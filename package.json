@@ -1,0 +1,20 @@
+{
+  "name": "browser-automation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser Automation Platform — Quản lý profile, automation, marketplace",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "desktop:dev": "pnpm --filter @browser-automation/desktop dev",
+    "desktop:build": "pnpm --filter @browser-automation/desktop build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.17.1",
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "electron", "esbuild"]
+  }
+}
