@@ -7,11 +7,71 @@ const api = {
   createProfile: (data: any) => ipcRenderer.invoke('profile:create', data),
   updateProfile: (id: string, data: any) => ipcRenderer.invoke('profile:update', id, data),
   deleteProfile: (id: string) => ipcRenderer.invoke('profile:delete', id),
+  duplicateProfile: (id: string) => ipcRenderer.invoke('profile:duplicate', id),
 
   // Browser
   launchBrowser: (profileId: string) => ipcRenderer.invoke('browser:launch', profileId),
   closeBrowser: (profileId: string) => ipcRenderer.invoke('browser:close', profileId),
   detectBrowsers: () => ipcRenderer.invoke('browser:detect'),
+
+  // Proxy
+  getProxies: () => ipcRenderer.invoke('proxy:getAll'),
+  getProxy: (id: string) => ipcRenderer.invoke('proxy:get', id),
+  createProxy: (data: any) => ipcRenderer.invoke('proxy:create', data),
+  updateProxy: (id: string, data: any) => ipcRenderer.invoke('proxy:update', id, data),
+  deleteProxy: (id: string) => ipcRenderer.invoke('proxy:delete', id),
+  checkProxy: (id: string) => ipcRenderer.invoke('proxy:check', id),
+  importProxies: (lines: string[], type?: string) => ipcRenderer.invoke('proxy:import', lines, type),
+  importProxiesFile: () => ipcRenderer.invoke('proxy:importFile'),
+
+  // Email
+  getEmails: () => ipcRenderer.invoke('email:getAll'),
+  getEmail: (id: string) => ipcRenderer.invoke('email:get', id),
+  createEmail: (data: any) => ipcRenderer.invoke('email:create', data),
+  updateEmail: (id: string, data: any) => ipcRenderer.invoke('email:update', id, data),
+  deleteEmail: (id: string) => ipcRenderer.invoke('email:delete', id),
+  importEmailsCSV: (csvContent?: string) => ipcRenderer.invoke('email:importCSV', csvContent),
+
+  // Cookie
+  getCookies: () => ipcRenderer.invoke('cookie:getAll'),
+  getCookie: (id: string) => ipcRenderer.invoke('cookie:get', id),
+  getCookiesByProfile: (profileId: string) => ipcRenderer.invoke('cookie:getByProfile', profileId),
+  createCookie: (data: any) => ipcRenderer.invoke('cookie:create', data),
+  updateCookie: (id: string, data: any) => ipcRenderer.invoke('cookie:update', id, data),
+  deleteCookie: (id: string) => ipcRenderer.invoke('cookie:delete', id),
+  importCookie: (name: string, profileId?: string) => ipcRenderer.invoke('cookie:import', name, profileId),
+  exportCookie: (id: string) => ipcRenderer.invoke('cookie:export', id),
+
+  // Workflow
+  getWorkflows: () => ipcRenderer.invoke('workflow:getAll'),
+  duplicateWorkflow: (id: string) => ipcRenderer.invoke('workflow:duplicate', id),
+  exportWorkflow: (id: string) => ipcRenderer.invoke('workflow:export', id),
+  importWorkflow: () => ipcRenderer.invoke('workflow:import'),
+  getWorkflow: (id: string) => ipcRenderer.invoke('workflow:get', id),
+  createWorkflow: (data: any) => ipcRenderer.invoke('workflow:create', data),
+  updateWorkflow: (id: string, data: any) => ipcRenderer.invoke('workflow:update', id, data),
+  deleteWorkflow: (id: string) => ipcRenderer.invoke('workflow:delete', id),
+  getWorkflowLogs: (workflowId: string) => ipcRenderer.invoke('workflow:getLogs', workflowId),
+  runWorkflow: (workflowId: string, profileId: string) => ipcRenderer.invoke('workflow:run', workflowId, profileId),
+  stopWorkflow: (logId: string) => ipcRenderer.invoke('workflow:stop', logId),
+  getNodeDefinitions: () => ipcRenderer.invoke('automation:getNodeDefinitions'),
+  getNodeCategories: () => ipcRenderer.invoke('automation:getNodeCategories'),
+
+  // Settings
+  getSetting: (key: string) => ipcRenderer.invoke('settings:get', key),
+  setSetting: (key: string, value: string) => ipcRenderer.invoke('settings:set', key, value),
+  getAllSettings: () => ipcRenderer.invoke('settings:getAll'),
+  setSettingsBatch: (settings: Record<string, string>) => ipcRenderer.invoke('settings:setBatch', settings),
+
+  // Auth
+  login: (email: string, password: string) => ipcRenderer.invoke('auth:login', email, password),
+  register: (name: string, email: string, password: string) => ipcRenderer.invoke('auth:register', name, email, password),
+  logout: () => ipcRenderer.invoke('auth:logout'),
+  checkAuth: () => ipcRenderer.invoke('auth:check'),
+  testConnection: () => ipcRenderer.invoke('auth:testConnection'),
+
+  // API proxy
+  apiRequest: (method: string, path: string, body?: any) => ipcRenderer.invoke('api:request', method, path, body),
 
   // Events
   on: (channel: string, callback: (...args: any[]) => void) => {

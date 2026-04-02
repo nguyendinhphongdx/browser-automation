@@ -154,3 +154,10 @@ export async function closeBrowser(profileId: string): Promise<void> {
 export function isBrowserRunning(profileId: string): boolean {
   return activeBrowsers.has(profileId)
 }
+
+export async function closeAllBrowsers(): Promise<void> {
+  const ids = Array.from(activeBrowsers.keys())
+  for (const id of ids) {
+    await closeBrowser(id)
+  }
+}

@@ -120,6 +120,23 @@ export function deleteProfile(id: string): boolean {
   return result.changes > 0
 }
 
+export function duplicateProfile(id: string): BrowserProfile | null {
+  const original = getProfileById(id)
+  if (!original) return null
+
+  return createProfile({
+    name: `${original.name} (copy)`,
+    browserType: original.browserType,
+    browserVersion: original.browserVersion,
+    browserExecutablePath: original.browserExecutablePath,
+    tags: original.tags,
+    folder: original.folder,
+    color: original.color,
+    notes: original.notes,
+    proxyId: original.proxyId
+  })
+}
+
 export function updateLastUsed(id: string): void {
   const db = getDatabase()
   const now = new Date().toISOString()

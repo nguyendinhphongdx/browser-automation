@@ -8,16 +8,19 @@ import {
   Globe
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/lib/i18n'
 
 const navItems = [
-  { to: '/profiles', label: 'Profiles', icon: Users },
-  { to: '/automation', label: 'Automation', icon: Play },
-  { to: '/resources', label: 'Tài nguyên', icon: Database },
-  { to: '/marketplace', label: 'Marketplace', icon: ShoppingBag },
-  { to: '/settings', label: 'Cài đặt', icon: Settings }
+  { to: '/profiles', labelKey: 'nav.profiles', icon: Users },
+  { to: '/automation', labelKey: 'nav.automation', icon: Play },
+  { to: '/resources', labelKey: 'nav.resources', icon: Database },
+  { to: '/marketplace', labelKey: 'nav.marketplace', icon: ShoppingBag },
+  { to: '/settings', labelKey: 'nav.settings', icon: Settings }
 ]
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const { t } = useI18n()
+
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
@@ -44,7 +47,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               }
             >
               <item.icon className="h-4 w-4" />
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>
@@ -52,7 +55,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/* Footer */}
         <div className="p-3 border-t">
           <div className="px-3 py-2 text-xs text-muted-foreground">
-            v0.1.0 — Phase 1
+            v0.2.0 — Phase 3
           </div>
         </div>
       </aside>

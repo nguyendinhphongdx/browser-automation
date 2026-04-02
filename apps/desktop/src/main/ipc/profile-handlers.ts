@@ -4,7 +4,8 @@ import {
   getProfileById,
   createProfile,
   updateProfile,
-  deleteProfile
+  deleteProfile,
+  duplicateProfile
 } from '../services/profile-service'
 
 export function registerProfileHandlers(ipcMain: IpcMain) {
@@ -26,5 +27,9 @@ export function registerProfileHandlers(ipcMain: IpcMain) {
 
   ipcMain.handle('profile:delete', (_event, id: string) => {
     return deleteProfile(id)
+  })
+
+  ipcMain.handle('profile:duplicate', (_event, id: string) => {
+    return duplicateProfile(id)
   })
 }

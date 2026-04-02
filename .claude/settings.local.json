@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /d/Code/VibeCoding/browser-automation/apps/desktop/src/renderer/pages -type f -name \"*.tsx\" -exec basename {} \\\\;)",
+      "Bash(npx --filter @browser-automation/desktop electron-vite build)",
+      "Bash(npx electron-vite:*)",
+      "Bash(pnpm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm add:*)"
+    ]
+  }
+}

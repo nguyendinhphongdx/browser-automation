@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Plus, LayoutGrid, LayoutList, Search, Play, Square, Trash2, Edit, Copy } from 'lucide-react'
+import { Plus, LayoutGrid, LayoutList, Search, Play, Square, Trash2, Edit, Copy, Users } from 'lucide-react'
 import { useProfileStore } from '@/stores/profile-store'
+import { useResourceStore } from '@/stores/resource-store'
 import { cn } from '@/lib/utils'
 import { CreateProfileDialog } from './CreateProfileDialog'
+import { EditProfileDialog } from './EditProfileDialog'
 import type { BrowserProfile } from '@shared/types'
 
 const BROWSER_ICONS: Record<string, string> = {
@@ -16,8 +18,8 @@ const BROWSER_ICONS: Record<string, string> = {
   custom: '🔧'
 }
 
-function ProfileTableRow({ profile }: { profile: BrowserProfile }) {
-  const { launchBrowser, closeBrowser, deleteProfile, runningProfiles } = useProfileStore()
+function ProfileTableRow({ profile, getProxyName, onEdit }: { profile: BrowserProfile; getProxyName: (id: string | null) => string; onEdit: (p: BrowserProfile) => void }) {
+  const { launchBrowser, closeBrowser, deleteProfile, duplicateProfile, runningProfiles } = useProfileStore()
   const isRunning = runningProfiles.has(profile.id)
 
   return (
@@ -41,7 +43,7 @@ function ProfileTableRow({ profile }: { profile: BrowserProfile }) {
         {profile.fingerprint?.platform || '—'}
       </td>
       <td className="px-4 py-3 text-sm text-muted-foreground">
-        {profile.proxyId || 'Không có'}
+        {getProxyName(profile.proxyId)}
       </td>
       <td className="px-4 py-3 text-sm text-muted-foreground">
         <div className="flex flex-wrap gap-1">
@@ -80,12 +82,14 @@ function ProfileTableRow({ profile }: { profile: BrowserProfile }) {
             </button>
           )}
           <button
+            onClick={() => onEdit(profile)}
             className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"
             title="Chỉnh sửa"
           >
             <Edit className="h-4 w-4" />
           </button>
           <button
+            onClick={() => duplicateProfile(profile.id)}
             className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"
             title="Nhân đôi"
           >
@@ -108,8 +112,8 @@ function ProfileTableRow({ profile }: { profile: BrowserProfile }) {
   )
 }
 
-function ProfileGridCard({ profile }: { profile: BrowserProfile }) {
-  const { launchBrowser, closeBrowser, deleteProfile, runningProfiles } = useProfileStore()
+function ProfileGridCard({ profile, getProxyName, onEdit }: { profile: BrowserProfile; getProxyName: (id: string | null) => string; onEdit: (p: BrowserProfile) => void }) {
+  const { launchBrowser, closeBrowser, deleteProfile, duplicateProfile, runningProfiles } = useProfileStore()
   const isRunning = runningProfiles.has(profile.id)
 
   return (
@@ -142,7 +146,7 @@ function ProfileGridCard({ profile }: { profile: BrowserProfile }) {
         </div>
         <div className="flex justify-between">
           <span>Proxy</span>
-          <span>{profile.proxyId || 'Không có'}</span>
+          <span>{getProxyName(profile.proxyId)}</span>
         </div>
       </div>
 
@@ -165,6 +169,20 @@ function ProfileGridCard({ profile }: { profile: BrowserProfile }) {
           </button>
         )}
         <button
+          onClick={() => onEdit(profile)}
+          className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground transition-colors"
+          title="Chỉnh sửa"
+        >
+          <Edit className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={() => duplicateProfile(profile.id)}
+          className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground transition-colors"
+          title="Nhân đôi"
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </button>
+        <button
           onClick={() => {
             if (confirm('Bạn có chắc muốn xoá profile này?')) {
               deleteProfile(profile.id)
@@ -182,12 +200,21 @@ function ProfileGridCard({ profile }: { profile: BrowserProfile }) {
 export function ProfilesPage() {
   const { profiles, viewMode, setViewMode, fetchProfiles, fetchBrowsers, loading } =
     useProfileStore()
+  const { proxies, fetchProxies } = useResourceStore()
   const [showCreate, setShowCreate] = useState(false)
+  const [editingProfile, setEditingProfile] = useState<BrowserProfile | null>(null)
   const [search, setSearch] = useState('')
+
+  const getProxyName = (proxyId: string | null) => {
+    if (!proxyId) return 'Không có'
+    const proxy = proxies.find(p => p.id === proxyId)
+    return proxy ? proxy.name : proxyId
+  }
 
   useEffect(() => {
     fetchProfiles()
     fetchBrowsers()
+    fetchProxies()
   }, [])
 
   const filtered = profiles.filter(
@@ -302,7 +329,7 @@ export function ProfilesPage() {
             </thead>
             <tbody>
               {filtered.map((profile) => (
-                <ProfileTableRow key={profile.id} profile={profile} />
+                <ProfileTableRow key={profile.id} profile={profile} getProxyName={getProxyName} onEdit={setEditingProfile} />
               ))}
             </tbody>
           </table>
@@ -310,13 +337,17 @@ export function ProfilesPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((profile) => (
-            <ProfileGridCard key={profile.id} profile={profile} />
+            <ProfileGridCard key={profile.id} profile={profile} getProxyName={getProxyName} onEdit={setEditingProfile} />
           ))}
         </div>
       )}
 
       {/* Create dialog */}
       {showCreate && <CreateProfileDialog onClose={() => setShowCreate(false)} />}
+      {/* Edit dialog */}
+      {editingProfile && (
+        <EditProfileDialog profile={editingProfile} onClose={() => setEditingProfile(null)} />
+      )}
     </div>
   )
 }

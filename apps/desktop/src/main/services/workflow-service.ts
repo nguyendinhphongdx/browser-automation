@@ -1,0 +1,191 @@
+import { v4 as uuid } from 'uuid'
+import { getDatabase } from '../database/init'
+import type {
+  Workflow, CreateWorkflowInput, UpdateWorkflowInput, WorkflowLog
+} from '../../shared/types'
+
+function rowToWorkflow(row: any): Workflow {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description || '',
+    version: row.version || '1.0.0',
+    mode: row.mode || 'visual',
+    nodes: JSON.parse(row.nodes || '[]'),
+    edges: JSON.parse(row.edges || '[]'),
+    code: row.code || '',
+    variables: JSON.parse(row.variables || '[]'),
+    status: row.status || 'draft',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  }
+}
+
+function rowToLog(row: any): WorkflowLog {
+  return {
+    id: row.id,
+    workflowId: row.workflow_id,
+    profileId: row.profile_id,
+    status: row.status,
+    logs: row.logs || '[]',
+    startedAt: row.started_at,
+    finishedAt: row.finished_at || undefined
+  }
+}
+
+export function getAllWorkflows(): Workflow[] {
+  const db = getDatabase()
+  return db.prepare('SELECT * FROM workflows ORDER BY updated_at DESC').all().map(rowToWorkflow)
+}
+
+export function getWorkflowById(id: string): Workflow | null {
+  const db = getDatabase()
+  const row = db.prepare('SELECT * FROM workflows WHERE id = ?').get(id)
+  return row ? rowToWorkflow(row) : null
+}
+
+export function createWorkflow(input: CreateWorkflowInput): Workflow {
+  const db = getDatabase()
+  const id = uuid()
+  const now = new Date().toISOString()
+
+  db.prepare(`
+    INSERT INTO workflows (id, name, description, mode, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(id, input.name, input.description || '', input.mode, now, now)
+
+  return getWorkflowById(id)!
+}
+
+export function updateWorkflow(id: string, input: UpdateWorkflowInput): Workflow | null {
+  const db = getDatabase()
+  const existing = getWorkflowById(id)
+  if (!existing) return null
+
+  const now = new Date().toISOString()
+
+  db.prepare(`
+    UPDATE workflows SET
+      name = ?, description = ?, mode = ?,
+      nodes = ?, edges = ?, code = ?,
+      variables = ?, status = ?, updated_at = ?
+    WHERE id = ?
+  `).run(
+    input.name ?? existing.name,
+    input.description ?? existing.description,
+    input.mode ?? existing.mode,
+    JSON.stringify(input.nodes ?? existing.nodes),
+    JSON.stringify(input.edges ?? existing.edges),
+    input.code ?? existing.code,
+    JSON.stringify(input.variables ?? existing.variables),
+    input.status ?? existing.status,
+    now,
+    id
+  )
+
+  return getWorkflowById(id)
+}
+
+export function deleteWorkflow(id: string): boolean {
+  const db = getDatabase()
+  const result = db.prepare('DELETE FROM workflows WHERE id = ?').run(id)
+  return result.changes > 0
+}
+
+// ── Workflow Logs ───────────────────────────────────
+
+export function createWorkflowLog(workflowId: string, profileId: string): WorkflowLog {
+  const db = getDatabase()
+  const id = uuid()
+  const now = new Date().toISOString()
+
+  db.prepare(`
+    INSERT INTO workflow_logs (id, workflow_id, profile_id, status, started_at)
+    VALUES (?, ?, ?, 'running', ?)
+  `).run(id, workflowId, profileId, now)
+
+  return rowToLog(db.prepare('SELECT * FROM workflow_logs WHERE id = ?').get(id))
+}
+
+export function updateWorkflowLog(
+  id: string,
+  status: 'completed' | 'error',
+  logs: string
+): void {
+  const db = getDatabase()
+  const now = new Date().toISOString()
+  db.prepare(
+    'UPDATE workflow_logs SET status = ?, logs = ?, finished_at = ? WHERE id = ?'
+  ).run(status, logs, now, id)
+}
+
+export function getWorkflowLogs(workflowId: string): WorkflowLog[] {
+  const db = getDatabase()
+  return db.prepare(
+    'SELECT * FROM workflow_logs WHERE workflow_id = ? ORDER BY started_at DESC LIMIT 50'
+  ).all(workflowId).map(rowToLog)
+}
+
+// ── Export / Import ─────────────────────────────────
+
+export function exportWorkflow(id: string): string | null {
+  const workflow = getWorkflowById(id)
+  if (!workflow) return null
+
+  return JSON.stringify({
+    _format: 'browser-automation-workflow',
+    _version: '1.0',
+    name: workflow.name,
+    description: workflow.description,
+    version: workflow.version,
+    mode: workflow.mode,
+    nodes: workflow.nodes,
+    edges: workflow.edges,
+    code: workflow.code,
+    variables: workflow.variables
+  }, null, 2)
+}
+
+export function importWorkflow(jsonContent: string): Workflow {
+  let data: any
+  try {
+    data = JSON.parse(jsonContent)
+  } catch {
+    throw new Error('Invalid JSON format')
+  }
+
+  if (data._format !== 'browser-automation-workflow') {
+    throw new Error('Not a valid workflow file')
+  }
+
+  const wf = createWorkflow({
+    name: data.name || 'Imported Workflow',
+    description: data.description || '',
+    mode: data.mode || 'visual'
+  })
+
+  return updateWorkflow(wf.id, {
+    nodes: data.nodes || [],
+    edges: data.edges || [],
+    code: data.code || '',
+    variables: data.variables || []
+  })!
+}
+
+export function duplicateWorkflow(id: string): Workflow | null {
+  const original = getWorkflowById(id)
+  if (!original) return null
+
+  const copy = createWorkflow({
+    name: `${original.name} (copy)`,
+    description: original.description,
+    mode: original.mode
+  })
+
+  return updateWorkflow(copy.id, {
+    nodes: original.nodes,
+    edges: original.edges,
+    code: original.code,
+    variables: original.variables
+  })
+}

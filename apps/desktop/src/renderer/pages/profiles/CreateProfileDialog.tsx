@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useProfileStore } from '@/stores/profile-store'
+import { useResourceStore } from '@/stores/resource-store'
 import type { BrowserType, CreateProfileInput } from '@shared/types'
 
 const BROWSER_OPTIONS: { value: BrowserType; label: string; icon: string }[] = [
@@ -33,6 +34,7 @@ interface Props {
 
 export function CreateProfileDialog({ onClose }: Props) {
   const { createProfile, installedBrowsers } = useProfileStore()
+  const { proxies, fetchProxies } = useResourceStore()
   const [loading, setLoading] = useState(false)
 
   const [name, setName] = useState('')
@@ -41,6 +43,9 @@ export function CreateProfileDialog({ onClose }: Props) {
   const [color, setColor] = useState(COLORS[0])
   const [tags, setTags] = useState('')
   const [notes, setNotes] = useState('')
+  const [proxyId, setProxyId] = useState<string | null>(null)
+
+  useEffect(() => { fetchProxies() }, [])
 
   const isInstalled = (type: BrowserType) =>
     installedBrowsers.some((b) => b.type === type)
@@ -60,6 +65,7 @@ export function CreateProfileDialog({ onClose }: Props) {
           .map((t) => t.trim())
           .filter(Boolean),
         notes,
+        proxyId,
         browserExecutablePath:
           browserType === 'custom' ? customPath : undefined
       }
@@ -190,6 +196,23 @@ export function CreateProfileDialog({ onClose }: Props) {
               placeholder="facebook, ads, account1"
               className="w-full px-3 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
+          </div>
+
+          {/* Proxy */}
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Proxy</label>
+            <select
+              value={proxyId || ''}
+              onChange={(e) => setProxyId(e.target.value || null)}
+              className="w-full px-3 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">Không sử dụng proxy</option>
+              {proxies.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.type}://{p.host}:{p.port})
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Ghi chú */}

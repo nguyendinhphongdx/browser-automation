@@ -49,6 +49,65 @@ export function initDatabase() {
       last_checked TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS emails (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      password TEXT NOT NULL,
+      recovery_email TEXT,
+      phone TEXT,
+      provider TEXT NOT NULL DEFAULT 'other',
+      status TEXT NOT NULL DEFAULT 'unknown',
+      notes TEXT DEFAULT '',
+      profile_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS cookies (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      profile_id TEXT,
+      domain TEXT NOT NULL,
+      cookies TEXT NOT NULL DEFAULT '[]',
+      notes TEXT DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS workflows (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      version TEXT DEFAULT '1.0.0',
+      mode TEXT NOT NULL DEFAULT 'visual',
+      nodes TEXT DEFAULT '[]',
+      edges TEXT DEFAULT '[]',
+      code TEXT DEFAULT '',
+      variables TEXT DEFAULT '[]',
+      status TEXT DEFAULT 'draft',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS workflow_logs (
+      id TEXT PRIMARY KEY,
+      workflow_id TEXT NOT NULL,
+      profile_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'running',
+      logs TEXT DEFAULT '[]',
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finished_at TEXT,
+      FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE,
+      FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+    );
   `)
 }
 

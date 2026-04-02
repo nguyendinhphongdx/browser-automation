@@ -1,4 +1,4 @@
-# Browser Automation Platform — Kế hoạch dự án
+****# Browser Automation Platform — Kế hoạch dự án
 
 ## 1. Tổng quan sản phẩm
 
@@ -381,35 +381,35 @@ browser-automation/
 
 **Mục tiêu:** Quản lý proxy, email, cookie đầy đủ.
 
-- [ ] Quản lý proxy: CRUD, import, kiểm tra sống, đo tốc độ
-- [ ] Quản lý email/account: CRUD, import CSV
-- [ ] Quản lý cookie: import/export, xem/sửa
-- [ ] Gán proxy + email cho profile
-- [ ] Giao diện cho từng loại tài nguyên
-- [ ] Kho mã hoá cho dữ liệu nhạy cảm
+- [x] Quản lý proxy: CRUD, import, kiểm tra sống, đo tốc độ
+- [x] Quản lý email/account: CRUD, import CSV
+- [x] Quản lý cookie: import/export, xem/sửa
+- [x] Gán proxy + email cho profile
+- [x] Giao diện cho từng loại tài nguyên
+- [x] Kho mã hoá cho dữ liệu nhạy cảm
 
 ### Phase 4 — Xây dựng kịch bản (6-8 tuần)
 
 **Mục tiêu:** Xây dựng và chạy kịch bản automation bằng code và kéo thả.
 
-- [ ] Lõi engine automation (chạy workflow)
-- [ ] Chế độ viết code với Monaco Editor
-- [ ] API helpers + IntelliSense cho automation
-- [ ] Chế độ kéo thả với React Flow
-- [ ] Các node cơ bản: Trình duyệt, Tương tác, Dữ liệu, Luồng điều khiển
-- [ ] Panel thuộc tính node (cấu hình từng node)
-- [ ] Chế độ debug: chạy từng bước, xem log
+- [x] Lõi engine automation (chạy workflow)
+- [x] Chế độ viết code với Monaco Editor
+- [x] API helpers + IntelliSense cho automation
+- [x] Chế độ kéo thả với React Flow
+- [x] Các node cơ bản: Trình duyệt, Tương tác, Dữ liệu, Luồng điều khiển
+- [x] Panel thuộc tính node (cấu hình từng node)
+- [x] Chế độ debug: chạy từng bước, xem log
 - [ ] Chế độ ghi lại: ghi thao tác → workflow
-- [ ] Lưu / tải workflow
-- [ ] Chạy workflow trên nhiều profile đồng thời
+- [x] Lưu / tải workflow
+- [x] Chạy workflow trên nhiều profile đồng thời
 
 ### Phase 5 — Marketplace (4-6 tuần)
 
 **Mục tiêu:** Hệ thống mua bán và chia sẻ kịch bản.
 
 - [ ] Marketplace API: upload, tìm kiếm, tải về, đánh giá
-- [ ] Giao diện Marketplace trong desktop app
-- [ ] Quản lý phiên bản kịch bản
+- [x] Giao diện Marketplace trong desktop app
+- [x] Quản lý phiên bản kịch bản
 - [ ] Hệ thống đánh giá & nhận xét
 - [ ] Tích hợp Stripe: thanh toán, chia doanh thu
 - [ ] Admin dashboard: duyệt kịch bản, thống kê doanh thu
@@ -421,11 +421,11 @@ browser-automation/
 
 - [ ] Tự động cập nhật (electron-updater)
 - [ ] Luồng hướng dẫn cho người dùng mới
-- [ ] Phím tắt
-- [ ] Giao diện sáng / tối (Dark mode / Light mode)
-- [ ] Đa ngôn ngữ (Tiếng Việt, English)
+- [x] Phím tắt
+- [x] Giao diện sáng / tối (Dark mode / Light mode)
+- [x] Đa ngôn ngữ (Tiếng Việt, English)
 - [ ] Tối ưu hiệu năng
-- [ ] Kiểm tra bảo mật
+- [x] Kiểm tra bảo mật
 - [ ] Tài liệu hướng dẫn sử dụng
 - [ ] Phát hành bản beta
 

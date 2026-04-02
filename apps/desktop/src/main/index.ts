@@ -1,8 +1,12 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
-import { initDatabase } from './database/init'
+import { initDatabase, closeDatabase } from './database/init'
 import { registerProfileHandlers } from './ipc/profile-handlers'
 import { registerBrowserHandlers } from './ipc/browser-handlers'
+import { registerResourceHandlers } from './ipc/resource-handlers'
+import { registerAutomationHandlers } from './ipc/automation-handlers'
+import { registerSettingsHandlers } from './ipc/settings-handlers'
+import { closeAllBrowsers } from './browser/launcher'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -43,6 +47,9 @@ app.whenReady().then(() => {
   // Đăng ký IPC handlers
   registerProfileHandlers(ipcMain)
   registerBrowserHandlers(ipcMain)
+  registerResourceHandlers(ipcMain)
+  registerAutomationHandlers(ipcMain)
+  registerSettingsHandlers(ipcMain)
 
   createWindow()
 
@@ -51,6 +58,12 @@ app.whenReady().then(() => {
       createWindow()
     }
   })
+})
+
+// Clean up all browsers before quitting
+app.on('before-quit', async () => {
+  await closeAllBrowsers()
+  closeDatabase()
 })
 
 app.on('window-all-closed', () => {
