@@ -75,7 +75,7 @@ export function deleteSetting(key: string): void {
 export function getAllSettings(): Record<string, string> {
   const db = getDatabase()
   const rows = db.prepare('SELECT key, value FROM settings').all() as any[]
-  const result: Record<string, string> = { ...DEFAULTS }
+  const result: Record<string, string> = { ...DEFAULTS } as Record<string, string>
 
   for (const row of rows) {
     result[row.key] = SENSITIVE_KEYS.includes(row.key)

@@ -1,5 +1,5 @@
 import type { Page, BrowserContext } from 'playwright-core'
-import type { WorkflowNode, WorkflowEdge } from '../../shared/types'
+import type { WorkflowNode, WorkflowEdge, NodeCategory } from '../../shared/types'
 import { v4 as uuid } from 'uuid'
 
 export interface RecordedAction {
@@ -178,7 +178,7 @@ export function stopRecording(): RecordedAction[] {
 }
 
 // Map action type → node definition
-const ACTION_TO_NODE: Record<string, { nodeType: string; label: string; category: string; icon: string }> = {
+const ACTION_TO_NODE: Record<string, { nodeType: string; label: string; category: NodeCategory; icon: string }> = {
   navigate: { nodeType: 'open-page', label: 'Mở trang', category: 'browser', icon: 'Globe' },
   click: { nodeType: 'click', label: 'Click', category: 'interaction', icon: 'MousePointerClick' },
   type: { nodeType: 'type-text', label: 'Nhập text', category: 'interaction', icon: 'Keyboard' },

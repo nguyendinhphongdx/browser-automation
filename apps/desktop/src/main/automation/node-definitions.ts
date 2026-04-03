@@ -14,7 +14,7 @@ export interface NodeDefinition {
 export interface ConfigField {
   key: string
   label: string
-  type: 'text' | 'number' | 'select' | 'boolean' | 'code' | 'selector'
+  type: 'text' | 'number' | 'select' | 'boolean' | 'code' | 'selector' | 'keyrecorder'
   placeholder?: string
   options?: { label: string; value: string }[]
   defaultValue?: any

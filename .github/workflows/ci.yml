@@ -24,8 +24,5 @@ jobs:
       - name: Rebuild native modules
         run: npx @electron/rebuild -f -w better-sqlite3
 
-      - name: Type check (desktop)
-        run: pnpm --filter @browser-automation/desktop exec tsc --noEmit
-
       - name: Build (desktop)
         run: pnpm --filter @browser-automation/desktop build

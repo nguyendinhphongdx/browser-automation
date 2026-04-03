@@ -3,7 +3,7 @@ import { getSetting, setSetting, deleteSetting } from './settings-service'
 interface ApiResponse<T = any> {
   ok: boolean
   status: number
-  data: T
+  data: T | null
   error?: string
 }
 

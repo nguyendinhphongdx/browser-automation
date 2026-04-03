@@ -76,7 +76,7 @@ export function RecorderPanel() {
 
         const offsetX = lastNode ? lastNode.position.x + 250 : 80
         const offsetY = lastNode ? lastNode.position.y : 200
-        const offsetNodes = newNodes.map((n, i) => ({
+        const offsetNodes = newNodes.map((n: any, i: number) => ({
           ...n,
           position: { x: offsetX + i * 250, y: offsetY }
         }))

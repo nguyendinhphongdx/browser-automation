@@ -177,6 +177,8 @@ export interface WorkflowNodeData {
   label: string
   category: NodeCategory
   config: Record<string, any>
+  icon?: string
+  nodeType?: string
 }
 
 export interface WorkflowNode {

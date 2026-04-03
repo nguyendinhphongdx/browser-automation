@@ -4,7 +4,8 @@ import type {
   Proxy, CreateProxyInput, UpdateProxyInput,
   EmailAccount, CreateEmailInput, UpdateEmailInput,
   CookieEntry, CreateCookieInput, UpdateCookieInput,
-  Workflow, CreateWorkflowInput, UpdateWorkflowInput, WorkflowLog, LogEntry
+  Workflow, CreateWorkflowInput, UpdateWorkflowInput, WorkflowLog, LogEntry,
+  Campaign, CreateCampaignInput, UpdateCampaignInput, CampaignRun
 } from '@shared/types'
 
 declare global {
@@ -73,6 +74,27 @@ declare global {
       testConnection: () => Promise<any>
       // API proxy
       apiRequest: (method: string, path: string, body?: any) => Promise<any>
+      // Campaign
+      getCampaigns: () => Promise<Campaign[]>
+      getCampaign: (id: string) => Promise<Campaign | null>
+      createCampaign: (data: CreateCampaignInput) => Promise<Campaign>
+      updateCampaign: (id: string, data: UpdateCampaignInput) => Promise<Campaign | null>
+      deleteCampaign: (id: string) => Promise<boolean>
+      duplicateCampaign: (id: string) => Promise<Campaign | null>
+      getCampaignRuns: (campaignId: string) => Promise<CampaignRun[]>
+      runCampaign: (campaignId: string) => Promise<{ runId: string }>
+      stopCampaign: (campaignId: string) => Promise<{ success: boolean }>
+      pauseCampaign: (campaignId: string) => Promise<{ success: boolean }>
+      resumeCampaign: (campaignId: string) => Promise<{ success: boolean }>
+      // Recorder
+      startRecording: (profileId: string) => Promise<{ success: boolean }>
+      stopRecording: () => Promise<{ actions: any[] }>
+      getRecorderStatus: () => Promise<{ recording: boolean; actions: any[] }>
+      actionsToWorkflow: (actions: any[]) => Promise<{ nodes: any[]; edges: any[] }>
+      // AI Chat
+      aiChat: (systemPrompt: string, messages: any[]) => Promise<any>
+      // App info
+      getDbPath: () => Promise<string>
       // Events
       on: (channel: string, callback: (...args: any[]) => void) => void
       off: (channel: string, callback: (...args: any[]) => void) => void
