@@ -62,27 +62,59 @@ export async function aiChat(systemPrompt: string, messages: ChatMessage[]): Pro
       return { ok: true, text: data.message?.content || '' }
     }
 
-    // OpenAI-compatible (OpenAI, Groq, Google, Custom)
+    // Google Gemini — dùng native API
+    if (provider === 'google') {
+      const geminiModel = model || 'gemini-2.5-flash'
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`
+      const geminiMessages = [
+        { role: 'user', parts: [{ text: systemPrompt }] },
+        { role: 'model', parts: [{ text: 'Understood. I will follow these instructions.' }] },
+        ...messages.map(m => ({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }]
+        }))
+      ]
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: geminiMessages,
+          generationConfig: { maxOutputTokens: 4096 }
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        console.error('[AI] Google error:', res.status, JSON.stringify(data).slice(0, 500))
+        return { ok: false, text: '', error: data.error?.message || `Google API error ${res.status}` }
+      }
+      return { ok: true, text: data.candidates?.[0]?.content?.parts?.[0]?.text || '' }
+    }
+
+    // OpenAI-compatible (OpenAI, Groq, Custom)
     const base = baseUrl || (
-      provider === 'google' ? 'https://generativelanguage.googleapis.com/v1beta/openai' :
-      provider === 'groq' ? 'https://api.groq.com/openai' :
-      'https://api.openai.com'
+      provider === 'groq' ? 'https://api.groq.com/openai/v1' :
+      'https://api.openai.com/v1'
     )
-    const res = await fetch(`${base}/v1/chat/completions`, {
+    const chatUrl = base.endsWith('/v1') ? `${base}/chat/completions` : `${base}/v1/chat/completions`
+    const defaultModel = provider === 'google' ? 'gemini-2.5-flash' : provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gpt-4o-mini'
+    const res = await fetch(chatUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: model || 'gpt-4o-mini',
+        model: model || defaultModel,
         messages: [{ role: 'system', content: systemPrompt }, ...messages],
         max_tokens: 4096,
       }),
     })
     const data = await res.json()
-    if (!res.ok) return { ok: false, text: '', error: data.error?.message || `API error ${res.status}` }
-    return { ok: true, text: data.choices?.[0]?.message?.content || '' }
+    if (!res.ok) {
+      console.error('[AI] Error:', res.status, chatUrl, JSON.stringify(data).slice(0, 500))
+      return { ok: false, text: '', error: data.error?.message || data.message || `API error ${res.status}` }
+    }
+    return { ok: true, text: data.choices?.[0]?.message?.content || data.candidates?.[0]?.content?.parts?.[0]?.text || '' }
   } catch (err: any) {
     return { ok: false, text: '', error: err.message || 'Network error' }
   }
