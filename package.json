@@ -1,19 +1,49 @@
 {
   "name": "browser-automation",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Browser Automation Platform — Quản lý profile, automation, marketplace",
+  "description": "Nền tảng quản lý nhiều browser profile với fingerprint riêng biệt, xây dựng kịch bản automation và chia sẻ qua marketplace",
+  "homepage": "https://github.com/user/browser-automation#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/browser-automation.git"
+  },
+  "bugs": {
+    "url": "https://github.com/user/browser-automation/issues"
+  },
+  "author": {
+    "name": "phong.nguyen02"
+  },
+  "license": "ISC",
+  "keywords": [
+    "browser-automation",
+    "anti-detect",
+    "fingerprint",
+    "multi-profile",
+    "playwright",
+    "electron",
+    "marketplace",
+    "workflow",
+    "automation"
+  ],
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=10"
+  },
+  "packageManager": "pnpm@10.17.1",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "desktop:dev": "pnpm --filter @browser-automation/desktop dev",
-    "desktop:build": "pnpm --filter @browser-automation/desktop build"
+    "desktop:build": "pnpm --filter @browser-automation/desktop build",
+    "desktop:pack": "pnpm --filter @browser-automation/desktop pack",
+    "desktop:dist": "pnpm --filter @browser-automation/desktop dist",
+    "server:dev": "pnpm --filter @browser-automation/server dev",
+    "server:build": "pnpm --filter @browser-automation/server build",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "typecheck": "turbo run typecheck"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.17.1",
   "pnpm": {
     "onlyBuiltDependencies": ["better-sqlite3", "electron", "esbuild"]
   }
