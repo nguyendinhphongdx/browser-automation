@@ -1,24 +1,31 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { Onboarding } from './components/Onboarding'
-import { ProfilesPage } from './pages/profiles/ProfilesPage'
-import { AutomationPage } from './pages/automation/AutomationPage'
-import { ResourcesPage } from './pages/resources/ResourcesPage'
-import { MarketplacePage } from './pages/marketplace/MarketplacePage'
-import { SettingsPage } from './pages/settings/SettingsPage'
-import { AuthPage } from './pages/auth/AuthPage'
+
+// Lazy load pages để giảm bundle ban đầu
+const ProfilesPage = lazy(() => import('./pages/profiles/ProfilesPage').then(m => ({ default: m.ProfilesPage })))
+const AutomationPage = lazy(() => import('./pages/automation/AutomationPage').then(m => ({ default: m.AutomationPage })))
+const ResourcesPage = lazy(() => import('./pages/resources/ResourcesPage').then(m => ({ default: m.ResourcesPage })))
+const MarketplacePage = lazy(() => import('./pages/marketplace/MarketplacePage').then(m => ({ default: m.MarketplacePage })))
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const AuthPage = lazy(() => import('./pages/auth/AuthPage').then(m => ({ default: m.AuthPage })))
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+    </div>
+  )
+}
 
 export function App() {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    // Kiểm tra đã xem onboarding chưa
     window.api.getSetting('onboarding.completed').then((val) => {
-      if (!val) {
-        setShowOnboarding(true)
-      }
+      if (!val) setShowOnboarding(true)
       setReady(true)
     }).catch(() => setReady(true))
   }, [])
@@ -29,23 +36,22 @@ export function App() {
   }
 
   if (!ready) return null
-
-  if (showOnboarding) {
-    return <Onboarding onComplete={handleOnboardingComplete} />
-  }
+  if (showOnboarding) return <Onboarding onComplete={handleOnboardingComplete} />
 
   return (
     <HashRouter>
       <Layout>
-        <Routes>
-          <Route path="/" element={<Navigate to="/profiles" replace />} />
-          <Route path="/profiles" element={<ProfilesPage />} />
-          <Route path="/automation" element={<AutomationPage />} />
-          <Route path="/resources" element={<ResourcesPage />} />
-          <Route path="/marketplace" element={<MarketplacePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/account" element={<AuthPage />} />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/profiles" replace />} />
+            <Route path="/profiles" element={<ProfilesPage />} />
+            <Route path="/automation" element={<AutomationPage />} />
+            <Route path="/resources" element={<ResourcesPage />} />
+            <Route path="/marketplace" element={<MarketplacePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/account" element={<AuthPage />} />
+          </Routes>
+        </Suspense>
       </Layout>
     </HashRouter>
   )

@@ -29,6 +29,7 @@
     "@browser-automation/fingerprint": "workspace:*",
     "@browser-automation/shared-types": "workspace:*",
     "better-sqlite3": "^11.7.0",
+    "@tanstack/react-virtual": "^3.11.2",
     "electron-log": "^5.2.4",
     "electron-updater": "^6.3.9",
     "class-variance-authority": "^0.7.1",
