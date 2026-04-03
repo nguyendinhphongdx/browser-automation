@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 
 interface DrawerProps {
@@ -11,6 +11,17 @@ interface DrawerProps {
 
 export function Drawer({ open, onClose, title, children, width = 360 }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null)
+  // Giữ mounted thêm 300ms sau khi đóng để animation kết thúc
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true)
+    } else {
+      const timer = setTimeout(() => setMounted(false), 300)
+      return () => clearTimeout(timer)
+    }
+  }, [open])
 
   // Close on Escape
   useEffect(() => {
@@ -21,6 +32,8 @@ export function Drawer({ open, onClose, title, children, width = 360 }: DrawerPr
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [open, onClose])
+
+  if (!mounted && !open) return null
 
   return (
     <>
@@ -35,8 +48,8 @@ export function Drawer({ open, onClose, title, children, width = 360 }: DrawerPr
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className={`absolute top-0 right-0 z-50 h-full bg-card border-l shadow-2xl flex flex-col transition-all duration-300 ease-out ${
-          open ? 'translate-x-0 opacity-100 visible' : 'translate-x-full opacity-0 invisible pointer-events-none'
+        className={`absolute top-0 right-0 z-50 h-full bg-card border-l shadow-2xl flex flex-col transition-transform duration-300 ease-out ${
+          open ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{ width }}
       >
@@ -53,7 +66,7 @@ export function Drawer({ open, onClose, title, children, width = 360 }: DrawerPr
           </div>
         )}
 
-        {/* Content — nếu không có title, children tự quản lý layout */}
+        {/* Content */}
         {title ? (
           <div className="flex-1 overflow-auto">
             {children}
