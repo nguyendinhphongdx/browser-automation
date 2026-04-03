@@ -1,12 +1,20 @@
 import type { IpcMain } from 'electron'
+import { app } from 'electron'
+import path from 'path'
 import {
   getSetting, setSetting, getAllSettings, setSettingsBatch
 } from '../services/settings-service'
 import {
   login, register, logout, checkAuth, testConnection, apiRequest
 } from '../services/api-client'
+import { aiChat } from '../services/ai-service'
 
 export function registerSettingsHandlers(ipcMain: IpcMain) {
+  // ── App info ─────────────────────────────────
+  ipcMain.handle('app:getDbPath', () => {
+    return path.join(app.getPath('userData'), 'browser-automation.db')
+  })
+
   // ── Settings ──────────────────────────────────
   ipcMain.handle('settings:get', (_e, key: string) => getSetting(key))
   ipcMain.handle('settings:set', (_e, key: string, value: string) => setSetting(key, value))
@@ -23,5 +31,10 @@ export function registerSettingsHandlers(ipcMain: IpcMain) {
   // ── Generic API proxy (for renderer to call server) ──
   ipcMain.handle('api:request', async (_e, method: string, path: string, body?: any) => {
     return apiRequest(method, path, body)
+  })
+
+  // ── AI Chat (main process — không bị CORS) ──
+  ipcMain.handle('ai:chat', async (_e, systemPrompt: string, messages: any[]) => {
+    return aiChat(systemPrompt, messages)
   })
 }

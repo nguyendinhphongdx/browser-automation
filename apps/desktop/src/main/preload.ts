@@ -57,11 +57,27 @@ const api = {
   getNodeDefinitions: () => ipcRenderer.invoke('automation:getNodeDefinitions'),
   getNodeCategories: () => ipcRenderer.invoke('automation:getNodeCategories'),
 
+  // Campaign
+  getCampaigns: () => ipcRenderer.invoke('campaign:getAll'),
+  getCampaign: (id: string) => ipcRenderer.invoke('campaign:get', id),
+  createCampaign: (data: any) => ipcRenderer.invoke('campaign:create', data),
+  updateCampaign: (id: string, data: any) => ipcRenderer.invoke('campaign:update', id, data),
+  deleteCampaign: (id: string) => ipcRenderer.invoke('campaign:delete', id),
+  duplicateCampaign: (id: string) => ipcRenderer.invoke('campaign:duplicate', id),
+  getCampaignRuns: (campaignId: string) => ipcRenderer.invoke('campaign:getRuns', campaignId),
+  runCampaign: (campaignId: string) => ipcRenderer.invoke('campaign:run', campaignId),
+  stopCampaign: (campaignId: string) => ipcRenderer.invoke('campaign:stop', campaignId),
+  pauseCampaign: (campaignId: string) => ipcRenderer.invoke('campaign:pause', campaignId),
+  resumeCampaign: (campaignId: string) => ipcRenderer.invoke('campaign:resume', campaignId),
+
   // Recorder
   startRecording: (profileId: string) => ipcRenderer.invoke('recorder:start', profileId),
   stopRecording: () => ipcRenderer.invoke('recorder:stop'),
   getRecorderStatus: () => ipcRenderer.invoke('recorder:status'),
   actionsToWorkflow: (actions: any[]) => ipcRenderer.invoke('recorder:toWorkflow', actions),
+
+  // App info
+  getDbPath: () => ipcRenderer.invoke('app:getDbPath'),
 
   // Settings
   getSetting: (key: string) => ipcRenderer.invoke('settings:get', key),
@@ -78,6 +94,9 @@ const api = {
 
   // API proxy
   apiRequest: (method: string, path: string, body?: any) => ipcRenderer.invoke('api:request', method, path, body),
+
+  // AI Chat (qua main process, tránh CORS)
+  aiChat: (systemPrompt: string, messages: any[]) => ipcRenderer.invoke('ai:chat', systemPrompt, messages),
 
   // Events
   on: (channel: string, callback: (...args: any[]) => void) => {
