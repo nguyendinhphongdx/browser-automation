@@ -1,3 +1,6 @@
+// Types dùng chung — bản chính nằm tại packages/shared-types
+// File này giữ nguyên để tương thích với import path @shared/types
+
 // Các loại trình duyệt hỗ trợ
 export type BrowserType =
   | 'chrome'

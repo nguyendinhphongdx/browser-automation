@@ -26,6 +26,8 @@
     "@reactflow/controls": "^11.2.14",
     "@reactflow/core": "^11.11.4",
     "@reactflow/minimap": "^11.7.14",
+    "@browser-automation/fingerprint": "workspace:*",
+    "@browser-automation/shared-types": "workspace:*",
     "better-sqlite3": "^11.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
