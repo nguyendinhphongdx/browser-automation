@@ -7,8 +7,9 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { useWorkflowStore } from '@/stores/workflow-store'
-import { NodeDrawer, AddNodeButton, ICON_MAP, CATEGORY_COLORS } from './NodePalette'
+import { NodeDrawer, AddNodeButton, AIButton, ICON_MAP, CATEGORY_COLORS } from './NodePalette'
 import { NodePropertiesPanel } from './NodePropertiesPanel'
+import { AIChatPanel } from './AIChatPanel'
 import { LayoutGrid, Zap, Loader2, CheckCircle2, XCircle, Plus } from 'lucide-react'
 
 // Lấy subtitle hiển thị trên node
@@ -179,6 +180,7 @@ function VisualEditorInner() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
   const [showNodePanel, setShowNodePanel] = useState(false)
+  const [showAIPanel, setShowAIPanel] = useState(false)
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
   const [addAfterNodeId, setAddAfterNodeId] = useState<string | null>(null)
 
@@ -548,9 +550,17 @@ function VisualEditorInner() {
           />
         </ReactFlow>
 
-        {/* Add Node Button — đóng config drawer khi mở node drawer */}
+        {/* Add Node Button */}
         <AddNodeButton onClick={() => {
           setShowNodePanel(prev => !prev)
+          setShowAIPanel(false)
+          setSelectedNode(null)
+        }} />
+
+        {/* AI Button */}
+        <AIButton onClick={() => {
+          setShowAIPanel(prev => !prev)
+          setShowNodePanel(false)
           setSelectedNode(null)
         }} />
 
@@ -563,6 +573,9 @@ function VisualEditorInner() {
 
         {/* Properties Drawer */}
         <NodePropertiesPanel />
+
+        {/* AI Chat Drawer */}
+        <AIChatPanel open={showAIPanel} onClose={() => setShowAIPanel(false)} />
       </div>
     </div>
   )
