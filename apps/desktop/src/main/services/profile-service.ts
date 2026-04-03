@@ -115,6 +115,7 @@ export function updateProfile(id: string, input: UpdateProfileInput): BrowserPro
 }
 
 export function deleteProfile(id: string): boolean {
+  if (id === 'default-browser') return false
   const db = getDatabase()
   const result = db.prepare('DELETE FROM profiles WHERE id = ?').run(id)
   return result.changes > 0

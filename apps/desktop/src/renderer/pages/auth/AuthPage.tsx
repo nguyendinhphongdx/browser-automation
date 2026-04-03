@@ -40,7 +40,7 @@ export function AuthPage() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-full">
+    <div className="p-6 flex items-center justify-center min-h-full">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">

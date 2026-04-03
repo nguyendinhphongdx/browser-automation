@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, Trash2, Download, Upload, Search, Cookie } from 'lucide-react'
 import { useResourceStore } from '@/stores/resource-store'
+import { DownloadTemplate } from './DownloadTemplate'
 
 function CreateCookieDialog({ onClose }: { onClose: () => void }) {
   const { createCookie } = useResourceStore()
@@ -120,6 +121,7 @@ export function CookieTab() {
           <input type="text" placeholder="Tìm cookie..." value={search} onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
         </div>
+        <DownloadTemplate type="cookie" />
         <button onClick={handleImport}
           className="inline-flex items-center gap-2 px-3 py-2 border rounded-lg text-sm font-medium hover:bg-accent transition-colors">
           <Upload className="h-4 w-4" /> Import JSON

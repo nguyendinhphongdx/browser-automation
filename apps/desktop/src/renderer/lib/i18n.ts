@@ -7,6 +7,7 @@ const translations: Record<Locale, Record<string, string>> = {
     // Sidebar
     'nav.profiles': 'Hồ sơ',
     'nav.automation': 'Tự động hoá',
+    'nav.campaigns': 'Chiến dịch',
     'nav.resources': 'Tài nguyên',
     'nav.marketplace': 'Chợ kịch bản',
     'nav.settings': 'Cài đặt',
@@ -79,6 +80,7 @@ const translations: Record<Locale, Record<string, string>> = {
     // Sidebar
     'nav.profiles': 'Profiles',
     'nav.automation': 'Automation',
+    'nav.campaigns': 'Campaigns',
     'nav.resources': 'Resources',
     'nav.marketplace': 'Marketplace',
     'nav.settings': 'Settings',

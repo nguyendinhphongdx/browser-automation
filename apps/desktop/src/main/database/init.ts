@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3'
 import path from 'path'
 import { app } from 'electron'
+import { detectInstalledBrowsers } from '../browser/detect'
 
 let db: Database.Database
 
@@ -108,7 +109,70 @@ export function initDatabase() {
       FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE,
       FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS campaigns (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      profile_ids TEXT DEFAULT '[]',
+      workflow_ids TEXT DEFAULT '[]',
+      execution TEXT DEFAULT '{}',
+      status TEXT DEFAULT 'draft',
+      last_run_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS campaign_runs (
+      id TEXT PRIMARY KEY,
+      campaign_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'running',
+      profile_results TEXT DEFAULT '[]',
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finished_at TEXT,
+      FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+    );
   `)
+
+  // Tạo Default Browser profile nếu chưa có
+  ensureDefaultProfile(db)
+}
+
+export const DEFAULT_PROFILE_ID = 'default-browser'
+
+function ensureDefaultProfile(db: Database.Database) {
+  const exists = db.prepare('SELECT id FROM profiles WHERE id = ?').get(DEFAULT_PROFILE_ID)
+  if (exists) return
+
+  const browsers = detectInstalledBrowsers()
+  const chrome = browsers.find((b: any) => b.type === 'chrome' || b.type === 'chromium') || browsers[0]
+
+  db.prepare(`
+    INSERT INTO profiles (id, name, color, browser_type, browser_executable_path, fingerprint, notes, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+  `).run(
+    DEFAULT_PROFILE_ID,
+    'Default Browser',
+    '#6B7280',
+    chrome?.type || 'chrome',
+    chrome?.executablePath || '',
+    JSON.stringify({
+      userAgent: '',
+      screenResolution: { width: 1920, height: 1080 },
+      locale: 'vi-VN',
+      timezone: 'Asia/Ho_Chi_Minh',
+      platform: 'Linux',
+      language: 'vi-VN',
+      hardwareConcurrency: 4,
+      deviceMemory: 8,
+      colorDepth: 24,
+      doNotTrack: false,
+      webrtc: { enabled: true },
+      canvas: { noise: false },
+      webgl: { noise: false }
+    }),
+    'Profile mặc định — không thể xóa'
+  )
 }
 
 export function closeDatabase() {

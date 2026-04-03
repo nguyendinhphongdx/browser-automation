@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, Trash2, Upload, RefreshCw, Search, Wifi } from 'lucide-react'
 import { useResourceStore } from '@/stores/resource-store'
+import { DownloadTemplate } from './DownloadTemplate'
 import type { Proxy } from '@shared/types'
 
 const STATUS_STYLES: Record<string, string> = {
@@ -213,6 +214,7 @@ export function ProxyTab() {
           <input type="text" placeholder="Tìm proxy..." value={search} onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
         </div>
+        <DownloadTemplate type="proxy" />
         <button onClick={handleImportFile}
           className="inline-flex items-center gap-2 px-3 py-2 border rounded-lg text-sm font-medium hover:bg-accent transition-colors">
           <Upload className="h-4 w-4" /> Import File

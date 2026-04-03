@@ -72,3 +72,69 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
 }
+
+/* ReactFlow custom styles — n8n look */
+.react-flow__node {
+  /* Remove default ReactFlow node styles */
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.react-flow__node.selected {
+  box-shadow: none !important;
+}
+
+.react-flow__handle {
+  transition: transform 0.15s, background-color 0.15s;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.4);
+  background-color: hsl(var(--primary)) !important;
+  border-color: hsl(var(--primary)) !important;
+}
+
+.react-flow__edge-path {
+  transition: stroke 0.15s;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: hsl(var(--primary)) !important;
+}
+
+.react-flow__connection-line {
+  stroke: hsl(var(--primary)) !important;
+}
+
+/* Minimap */
+.react-flow__minimap {
+  background: #fafafa !important;
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(0, 0, 0, 0.1) !important;
+  stroke: hsl(var(--primary)) !important;
+  stroke-width: 1.5 !important;
+  rx: 4 !important;
+}
+
+.react-flow__minimap svg {
+  pointer-events: all;
+}
+
+/* Panel animation */
+@keyframes slide-in-from-top-2 {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in.slide-in-from-top-2 {
+  animation: slide-in-from-top-2 0.2s ease-out;
+}
+
+.animate-in.fade-in {
+  animation: slide-in-from-top-2 0.2s ease-out;
+}

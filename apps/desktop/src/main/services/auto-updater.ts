@@ -1,23 +1,21 @@
-import { autoUpdater } from 'electron-updater'
 import { BrowserWindow, dialog } from 'electron'
-import log from 'electron-log'
-
-autoUpdater.logger = log
-autoUpdater.autoDownload = false
-autoUpdater.autoInstallOnAppQuit = true
 
 export function initAutoUpdater(mainWindow: BrowserWindow) {
+  // Lazy import — electron-updater crash nếu import top-level trong dev
+  const { autoUpdater } = require('electron-updater')
+
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = true
+
   // Kiểm tra cập nhật khi khởi động
-  autoUpdater.checkForUpdates().catch(() => {
-    // Bỏ qua lỗi nếu không có kết nối mạng
-  })
+  autoUpdater.checkForUpdates().catch(() => {})
 
   // Kiểm tra định kỳ mỗi 4 giờ
   setInterval(() => {
     autoUpdater.checkForUpdates().catch(() => {})
   }, 4 * 60 * 60 * 1000)
 
-  autoUpdater.on('update-available', (info) => {
+  autoUpdater.on('update-available', (info: any) => {
     dialog
       .showMessageBox(mainWindow, {
         type: 'info',
@@ -26,7 +24,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow) {
         buttons: ['Tải về', 'Để sau'],
         defaultId: 0,
       })
-      .then((result) => {
+      .then((result: any) => {
         if (result.response === 0) {
           autoUpdater.downloadUpdate()
           mainWindow.webContents.send('updater:downloading', info.version)
@@ -34,7 +32,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow) {
       })
   })
 
-  autoUpdater.on('update-downloaded', (info) => {
+  autoUpdater.on('update-downloaded', (info: any) => {
     dialog
       .showMessageBox(mainWindow, {
         type: 'info',
@@ -43,14 +41,14 @@ export function initAutoUpdater(mainWindow: BrowserWindow) {
         buttons: ['Khởi động lại', 'Để sau'],
         defaultId: 0,
       })
-      .then((result) => {
+      .then((result: any) => {
         if (result.response === 0) {
           autoUpdater.quitAndInstall()
         }
       })
   })
 
-  autoUpdater.on('download-progress', (progress) => {
+  autoUpdater.on('download-progress', (progress: any) => {
     mainWindow.webContents.send('updater:progress', {
       percent: Math.round(progress.percent),
       transferred: progress.transferred,
@@ -58,7 +56,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow) {
     })
   })
 
-  autoUpdater.on('error', (err) => {
-    log.error('Auto-updater error:', err)
+  autoUpdater.on('error', (err: any) => {
+    console.error('Auto-updater error:', err)
   })
 }

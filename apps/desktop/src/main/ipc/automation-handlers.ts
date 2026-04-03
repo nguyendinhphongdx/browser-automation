@@ -6,13 +6,17 @@ import {
   createWorkflowLog, updateWorkflowLog, getWorkflowLogs,
   exportWorkflow, importWorkflow, duplicateWorkflow
 } from '../services/workflow-service'
+import {
+  getAllCampaigns, getCampaignById, createCampaign, updateCampaign, deleteCampaign,
+  duplicateCampaign, createCampaignRun, getCampaignRuns
+} from '../services/campaign-service'
 import { getProfileById, updateLastUsed } from '../services/profile-service'
 import { launchBrowser, closeBrowser, getActiveBrowserContext } from '../browser/launcher'
 import { startRecording, stopRecording, isRecording, getRecordedActions, actionsToWorkflow } from '../automation/recorder'
 import { executeVisualWorkflow, executeCodeWorkflow, type ExecutionContext } from '../automation/engine'
 import { NODE_DEFINITIONS, NODE_CATEGORIES } from '../automation/node-definitions'
-import { chromium, firefox } from 'playwright-core'
-import { detectInstalledBrowsers } from '../browser/detect'
+import { executeCampaign, stopCampaign, pauseCampaign, resumeCampaign } from '../automation/campaign-engine'
+import { DEFAULT_PROFILE_ID } from '../database/init'
 import type { Workflow, BrowserProfile } from '../../shared/types'
 
 // Track running workflows
@@ -60,25 +64,17 @@ export function registerAutomationHandlers(ipcMain: IpcMain) {
     const workflow = getWorkflowById(workflowId)
     if (!workflow) throw new Error('Workflow not found')
 
-    const profile = getProfileById(profileId)
+    // Dùng default profile nếu không chọn
+    const actualProfileId = profileId || DEFAULT_PROFILE_ID
+    const profile = getProfileById(actualProfileId)
     if (!profile) throw new Error('Profile not found')
 
-    // Create log entry
-    const log = createWorkflowLog(workflowId, profileId)
-
-    // Launch browser for the profile
-    await launchBrowser(profile)
-    updateLastUsed(profileId)
-
-    // Get the browser context - we need to get the page
-    // For simplicity, re-launch and get context
-    const browserType = profile.browserType === 'firefox' ? firefox : chromium
-    const installed = detectInstalledBrowsers()
-    const browserInfo = installed.find(b => b.type === profile.browserType)
+    const log = createWorkflowLog(workflowId, actualProfileId)
 
     const ctx: ExecutionContext = {
-      page: null as any, // Will be set after getting context
+      page: null as any,
       context: null as any,
+      profileId: actualProfileId,
       variables: {},
       logs: [],
       aborted: false
@@ -90,26 +86,28 @@ export function registerAutomationHandlers(ipcMain: IpcMain) {
     })
 
     try {
-      // We need to get the active browser context
-      // For now, launch a new dedicated context for automation
-      const executablePath = profile.browserExecutablePath || browserInfo?.executablePath
-      if (!executablePath) throw new Error('Browser not found')
+      // Lấy browser đã mở, kiểm tra còn sống không
+      let active = getActiveBrowserContext(actualProfileId)
 
-      const browser = await browserType.launch({
-        executablePath,
-        headless: false
-      })
+      if (active) {
+        try {
+          active.context.pages()
+        } catch {
+          await closeBrowser(actualProfileId).catch(() => {})
+          active = null
+        }
+      }
 
-      const context = await browser.newContext({
-        userAgent: profile.fingerprint.userAgent,
-        viewport: profile.fingerprint.screenResolution,
-        locale: profile.fingerprint.locale,
-        timezoneId: profile.fingerprint.timezone
-      })
+      if (!active) {
+        await launchBrowser(profile)
+        active = getActiveBrowserContext(actualProfileId)
+      }
+      if (!active) throw new Error('Không thể khởi chạy browser')
+      updateLastUsed(actualProfileId)
 
-      const page = await context.newPage()
-      ctx.page = page
-      ctx.context = context
+      ctx.context = active.context
+      const pages = active.context.pages().filter(p => !p.isClosed())
+      ctx.page = pages[pages.length - 1] || await active.context.newPage()
 
       // Initialize variables from workflow
       for (const v of workflow.variables) {
@@ -119,6 +117,17 @@ export function registerAutomationHandlers(ipcMain: IpcMain) {
       // Send status update to renderer
       const sender = event.sender
       sender.send('workflow:status', { logId: log.id, status: 'running', workflowId, profileId })
+
+      // Node progress callbacks
+      ctx.onNodeStart = (nodeId: string) => {
+        sender.send('workflow:node-progress', { nodeId, status: 'running' })
+      }
+      ctx.onNodeDone = (nodeId: string) => {
+        sender.send('workflow:node-progress', { nodeId, status: 'done' })
+      }
+      ctx.onNodeError = (nodeId: string, error: string) => {
+        sender.send('workflow:node-progress', { nodeId, status: 'error', error })
+      }
 
       // Execute based on mode
       if (workflow.mode === 'visual') {
@@ -131,10 +140,7 @@ export function registerAutomationHandlers(ipcMain: IpcMain) {
       updateWorkflowLog(log.id, 'completed', JSON.stringify(ctx.logs))
       sender.send('workflow:status', { logId: log.id, status: 'completed', workflowId, profileId })
 
-      // Cleanup
-      await context.close()
-      await browser.close()
-
+      // Giữ browser mở — không đóng
       return { logId: log.id, status: 'completed', logs: ctx.logs }
     } catch (err: any) {
       ctx.logs.push({
@@ -193,5 +199,37 @@ export function registerAutomationHandlers(ipcMain: IpcMain) {
 
   ipcMain.handle('recorder:toWorkflow', (_e, actions) => {
     return actionsToWorkflow(actions)
+  })
+
+  // ── Campaign CRUD ─────────────────────────────
+  ipcMain.handle('campaign:getAll', () => getAllCampaigns())
+  ipcMain.handle('campaign:get', (_e, id: string) => getCampaignById(id))
+  ipcMain.handle('campaign:create', (_e, data) => createCampaign(data))
+  ipcMain.handle('campaign:update', (_e, id: string, data) => updateCampaign(id, data))
+  ipcMain.handle('campaign:delete', (_e, id: string) => deleteCampaign(id))
+  ipcMain.handle('campaign:duplicate', (_e, id: string) => duplicateCampaign(id))
+  ipcMain.handle('campaign:getRuns', (_e, campaignId: string) => getCampaignRuns(campaignId))
+
+  // ── Campaign Execution ───────────────────────
+  ipcMain.handle('campaign:run', async (event, campaignId: string) => {
+    const campaign = getCampaignById(campaignId)
+    if (!campaign) throw new Error('Campaign not found')
+    const runId = await executeCampaign(campaign, event.sender)
+    return { runId }
+  })
+
+  ipcMain.handle('campaign:stop', (_e, campaignId: string) => {
+    stopCampaign(campaignId)
+    return { success: true }
+  })
+
+  ipcMain.handle('campaign:pause', (_e, campaignId: string) => {
+    pauseCampaign(campaignId)
+    return { success: true }
+  })
+
+  ipcMain.handle('campaign:resume', (_e, campaignId: string) => {
+    resumeCampaign(campaignId)
+    return { success: true }
   })
 }

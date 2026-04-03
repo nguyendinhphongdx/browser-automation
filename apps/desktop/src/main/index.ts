@@ -19,7 +19,7 @@ function createWindow() {
     minHeight: 700,
     title: 'Browser Automation Platform',
     webPreferences: {
-      preload: path.join(__dirname, '../preload/index.js'),
+      preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
       nodeIntegration: false
     },

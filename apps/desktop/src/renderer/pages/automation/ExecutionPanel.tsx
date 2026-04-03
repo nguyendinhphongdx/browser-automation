@@ -1,5 +1,6 @@
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { CheckCircle, XCircle, AlertTriangle, Info, Clock } from 'lucide-react'
+import { Drawer } from './Drawer'
 import type { LogEntry } from '@shared/types'
 
 const LOG_ICONS: Record<string, any> = {
@@ -33,66 +34,55 @@ function LogLine({ entry }: { entry: LogEntry }) {
   )
 }
 
-export function ExecutionPanel() {
+export function ExecutionPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { executionLogs, logs, isRunning } = useWorkflowStore()
 
   return (
-    <div className="w-80 border-l bg-[#1e1e1e] flex flex-col">
-      {/* Current execution logs */}
-      <div className="flex-1 overflow-auto">
-        <div className="sticky top-0 bg-[#1e1e1e] px-3 py-2 border-b border-gray-700">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-2">
-            {isRunning ? (
-              <>
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                Đang chạy...
-              </>
-            ) : (
-              'Execution Logs'
-            )}
-          </h3>
+    <Drawer open={open} onClose={onClose} title={isRunning ? '⏳ Đang chạy...' : 'Execution Logs'} width={360}>
+      <div className="flex flex-col h-full bg-[#1e1e1e]">
+        {/* Current execution logs */}
+        <div className="flex-1 overflow-auto">
+          {executionLogs.length > 0 ? (
+            <div className="py-1">
+              {executionLogs.map((entry, i) => (
+                <LogLine key={i} entry={entry} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-gray-500 text-xs py-8">
+              Chưa có log. Chạy workflow để xem kết quả.
+            </div>
+          )}
         </div>
 
-        {executionLogs.length > 0 ? (
-          <div className="py-1">
-            {executionLogs.map((entry, i) => (
-              <LogLine key={i} entry={entry} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-gray-500 text-xs py-8">
-            Chưa có log. Chạy workflow để xem kết quả.
+        {/* History */}
+        {logs.length > 0 && (
+          <div className="border-t border-gray-700">
+            <div className="px-3 py-2">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Lịch sử</h3>
+            </div>
+            <div className="max-h-40 overflow-auto">
+              {logs.map(log => (
+                <div key={log.id} className="flex items-center gap-2 px-3 py-1.5 text-xs">
+                  {log.status === 'completed' ? (
+                    <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />
+                  ) : log.status === 'error' ? (
+                    <XCircle className="h-3 w-3 text-red-500 shrink-0" />
+                  ) : (
+                    <Clock className="h-3 w-3 text-blue-500 shrink-0 animate-spin" />
+                  )}
+                  <span className="text-gray-400">
+                    {new Date(log.startedAt).toLocaleString('vi-VN')}
+                  </span>
+                  <span className={`ml-auto ${log.status === 'completed' ? 'text-green-400' : log.status === 'error' ? 'text-red-400' : 'text-blue-400'}`}>
+                    {log.status}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
-
-      {/* History */}
-      {logs.length > 0 && (
-        <div className="border-t border-gray-700">
-          <div className="px-3 py-2">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Lịch sử</h3>
-          </div>
-          <div className="max-h-40 overflow-auto">
-            {logs.map(log => (
-              <div key={log.id} className="flex items-center gap-2 px-3 py-1.5 text-xs">
-                {log.status === 'completed' ? (
-                  <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />
-                ) : log.status === 'error' ? (
-                  <XCircle className="h-3 w-3 text-red-500 shrink-0" />
-                ) : (
-                  <Clock className="h-3 w-3 text-blue-500 shrink-0 animate-spin" />
-                )}
-                <span className="text-gray-400">
-                  {new Date(log.startedAt).toLocaleString('vi-VN')}
-                </span>
-                <span className={`ml-auto ${log.status === 'completed' ? 'text-green-400' : log.status === 'error' ? 'text-red-400' : 'text-blue-400'}`}>
-                  {log.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    </Drawer>
   )
 }

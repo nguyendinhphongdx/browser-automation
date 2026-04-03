@@ -7,6 +7,7 @@ import { Onboarding } from './components/Onboarding'
 const ProfilesPage = lazy(() => import('./pages/profiles/ProfilesPage').then(m => ({ default: m.ProfilesPage })))
 const AutomationPage = lazy(() => import('./pages/automation/AutomationPage').then(m => ({ default: m.AutomationPage })))
 const ResourcesPage = lazy(() => import('./pages/resources/ResourcesPage').then(m => ({ default: m.ResourcesPage })))
+const CampaignPage = lazy(() => import('./pages/campaigns/CampaignPage').then(m => ({ default: m.CampaignPage })))
 const MarketplacePage = lazy(() => import('./pages/marketplace/MarketplacePage').then(m => ({ default: m.MarketplacePage })))
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
 const AuthPage = lazy(() => import('./pages/auth/AuthPage').then(m => ({ default: m.AuthPage })))
@@ -46,6 +47,7 @@ export function App() {
             <Route path="/" element={<Navigate to="/profiles" replace />} />
             <Route path="/profiles" element={<ProfilesPage />} />
             <Route path="/automation" element={<AutomationPage />} />
+            <Route path="/campaigns" element={<CampaignPage />} />
             <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/marketplace" element={<MarketplacePage />} />
             <Route path="/settings" element={<SettingsPage />} />

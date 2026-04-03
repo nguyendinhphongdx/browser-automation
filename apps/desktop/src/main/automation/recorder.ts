@@ -177,6 +177,16 @@ export function stopRecording(): RecordedAction[] {
   return [...state.actions]
 }
 
+// Map action type → node definition
+const ACTION_TO_NODE: Record<string, { nodeType: string; label: string; category: string; icon: string }> = {
+  navigate: { nodeType: 'open-page', label: 'Mở trang', category: 'browser', icon: 'Globe' },
+  click: { nodeType: 'click', label: 'Click', category: 'interaction', icon: 'MousePointerClick' },
+  type: { nodeType: 'type-text', label: 'Nhập text', category: 'interaction', icon: 'Keyboard' },
+  select: { nodeType: 'select-option', label: 'Chọn dropdown', category: 'interaction', icon: 'ListFilter' },
+  scroll: { nodeType: 'scroll', label: 'Cuộn trang', category: 'interaction', icon: 'ArrowDownUp' },
+  wait: { nodeType: 'delay', label: 'Delay', category: 'flow', icon: 'Timer' },
+}
+
 /** Chuyển các action đã ghi thành workflow nodes + edges */
 export function actionsToWorkflow(actions: RecordedAction[]): {
   nodes: WorkflowNode[]
@@ -188,54 +198,47 @@ export function actionsToWorkflow(actions: RecordedAction[]): {
   for (let i = 0; i < actions.length; i++) {
     const action = actions[i]
     const nodeId = uuid()
-    const x = 100
-    const y = 80 + i * 120
+    // Layout ngang: left → right
+    const x = 80 + i * 250
+    const y = 200
 
-    let nodeType: string
+    const def = ACTION_TO_NODE[action.type] || ACTION_TO_NODE['click']
     let config: Record<string, any> = {}
 
     switch (action.type) {
       case 'navigate':
-        nodeType = 'open-page'
         config = { url: action.url || '' }
         break
       case 'click':
-        nodeType = 'click'
         config = { selector: action.selector || '' }
         break
       case 'type':
-        nodeType = 'type'
-        config = { selector: action.selector || '', text: action.value || '' }
+        config = { selector: action.selector || '', text: action.value || '', clearFirst: true, delay: 50 }
         break
       case 'select':
-        nodeType = 'select'
         config = { selector: action.selector || '', value: action.value || '' }
         break
       case 'scroll':
-        nodeType = 'scroll'
         config = { direction: 'down', amount: 300 }
         break
       case 'wait':
-        nodeType = 'wait'
         config = { ms: 1000 }
         break
-      default:
-        nodeType = 'click'
-        config = { selector: action.selector || '' }
     }
 
     nodes.push({
       id: nodeId,
-      type: nodeType,
+      type: 'automationNode',
       position: { x, y },
       data: {
-        label: action.description,
-        category: nodeType === 'open-page' ? 'browser' : nodeType === 'wait' ? 'flow' : 'interaction',
+        label: def.label,
+        category: def.category,
+        icon: def.icon,
+        nodeType: def.nodeType,
         config,
       },
     })
 
-    // Nối node trước với node sau
     if (i > 0) {
       edges.push({
         id: uuid(),

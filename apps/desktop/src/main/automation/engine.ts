@@ -1,23 +1,24 @@
-import type { Page, BrowserContext } from 'playwright-core'
 import type { Workflow, WorkflowNode, WorkflowEdge, LogEntry } from '../../shared/types'
-import { getNodeDefinition } from './node-definitions'
+import { createNode } from './nodes/registry'
+import type { ExecutionContext } from './nodes/base-node'
 
-export interface ExecutionContext {
-  page: Page
-  context: BrowserContext
-  variables: Record<string, any>
-  logs: LogEntry[]
-  aborted: boolean
+export type { ExecutionContext } from './nodes/base-node'
+
+// ── Helpers ────────────────────────────────────
+
+function addLog(ctx: ExecutionContext, level: LogEntry['level'], message: string, nodeId?: string) {
+  ctx.logs.push({ timestamp: new Date().toISOString(), level, nodeId, message })
 }
 
-function addLog(ctx: ExecutionContext, level: LogEntry['level'], message: string, nodeId?: string, data?: any) {
-  ctx.logs.push({
-    timestamp: new Date().toISOString(),
-    level,
-    nodeId,
-    message,
-    data
-  })
+function resolveTemplate(str: string, variables: Record<string, any>): string {
+  if (!str) return str
+  return str.replace(/\{\{(\w+)\}\}/g, (_, key) =>
+    variables[key] !== undefined ? String(variables[key]) : `{{${key}}}`
+  )
+}
+
+function getNodeType(node: WorkflowNode): string {
+  return (node.data as any).nodeType || node.type
 }
 
 function getNextNodes(nodeId: string, edges: WorkflowEdge[], handleFilter?: string): string[] {
@@ -31,143 +32,28 @@ function getStartNodes(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNo
   return nodes.filter(n => !targets.has(n.id))
 }
 
-async function executeNode(node: WorkflowNode, ctx: ExecutionContext): Promise<void> {
-  if (ctx.aborted) return
+// ── Branching node types (handled by orchestrator, not by node class) ──
+const BRANCHING_TYPES = new Set(['if-else', 'loop', 'loop-each', 'element-exists', 'try-catch', 'break-loop'])
 
-  const config = node.data.config || {}
-  addLog(ctx, 'info', `Executing: ${node.data.label}`, node.id)
+// ── Execute a single node via registry ─────────
 
-  switch (node.type) {
-    // ── Browser ─────────────────────────────
-    case 'open-page': {
-      const url = resolveTemplate(config.url, ctx.variables)
-      await ctx.page.goto(url, { waitUntil: 'domcontentloaded' })
-      addLog(ctx, 'info', `Opened: ${url}`, node.id)
-      break
-    }
-    case 'navigate': {
-      if (config.action === 'back') await ctx.page.goBack()
-      else if (config.action === 'forward') await ctx.page.goForward()
-      else await ctx.page.reload()
-      break
-    }
-    case 'close-tab': {
-      await ctx.page.close()
-      const pages = ctx.context.pages()
-      if (pages.length > 0) {
-        // Switch to last page
-        (ctx as any).page = pages[pages.length - 1]
-      }
-      break
-    }
-    case 'screenshot': {
-      const opts: any = {}
-      if (config.path) opts.path = resolveTemplate(config.path, ctx.variables)
-      if (config.fullPage) opts.fullPage = true
-      await ctx.page.screenshot(opts)
-      addLog(ctx, 'info', 'Screenshot taken', node.id)
-      break
-    }
-
-    // ── Interaction ─────────────────────────
-    case 'click': {
-      const selector = resolveTemplate(config.selector, ctx.variables)
-      await ctx.page.click(selector, { button: config.button || 'left' })
-      addLog(ctx, 'info', `Clicked: ${selector}`, node.id)
-      break
-    }
-    case 'type-text': {
-      const selector = resolveTemplate(config.selector, ctx.variables)
-      const text = resolveTemplate(config.text, ctx.variables)
-      if (config.clearFirst) {
-        await ctx.page.fill(selector, '')
-      }
-      await ctx.page.type(selector, text, { delay: config.delay || 50 })
-      addLog(ctx, 'info', `Typed into: ${selector}`, node.id)
-      break
-    }
-    case 'scroll': {
-      if (config.direction === 'to-element' && config.selector) {
-        const selector = resolveTemplate(config.selector, ctx.variables)
-        await ctx.page.locator(selector).scrollIntoViewIfNeeded()
-      } else {
-        const amount = config.direction === 'up' ? -(config.amount || 500) : (config.amount || 500)
-        await ctx.page.mouse.wheel(0, amount)
-      }
-      break
-    }
-    case 'hover': {
-      const selector = resolveTemplate(config.selector, ctx.variables)
-      await ctx.page.hover(selector)
-      break
-    }
-    case 'select-option': {
-      const selector = resolveTemplate(config.selector, ctx.variables)
-      const value = resolveTemplate(config.value, ctx.variables)
-      await ctx.page.selectOption(selector, value)
-      break
-    }
-
-    // ── Data ────────────────────────────────
-    case 'get-text': {
-      const selector = resolveTemplate(config.selector, ctx.variables)
-      const text = await ctx.page.textContent(selector)
-      if (config.variable) ctx.variables[config.variable] = text
-      addLog(ctx, 'info', `Got text: "${text?.substring(0, 100)}"`, node.id)
-      break
-    }
-    case 'get-attribute': {
-      const selector = resolveTemplate(config.selector, ctx.variables)
-      const val = await ctx.page.getAttribute(selector, config.attribute)
-      if (config.variable) ctx.variables[config.variable] = val
-      break
-    }
-    case 'get-url': {
-      const url = ctx.page.url()
-      if (config.variable) ctx.variables[config.variable] = url
-      break
-    }
-
-    // ── Flow ────────────────────────────────
-    case 'delay': {
-      const ms = config.ms || 1000
-      const randomExtra = config.random ? Math.floor(Math.random() * config.random) : 0
-      await new Promise(r => setTimeout(r, ms + randomExtra))
-      break
-    }
-    case 'wait': {
-      const selector = resolveTemplate(config.selector, ctx.variables)
-      await ctx.page.waitForSelector(selector, { timeout: config.timeout || 30000 })
-      break
-    }
-
-    // ── Integration ─────────────────────────
-    case 'http-request': {
-      const url = resolveTemplate(config.url, ctx.variables)
-      const headers = config.headers ? JSON.parse(resolveTemplate(config.headers, ctx.variables)) : {}
-      const body = config.body ? resolveTemplate(config.body, ctx.variables) : undefined
-      const resp = await fetch(url, { method: config.method || 'GET', headers, body })
-      const data = await resp.text()
-      try {
-        ctx.variables[config.variable || 'response'] = JSON.parse(data)
-      } catch {
-        ctx.variables[config.variable || 'response'] = data
-      }
-      addLog(ctx, 'info', `HTTP ${config.method || 'GET'} ${url} → ${resp.status}`, node.id)
-      break
-    }
-
-    default:
-      addLog(ctx, 'warn', `Unknown node type: ${node.type}`, node.id)
-  }
-}
-
-function resolveTemplate(str: string, variables: Record<string, any>): string {
-  if (!str) return str
-  return str.replace(/\{\{(\w+)\}\}/g, (_, key) => {
-    return variables[key] !== undefined ? String(variables[key]) : `{{${key}}}`
+async function runNode(node: WorkflowNode, ctx: ExecutionContext): Promise<void> {
+  const nodeType = getNodeType(node)
+  const instance = createNode(nodeType, ctx, {
+    nodeId: node.id,
+    label: node.data.label,
+    config: node.data.config || {}
   })
+
+  if (!instance) {
+    addLog(ctx, 'warn', `Unknown node type: ${nodeType}`, node.id)
+    return
+  }
+
+  await instance.run()
 }
+
+// ── Visual Workflow Orchestrator ────────────────
 
 export async function executeVisualWorkflow(
   workflow: Workflow,
@@ -183,7 +69,6 @@ export async function executeVisualWorkflow(
 
   addLog(ctx, 'info', `Starting workflow: ${workflow.name}`)
 
-  // BFS execution
   const queue = startNodes.map(n => n.id)
   const visited = new Set<string>()
 
@@ -195,48 +80,32 @@ export async function executeVisualWorkflow(
     const node = nodesMap.get(nodeId)
     if (!node) continue
 
+    const nType = getNodeType(node)
+
     try {
-      // Special handling for if-else and loop
-      if (node.type === 'if-else') {
-        const condition = resolveTemplate(node.data.config.condition, ctx.variables)
-        let result = false
-        try {
-          result = new Function('variables', `return ${condition}`)(ctx.variables)
-        } catch (e) {
-          addLog(ctx, 'error', `Condition error: ${e}`, node.id)
-        }
-
-        const handle = result ? 'true' : 'false'
-        addLog(ctx, 'info', `If condition → ${handle}`, node.id)
-        const nextIds = getNextNodes(nodeId, workflow.edges, handle)
-        // Also get default (non-handle) edges
-        const defaultNext = getNextNodes(nodeId, workflow.edges).filter(id => !nextIds.includes(id))
-        // Only follow the matching branch
-        nextIds.forEach(id => queue.push(id))
-      } else if (node.type === 'loop') {
-        const count = node.data.config.count || 1
-        const varName = node.data.config.variable || 'i'
-        const bodyNodes = getNextNodes(nodeId, workflow.edges, 'body')
-        const doneNodes = getNextNodes(nodeId, workflow.edges, 'done')
-
-        for (let i = 0; i < count && !ctx.aborted; i++) {
-          ctx.variables[varName] = i
-          addLog(ctx, 'info', `Loop iteration ${i + 1}/${count}`, node.id)
-          // Execute body branch for each iteration
-          for (const bodyId of bodyNodes) {
-            const bodyNode = nodesMap.get(bodyId)
-            if (bodyNode) await executeNode(bodyNode, ctx)
-          }
-        }
-
-        doneNodes.forEach(id => queue.push(id))
+      if (nType === 'if-else') {
+        await handleIfElse(node, workflow.edges, ctx, queue)
+      } else if (nType === 'loop') {
+        await handleLoop(node, workflow.edges, ctx, nodesMap, queue)
+      } else if (nType === 'loop-each') {
+        await handleLoopEach(node, workflow.edges, ctx, nodesMap, queue)
+      } else if (nType === 'element-exists') {
+        await handleElementExists(node, workflow.edges, ctx, queue)
+      } else if (nType === 'try-catch') {
+        await handleTryCatch(node, workflow.edges, ctx, nodesMap, queue)
+      } else if (nType === 'break-loop') {
+        addLog(ctx, 'info', 'Break loop', node.id)
+        ctx.onNodeStart?.(node.id)
+        ctx.onNodeDone?.(node.id)
+        // Không push next — dừng lại
       } else {
-        await executeNode(node, ctx)
-        const nextIds = getNextNodes(nodeId, workflow.edges)
-        nextIds.forEach(id => queue.push(id))
+        // Standard node — delegate to registry
+        await runNode(node, ctx)
+        getNextNodes(nodeId, workflow.edges).forEach(id => queue.push(id))
       }
     } catch (err: any) {
       addLog(ctx, 'error', `Error at "${node.data.label}": ${err.message}`, node.id)
+      ctx.onNodeError?.(node.id, err.message)
       throw err
     }
   }
@@ -244,13 +113,122 @@ export async function executeVisualWorkflow(
   addLog(ctx, 'info', 'Workflow completed')
 }
 
+// ── Branching Handlers ─────────────────────────
+
+async function handleIfElse(
+  node: WorkflowNode, edges: WorkflowEdge[], ctx: ExecutionContext, queue: string[]
+) {
+  ctx.onNodeStart?.(node.id)
+  const condition = resolveTemplate(node.data.config.condition, ctx.variables)
+  let result = false
+  try {
+    result = new Function('variables', `return ${condition}`)(ctx.variables)
+  } catch (e) {
+    addLog(ctx, 'error', `Condition error: ${e}`, node.id)
+  }
+
+  const handle = result ? 'true' : 'false'
+  addLog(ctx, 'info', `If condition → ${handle}`, node.id)
+  ctx.onNodeDone?.(node.id)
+  getNextNodes(node.id, edges, handle).forEach(id => queue.push(id))
+}
+
+async function handleLoop(
+  node: WorkflowNode, edges: WorkflowEdge[], ctx: ExecutionContext,
+  nodesMap: Map<string, WorkflowNode>, queue: string[]
+) {
+  ctx.onNodeStart?.(node.id)
+  const count = node.data.config.count || 1
+  const varName = node.data.config.variable || 'i'
+  const bodyNodes = getNextNodes(node.id, edges, 'body')
+  const doneNodes = getNextNodes(node.id, edges, 'done')
+
+  for (let i = 0; i < count && !ctx.aborted; i++) {
+    ctx.variables[varName] = i
+    addLog(ctx, 'info', `Loop iteration ${i + 1}/${count}`, node.id)
+    for (const bodyId of bodyNodes) {
+      const bodyNode = nodesMap.get(bodyId)
+      if (bodyNode) await runNode(bodyNode, ctx)
+    }
+  }
+
+  ctx.onNodeDone?.(node.id)
+  doneNodes.forEach(id => queue.push(id))
+}
+
+async function handleLoopEach(
+  node: WorkflowNode, edges: WorkflowEdge[], ctx: ExecutionContext,
+  nodesMap: Map<string, WorkflowNode>, queue: string[]
+) {
+  ctx.onNodeStart?.(node.id)
+  const selector = resolveTemplate(node.data.config.selector, ctx.variables)
+  const varName = node.data.config.variable || 'element'
+  const indexVar = node.data.config.indexVar || 'index'
+  const bodyNodes = getNextNodes(node.id, edges, 'body')
+  const doneNodes = getNextNodes(node.id, edges, 'done')
+  const count = await ctx.page.locator(selector).count()
+
+  for (let i = 0; i < count && !ctx.aborted; i++) {
+    ctx.variables[indexVar] = i
+    ctx.variables[varName] = await ctx.page.locator(selector).nth(i).textContent()
+    addLog(ctx, 'info', `Loop-each ${i + 1}/${count}`, node.id)
+    for (const bodyId of bodyNodes) {
+      const bodyNode = nodesMap.get(bodyId)
+      if (bodyNode) await runNode(bodyNode, ctx)
+    }
+  }
+
+  ctx.onNodeDone?.(node.id)
+  doneNodes.forEach(id => queue.push(id))
+}
+
+async function handleElementExists(
+  node: WorkflowNode, edges: WorkflowEdge[], ctx: ExecutionContext, queue: string[]
+) {
+  ctx.onNodeStart?.(node.id)
+  const selector = resolveTemplate(node.data.config.selector, ctx.variables)
+  let exists = false
+  try {
+    await ctx.page.waitForSelector(selector, { timeout: node.data.config.timeout || 3000 })
+    exists = true
+  } catch { /* not found */ }
+
+  const handle = exists ? 'true' : 'false'
+  addLog(ctx, 'info', `Element "${selector}" ${exists ? 'exists' : 'not found'}`, node.id)
+  ctx.onNodeDone?.(node.id)
+  getNextNodes(node.id, edges, handle).forEach(id => queue.push(id))
+}
+
+async function handleTryCatch(
+  node: WorkflowNode, edges: WorkflowEdge[], ctx: ExecutionContext,
+  nodesMap: Map<string, WorkflowNode>, queue: string[]
+) {
+  ctx.onNodeStart?.(node.id)
+  const tryNodes = getNextNodes(node.id, edges, 'try')
+  const catchNodes = getNextNodes(node.id, edges, 'catch')
+
+  try {
+    for (const tryId of tryNodes) {
+      const tryNode = nodesMap.get(tryId)
+      if (tryNode) await runNode(tryNode, ctx)
+    }
+    ctx.onNodeDone?.(node.id)
+  } catch (e: any) {
+    ctx.variables[node.data.config.errorVar || 'error'] = e.message
+    addLog(ctx, 'warn', `Try failed: ${e.message}`, node.id)
+    ctx.onNodeDone?.(node.id)
+    catchNodes.forEach(id => queue.push(id))
+  }
+}
+
+// ── Code Workflow ──────────────────────────────
+
 export async function executeCodeWorkflow(
   code: string,
   ctx: ExecutionContext
 ): Promise<void> {
   addLog(ctx, 'info', 'Executing code workflow')
 
-  // Create a sandboxed API for the code
   const api = {
     page: ctx.page,
     context: ctx.context,

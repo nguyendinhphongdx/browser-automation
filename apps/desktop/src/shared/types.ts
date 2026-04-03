@@ -253,3 +253,75 @@ export interface LogEntry {
   message: string
   data?: any
 }
+
+// ── Campaign ──────────────────────────────────
+
+export type CampaignStatus = 'draft' | 'running' | 'paused' | 'completed' | 'error'
+export type WorkflowOrderMode = 'sequential' | 'random' | 'shuffle'
+export type ProfileOrderMode = 'sequential' | 'random'
+
+export interface CampaignExecution {
+  mode: 'parallel' | 'sequential'
+  maxConcurrent: number
+  delayBetweenProfiles: { min: number; max: number }
+  workflowOrder: WorkflowOrderMode
+  profileOrder: ProfileOrderMode
+  repeatCount: number
+  repeatDelay: { min: number; max: number }
+  stopOnError: boolean
+  retryOnError: number
+  warmUp: boolean
+  warmUpStep: number
+  warmUpDelay: number
+}
+
+export interface Campaign {
+  id: string
+  name: string
+  description: string
+  profileIds: string[]
+  workflowIds: string[]
+  execution: CampaignExecution
+  status: CampaignStatus
+  lastRunAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateCampaignInput {
+  name: string
+  description?: string
+  profileIds: string[]
+  workflowIds: string[]
+  execution: CampaignExecution
+}
+
+export interface UpdateCampaignInput {
+  name?: string
+  description?: string
+  profileIds?: string[]
+  workflowIds?: string[]
+  execution?: CampaignExecution
+  status?: CampaignStatus
+}
+
+export interface CampaignRun {
+  id: string
+  campaignId: string
+  status: CampaignStatus
+  profileResults: CampaignProfileResult[]
+  startedAt: string
+  finishedAt?: string
+}
+
+export interface CampaignProfileResult {
+  profileId: string
+  profileName: string
+  workflowId: string
+  workflowName: string
+  status: 'pending' | 'running' | 'completed' | 'error' | 'skipped'
+  error?: string
+  startedAt?: string
+  finishedAt?: string
+  logs: LogEntry[]
+}

@@ -99,11 +99,7 @@ export function AutomationPage() {
   }
 
   const handleRun = async () => {
-    if (!selectedProfileId) {
-      alert('Vui lòng chọn profile trước khi chạy')
-      return
-    }
-    await runWorkflow(selectedProfileId)
+    await runWorkflow(selectedProfileId || '')
   }
 
   const handleDelete = async () => {
@@ -114,7 +110,7 @@ export function AutomationPage() {
   }
 
   return (
-    <div className="flex h-full -m-6">
+    <div className="flex h-full">
       {/* Sidebar: Workflow List */}
       <div className="w-64 border-r bg-card flex flex-col">
         <div className="p-3 border-b">
@@ -169,7 +165,7 @@ export function AutomationPage() {
               {/* Profile selector */}
               <select value={selectedProfileId} onChange={e => setSelectedProfileId(e.target.value)}
                 className="px-2 py-1.5 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring min-w-[150px]">
-                <option value="">Chọn profile...</option>
+                <option value="">Default browser</option>
                 {profiles.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
@@ -206,17 +202,15 @@ export function AutomationPage() {
           </div>
 
           {/* Editor Area */}
-          <div className="flex-1 flex overflow-hidden">
-            <div className="flex-1">
-              {activeWorkflow.mode === 'visual' ? (
-                <VisualEditor />
-              ) : (
-                <CodeEditor />
-              )}
-            </div>
+          <div className="flex-1 relative overflow-hidden">
+            {activeWorkflow.mode === 'visual' ? (
+              <VisualEditor />
+            ) : (
+              <CodeEditor />
+            )}
 
-            {/* Logs panel */}
-            {showLogs && <ExecutionPanel />}
+            {/* Logs drawer */}
+            <ExecutionPanel open={showLogs} onClose={() => setShowLogs(false)} />
           </div>
         </div>
       ) : (

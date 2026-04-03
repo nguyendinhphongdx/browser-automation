@@ -4,6 +4,9 @@ import type {
   WorkflowNode, WorkflowEdge, WorkflowLog, LogEntry
 } from '@shared/types'
 
+// Node execution status: 'running' | 'done' | 'error'
+type NodeStatus = 'running' | 'done' | 'error'
+
 interface WorkflowStore {
   workflows: Workflow[]
   activeWorkflow: Workflow | null
@@ -15,6 +18,7 @@ interface WorkflowStore {
   runningLogId: string | null
   loading: boolean
   selectedNodeId: string | null
+  nodeProgress: Record<string, NodeStatus>
 
   // Actions
   fetchWorkflows: () => Promise<void>
@@ -49,6 +53,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   runningLogId: null,
   loading: false,
   selectedNodeId: null,
+  nodeProgress: {},
 
   fetchWorkflows: async () => {
     set({ loading: true })
@@ -137,7 +142,15 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       code: activeWorkflow.code
     })
 
-    set({ isRunning: true, executionLogs: [] })
+    set({ isRunning: true, executionLogs: [], nodeProgress: {} })
+
+    // Listen for node progress events
+    const onNodeProgress = (data: { nodeId: string; status: NodeStatus }) => {
+      const current = get().nodeProgress
+      set({ nodeProgress: { ...current, [data.nodeId]: data.status } })
+    }
+    window.api.on('workflow:node-progress', onNodeProgress)
+
     try {
       const result = await window.api.runWorkflow(activeWorkflow.id, profileId)
       set({
@@ -146,7 +159,10 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       })
       await get().fetchLogs(activeWorkflow.id)
     } finally {
+      window.api.off('workflow:node-progress', onNodeProgress)
       set({ isRunning: false, runningLogId: null })
+      // Keep nodeProgress visible for 2s after completion so user sees final state
+      setTimeout(() => set({ nodeProgress: {} }), 2000)
     }
   },
 
