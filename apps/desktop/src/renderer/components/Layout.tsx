@@ -14,6 +14,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
 import { useAuthStore } from '@/stores/auth-store'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 const navItems = [
   { to: '/profiles', labelKey: 'nav.profiles', icon: Users },
@@ -26,6 +27,8 @@ const navItems = [
 export function Layout({ children }: { children: React.ReactNode }) {
   const { t } = useI18n()
   const { user, isLoggedIn, checkAuth, logout, syncProfiles } = useAuthStore()
+
+  useKeyboardShortcuts()
 
   useEffect(() => {
     checkAuth()
