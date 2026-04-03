@@ -1,0 +1,10 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npx prisma generate && next build",
+  "installCommand": "pnpm install",
+  "env": {
+    "DATABASE_URL": "@database-url",
+    "AUTH_SECRET": "@auth-secret",
+    "JWT_SECRET": "@jwt-secret"
+  }
+}
