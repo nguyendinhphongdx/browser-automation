@@ -359,7 +359,7 @@ browser-automation/
 - [x] Landing page: hero (gradient glow), features, how it works, quick start, pricing, download, footer
 - [x] Xác thực: đăng ký, đăng nhập, OAuth Google + GitHub (NextAuth v5 / Auth.js)
 - [x] Admin dashboard: layout sidebar + 4 trang (dashboard, users, scripts, revenue)
-- [ ] Deploy lên Vercel / VPS
+- [x] Deploy lên Vercel / VPS
 
 ### Phase 2 — Desktop App & Quản lý Profile (4-6 tuần)
 
@@ -375,7 +375,7 @@ browser-automation/
 - [x] Hỗ trợ đường dẫn trình duyệt tuỳ chỉnh
 - [x] Giao diện danh sách profile (dạng bảng + dạng lưới)
 - [x] Form chi tiết / chỉnh sửa profile (CreateProfileDialog)
-- [ ] Kết nối desktop app với server (auth, sync)
+- [x] Kết nối desktop app với server (auth, sync)
 
 ### Phase 3 — Quản lý tài nguyên (2-3 tuần)
 
@@ -399,7 +399,7 @@ browser-automation/
 - [x] Các node cơ bản: Trình duyệt, Tương tác, Dữ liệu, Luồng điều khiển
 - [x] Panel thuộc tính node (cấu hình từng node)
 - [x] Chế độ debug: chạy từng bước, xem log
-- [ ] Chế độ ghi lại: ghi thao tác → workflow
+- [x] Chế độ ghi lại: ghi thao tác → workflow
 - [x] Lưu / tải workflow
 - [x] Chạy workflow trên nhiều profile đồng thời
 
@@ -407,26 +407,26 @@ browser-automation/
 
 **Mục tiêu:** Hệ thống mua bán và chia sẻ kịch bản.
 
-- [ ] Marketplace API: upload, tìm kiếm, tải về, đánh giá
+- [x] Marketplace API: upload, tìm kiếm, tải về, đánh giá
 - [x] Giao diện Marketplace trong desktop app
 - [x] Quản lý phiên bản kịch bản
-- [ ] Hệ thống đánh giá & nhận xét
-- [ ] Tích hợp Stripe: thanh toán, chia doanh thu
-- [ ] Admin dashboard: duyệt kịch bản, thống kê doanh thu
-- [ ] Dashboard nhà sáng tạo: thống kê doanh thu cá nhân
+- [x] Hệ thống đánh giá & nhận xét
+- [x] Tích hợp Stripe: thanh toán, chia doanh thu (placeholder, cần Stripe key)
+- [x] Admin dashboard: duyệt kịch bản, thống kê doanh thu
+- [x] Dashboard nhà sáng tạo: thống kê doanh thu cá nhân
 
 ### Phase 6 — Hoàn thiện & Ra mắt (2-4 tuần)
 
 **Mục tiêu:** Hoàn thiện, kiểm thử, và phát hành bản beta.
 
-- [ ] Tự động cập nhật (electron-updater)
-- [ ] Luồng hướng dẫn cho người dùng mới
+- [x] Tự động cập nhật (electron-updater)
+- [x] Luồng hướng dẫn cho người dùng mới
 - [x] Phím tắt
 - [x] Giao diện sáng / tối (Dark mode / Light mode)
 - [x] Đa ngôn ngữ (Tiếng Việt, English)
-- [ ] Tối ưu hiệu năng
+- [x] Tối ưu hiệu năng (lazy loading, virtualized list)
 - [x] Kiểm tra bảo mật
-- [ ] Tài liệu hướng dẫn sử dụng
+- [x] Tài liệu hướng dẫn sử dụng
 - [ ] Phát hành bản beta
 
 ---
