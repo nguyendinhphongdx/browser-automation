@@ -427,7 +427,7 @@ browser-automation/
 - [x] Tối ưu hiệu năng (lazy loading, virtualized list)
 - [x] Kiểm tra bảo mật
 - [x] Tài liệu hướng dẫn sử dụng
-- [ ] Phát hành bản beta
+- [x] Phát hành bản beta (GitHub Actions CI/CD + electron-builder)
 
 ---
 
