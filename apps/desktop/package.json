@@ -29,6 +29,8 @@
     "@browser-automation/fingerprint": "workspace:*",
     "@browser-automation/shared-types": "workspace:*",
     "better-sqlite3": "^11.7.0",
+    "electron-log": "^5.2.4",
+    "electron-updater": "^6.3.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.469.0",

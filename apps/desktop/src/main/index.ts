@@ -7,6 +7,7 @@ import { registerResourceHandlers } from './ipc/resource-handlers'
 import { registerAutomationHandlers } from './ipc/automation-handlers'
 import { registerSettingsHandlers } from './ipc/settings-handlers'
 import { closeAllBrowsers } from './browser/launcher'
+import { initAutoUpdater } from './services/auto-updater'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -52,6 +53,11 @@ app.whenReady().then(() => {
   registerSettingsHandlers(ipcMain)
 
   createWindow()
+
+  // Auto-updater (chỉ trong production)
+  if (mainWindow && process.env.NODE_ENV !== 'development') {
+    initAutoUpdater(mainWindow)
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
