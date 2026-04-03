@@ -11,13 +11,23 @@ interface DrawerProps {
 
 export function Drawer({ open, onClose, title, children, width = 360 }: DrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null)
-  // Giữ mounted thêm 300ms sau khi đóng để animation kết thúc
   const [mounted, setMounted] = useState(false)
+  const [visible, setVisible] = useState(false)
 
   useEffect(() => {
     if (open) {
+      // Step 1: mount (ở vị trí translate-x-full)
       setMounted(true)
+      // Step 2: next frame → slide in
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setVisible(true)
+        })
+      })
     } else {
+      // Step 1: slide out
+      setVisible(false)
+      // Step 2: unmount sau animation
       const timer = setTimeout(() => setMounted(false), 300)
       return () => clearTimeout(timer)
     }
@@ -33,23 +43,23 @@ export function Drawer({ open, onClose, title, children, width = 360 }: DrawerPr
     return () => document.removeEventListener('keydown', handler)
   }, [open, onClose])
 
-  if (!mounted && !open) return null
+  if (!mounted) return null
 
   return (
     <>
       {/* Backdrop */}
-      {open && (
-        <div
-          className="absolute inset-0 z-40 bg-black/5"
-          onClick={onClose}
-        />
-      )}
+      <div
+        className={`absolute inset-0 z-40 transition-opacity duration-300 ${
+          visible ? 'bg-black/5 opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onClose}
+      />
 
       {/* Drawer */}
       <div
         ref={drawerRef}
         className={`absolute top-0 right-0 z-50 h-full bg-card border-l shadow-2xl flex flex-col transition-transform duration-300 ease-out ${
-          open ? 'translate-x-0' : 'translate-x-full'
+          visible ? 'translate-x-0' : 'translate-x-full'
         }`}
         style={{ width }}
       >
