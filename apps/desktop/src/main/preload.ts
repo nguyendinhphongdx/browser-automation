@@ -57,6 +57,12 @@ const api = {
   getNodeDefinitions: () => ipcRenderer.invoke('automation:getNodeDefinitions'),
   getNodeCategories: () => ipcRenderer.invoke('automation:getNodeCategories'),
 
+  // Recorder
+  startRecording: (profileId: string) => ipcRenderer.invoke('recorder:start', profileId),
+  stopRecording: () => ipcRenderer.invoke('recorder:stop'),
+  getRecorderStatus: () => ipcRenderer.invoke('recorder:status'),
+  actionsToWorkflow: (actions: any[]) => ipcRenderer.invoke('recorder:toWorkflow', actions),
+
   // Settings
   getSetting: (key: string) => ipcRenderer.invoke('settings:get', key),
   setSetting: (key: string, value: string) => ipcRenderer.invoke('settings:set', key, value),

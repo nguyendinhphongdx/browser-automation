@@ -7,7 +7,8 @@ import {
   exportWorkflow, importWorkflow, duplicateWorkflow
 } from '../services/workflow-service'
 import { getProfileById, updateLastUsed } from '../services/profile-service'
-import { launchBrowser, closeBrowser } from '../browser/launcher'
+import { launchBrowser, closeBrowser, getActiveBrowserContext } from '../browser/launcher'
+import { startRecording, stopRecording, isRecording, getRecordedActions, actionsToWorkflow } from '../automation/recorder'
 import { executeVisualWorkflow, executeCodeWorkflow, type ExecutionContext } from '../automation/engine'
 import { NODE_DEFINITIONS, NODE_CATEGORIES } from '../automation/node-definitions'
 import { chromium, firefox } from 'playwright-core'
@@ -161,5 +162,36 @@ export function registerAutomationHandlers(ipcMain: IpcMain) {
       return { success: true }
     }
     return { success: false }
+  })
+
+  // ── Recorder ────────────────────────────────────
+  ipcMain.handle('recorder:start', async (_e, profileId: string) => {
+    if (isRecording()) {
+      throw new Error('Đang ghi lại rồi. Dừng trước khi bắt đầu lại.')
+    }
+
+    const active = getActiveBrowserContext(profileId)
+    if (!active) {
+      throw new Error('Trình duyệt chưa được khởi chạy. Vui lòng mở browser trước.')
+    }
+
+    const pages = active.context.pages()
+    const page = pages[pages.length - 1] || await active.context.newPage()
+
+    await startRecording(page)
+    return { success: true }
+  })
+
+  ipcMain.handle('recorder:stop', () => {
+    const actions = stopRecording()
+    return { actions }
+  })
+
+  ipcMain.handle('recorder:status', () => {
+    return { recording: isRecording(), actions: getRecordedActions() }
+  })
+
+  ipcMain.handle('recorder:toWorkflow', (_e, actions) => {
+    return actionsToWorkflow(actions)
   })
 }

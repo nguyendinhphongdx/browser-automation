@@ -155,6 +155,10 @@ export function isBrowserRunning(profileId: string): boolean {
   return activeBrowsers.has(profileId)
 }
 
+export function getActiveBrowserContext(profileId: string) {
+  return activeBrowsers.get(profileId) || null
+}
+
 export async function closeAllBrowsers(): Promise<void> {
   const ids = Array.from(activeBrowsers.keys())
   for (const id of ids) {

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Plus, Play, Square, Save, Trash2, Code, GitBranch, FileText } from 'lucide-react'
+import { Plus, Play, Square, Save, Trash2, Code, GitBranch, FileText, Circle } from 'lucide-react'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { useProfileStore } from '@/stores/profile-store'
 import { cn } from '@/lib/utils'
 import { VisualEditor } from './VisualEditor'
 import { CodeEditor } from './CodeEditor'
 import { ExecutionPanel } from './ExecutionPanel'
+import { RecorderPanel } from './RecorderPanel'
 import type { WorkflowMode } from '@shared/types'
 
 function CreateWorkflowDialog({ onClose }: { onClose: () => void }) {
@@ -145,6 +146,11 @@ export function AutomationPage() {
               Chưa có workflow
             </div>
           )}
+        </div>
+
+        {/* Recorder */}
+        <div className="p-2 border-t">
+          <RecorderPanel />
         </div>
       </div>
 
