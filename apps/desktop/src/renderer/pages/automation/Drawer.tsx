@@ -35,12 +35,10 @@ export function Drawer({ open, onClose, title, children, width = 360 }: DrawerPr
       {/* Drawer */}
       <div
         ref={drawerRef}
-        className="absolute top-0 right-0 z-50 h-full bg-card border-l shadow-2xl flex flex-col transition-transform duration-300 ease-out"
-        style={{
-          width,
-          transform: open ? 'translateX(0)' : `translateX(${width}px)`,
-          visibility: open ? 'visible' : 'hidden',
-        }}
+        className={`absolute top-0 right-0 z-50 h-full bg-card border-l shadow-2xl flex flex-col transition-all duration-300 ease-out ${
+          open ? 'translate-x-0 opacity-100 visible' : 'translate-x-full opacity-0 invisible pointer-events-none'
+        }`}
+        style={{ width }}
       >
         {/* Header */}
         {title && (

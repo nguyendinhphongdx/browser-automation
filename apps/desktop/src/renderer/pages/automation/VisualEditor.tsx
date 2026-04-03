@@ -76,6 +76,7 @@ function AutomationNode({ id, data, selected }: { id: string; data: any; selecte
         style={{
           borderColor,
           minWidth: 140,
+          maxWidth: 220,
         }}
       >
         {/* Icon — thay bằng status icon khi đang chạy */}
@@ -96,7 +97,7 @@ function AutomationNode({ id, data, selected }: { id: string; data: any; selecte
 
         {/* Text */}
         <div className="flex flex-col min-w-0">
-          <span className="text-[13px] font-semibold text-foreground leading-tight whitespace-nowrap">
+          <span className="text-[13px] font-semibold text-foreground leading-tight truncate">
             {data.label}
           </span>
           {subtitle && (
@@ -495,7 +496,7 @@ function VisualEditorInner() {
   return (
     <div className="relative flex h-full overflow-hidden">
       {/* Flow Canvas */}
-      <div className="flex-1 h-full" ref={reactFlowWrapper}>
+      <div className="flex-1 h-full overflow-hidden relative" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
