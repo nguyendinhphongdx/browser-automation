@@ -11,12 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - uses: actions/setup-node@v4
         with:
@@ -24,6 +20,9 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      - name: Rebuild native modules
+        run: npx @electron/rebuild -f -w better-sqlite3
 
       - name: Type check (desktop)
         run: pnpm --filter @browser-automation/desktop exec tsc --noEmit

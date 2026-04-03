@@ -37,7 +37,7 @@ browser-automation/
 │   │   │   ├── renderer/     # React frontend (pages, stores, components)
 │   │   │   └── shared/       # Types dùng chung
 │   │   └── package.json
-│   └── server/               # Next.js server (submodule)
+│   └── server/               # Next.js server
 │       ├── src/app/          # Pages + API routes
 │       ├── prisma/           # Database schema
 │       └── package.json
@@ -52,26 +52,32 @@ browser-automation/
 
 ---
 
+## Quick Start
+
+```bash
+git clone https://github.com/nguyendinhphongdx/browser-automation.git
+cd browser-automation
+pnpm install                                    # 1. Cài dependencies
+npx @electron/rebuild -f -w better-sqlite3      # 2. Build native SQLite module
+pnpm desktop:dev                                # 3. Chạy desktop app
+```
+
+---
+
 ## Hướng dẫn Development
 
 ### Yêu cầu
 
 - **Node.js** >= 22
 - **pnpm** >= 10
-- **Git** (với submodule support)
+- **Git**
 - **PostgreSQL** (cho server, có thể dùng Docker)
 
 ### 1. Clone repo
 
 ```bash
-git clone --recurse-submodules https://github.com/<owner>/browser-automation.git
+git clone https://github.com/nguyendinhphongdx/browser-automation.git
 cd browser-automation
-```
-
-Nếu đã clone rồi nhưng thiếu submodule:
-
-```bash
-git submodule update --init --recursive
 ```
 
 ### 2. Cài dependencies
@@ -80,7 +86,21 @@ git submodule update --init --recursive
 pnpm install
 ```
 
-### 3. Chạy Desktop App
+### 3. Build native modules (bắt buộc lần đầu)
+
+`better-sqlite3` là native module cần được build cho Electron. Chạy:
+
+```bash
+npx @electron/rebuild -f -w better-sqlite3
+```
+
+> **Windows:** Nếu lỗi liên quan đến Python/node-gyp, cài [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (chọn "Desktop development with C++") hoặc chạy `npm install -g windows-build-tools` trong PowerShell (Admin).
+>
+> **macOS:** Cần Xcode Command Line Tools: `xcode-select --install`
+>
+> **Linux:** Cần `build-essential` và `python3`: `sudo apt install build-essential python3`
+
+### 4. Chạy Desktop App
 
 ```bash
 pnpm desktop:dev
@@ -88,7 +108,9 @@ pnpm desktop:dev
 
 App Electron sẽ mở với hot reload. Dữ liệu lưu trong SQLite tại `userData/browser-automation.db`.
 
-### 4. Chạy Server
+> **Lưu ý:** Không dùng `pnpm run dev` ở root (sẽ chạy cả server). Dùng `pnpm desktop:dev` để chỉ chạy desktop app.
+
+### 5. Chạy Server
 
 ```bash
 cd apps/server
@@ -111,7 +133,7 @@ Server chạy tại `http://localhost:3000` với:
 - Creator dashboard: `/creator`
 - API: `/api/*`
 
-### 5. Biến môi trường Server (.env)
+### 6. Biến môi trường Server (.env)
 
 ```env
 # Database
@@ -133,7 +155,7 @@ STRIPE_WEBHOOK_SECRET=""
 NEXT_PUBLIC_URL="http://localhost:3000"
 ```
 
-### 6. Build Desktop App
+### 7. Build Desktop App
 
 ```bash
 # Build code
