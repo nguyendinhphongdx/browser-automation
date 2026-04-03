@@ -381,14 +381,10 @@ export function AIChatPanel({ open, onClose }: Props) {
   const hasActions = (content: string) => /```action/.test(content)
 
   return (
-    <Drawer open={open} onClose={onClose} width={420} title="">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 h-12 border-b shrink-0">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-purple-500" />
-          <span className="text-sm font-semibold">AI Assistant</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 font-medium">Beta</span>
-        </div>
+    <Drawer open={open} onClose={onClose} width={400} title="AI Assistant">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b">
+        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 font-medium">Beta</span>
         <button
           onClick={clearChat}
           className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"
@@ -399,7 +395,7 @@ export function AIChatPanel({ open, onClose }: Props) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-auto p-3 space-y-3">
+      <div className="flex-1 overflow-auto p-3 space-y-3" style={{ maxHeight: 'calc(100vh - 200px)' }}>
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mb-4">
