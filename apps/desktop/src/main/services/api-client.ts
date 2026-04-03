@@ -92,7 +92,7 @@ export async function login(email: string, password: string): Promise<ApiRespons
 }
 
 export async function register(name: string, email: string, password: string): Promise<ApiResponse> {
-  const res = await apiRequest('POST', '/api/auth/register', { name, email, password }, { noAuth: true })
+  const res = await apiRequest('POST', '/api/auth/signup', { name, email, password }, { noAuth: true })
   if (res.ok && res.data?.token) {
     setSetting('auth.token', res.data.token)
     if (res.data.user?.id) setSetting('auth.userId', res.data.user.id)

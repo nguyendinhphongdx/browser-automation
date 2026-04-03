@@ -5,6 +5,7 @@ import { AutomationPage } from './pages/automation/AutomationPage'
 import { ResourcesPage } from './pages/resources/ResourcesPage'
 import { MarketplacePage } from './pages/marketplace/MarketplacePage'
 import { SettingsPage } from './pages/settings/SettingsPage'
+import { AuthPage } from './pages/auth/AuthPage'
 
 export function App() {
   return (
@@ -17,6 +18,7 @@ export function App() {
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/marketplace" element={<MarketplacePage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/account" element={<AuthPage />} />
         </Routes>
       </Layout>
     </HashRouter>
