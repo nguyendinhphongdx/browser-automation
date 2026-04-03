@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Sparkles, Send, Loader2, Bot, User, Copy, Check, RotateCcw } from 'lucide-react'
+import { Sparkles, Send, Loader2, Bot, User, Copy, Check, RotateCcw, X } from 'lucide-react'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { Drawer } from './Drawer'
 import { cn } from '@/lib/utils'
@@ -315,21 +315,33 @@ export function AIChatPanel({ open, onClose }: Props) {
   const hasActions = (content: string) => /```action/.test(content)
 
   return (
-    <Drawer open={open} onClose={onClose} width={400} title="AI Assistant">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b">
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 font-medium">Beta</span>
-        <button
-          onClick={clearChat}
-          className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"
-          title="Xoá lịch sử chat"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-        </button>
+    <Drawer open={open} onClose={onClose} width={400}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 h-12 border-b shrink-0">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-purple-500" />
+          <h3 className="text-sm font-semibold">AI Assistant</h3>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 font-medium">Beta</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={clearChat}
+            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"
+            title="Xoá lịch sử chat"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-auto p-3 space-y-3" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+      {/* Messages — flex-1 để chiếm hết space giữa header và input */}
+      <div className="flex-1 overflow-auto p-3 space-y-3">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center mb-4">
@@ -397,8 +409,8 @@ export function AIChatPanel({ open, onClose }: Props) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-3 border-t">
+      {/* Input — shrink-0 để luôn ở footer */}
+      <div className="p-3 border-t shrink-0">
         <div className="flex items-end gap-2 p-2 border rounded-xl bg-background focus-within:ring-2 focus-within:ring-ring">
           <textarea
             ref={inputRef}
