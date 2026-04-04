@@ -153,9 +153,17 @@ app.whenReady().then(() => {
 })
 
 // Clean up all browsers before quitting
-app.on('before-quit', async () => {
-  await closeAllBrowsers()
-  closeDatabase()
+let isQuitting = false
+app.on('before-quit', (e) => {
+  if (isQuitting) return
+  isQuitting = true
+  e.preventDefault()
+
+  Promise.resolve()
+    .then(() => closeAllBrowsers())
+    .then(() => closeDatabase())
+    .catch((err) => console.error('Cleanup error:', err))
+    .finally(() => app.quit())
 })
 
 app.on('window-all-closed', () => {

@@ -12,7 +12,7 @@ interface AuthStore {
   isLoggedIn: boolean
   loading: boolean
   serverUrl: string
-  connected: boolean
+  connected: boolean | undefined
 
   // Actions
   setServerUrl: (url: string) => Promise<void>
@@ -23,7 +23,7 @@ interface AuthStore {
   logout: () => void
   checkAuth: () => Promise<void>
   syncProfiles: () => Promise<void>
-  listenDeepLink: () => void
+  listenDeepLink: () => (() => void)
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -31,7 +31,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   isLoggedIn: false,
   loading: false,
   serverUrl: 'http://localhost:3000',
-  connected: false,
+  connected: undefined,
 
   setServerUrl: async (url) => {
     await window.api.setSetting('api.url', url)
@@ -86,7 +86,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   listenDeepLink: () => {
-    window.api.on('auth:deeplink-success', (data: any) => {
+    const handler = (data: any) => {
       set({
         user: {
           id: data.userId,
@@ -96,7 +96,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         },
         isLoggedIn: true,
       })
-    })
+    }
+    window.api.on('auth:deeplink-success', handler)
+    return () => {
+      window.api.off('auth:deeplink-success', handler)
+    }
   },
 
   logout: () => {

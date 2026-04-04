@@ -1,5 +1,8 @@
+import crypto from 'crypto'
 import path from 'path'
 import fs from 'fs'
+import { pipeline } from 'stream/promises'
+import { Readable } from 'stream'
 import os from 'os'
 import { app, dialog } from 'electron'
 import archiver from 'archiver'
@@ -32,6 +35,7 @@ function zipProfile(profile: BrowserProfile, outputPath: string): Promise<void> 
     const archive = archiver('zip', { zlib: { level: 6 } })
 
     output.on('close', resolve)
+    output.on('error', reject)
     archive.on('error', reject)
     archive.pipe(output)
 
@@ -97,6 +101,7 @@ export async function exportAllProfiles(): Promise<string | null> {
     const archive = archiver('zip', { zlib: { level: 6 } })
 
     output.on('close', () => resolve(filePath))
+    output.on('error', reject)
     archive.on('error', reject)
     archive.pipe(output)
 
@@ -155,11 +160,16 @@ export async function importProfile(zipPath?: string): Promise<BrowserProfile> {
 
   // Extract data/ vào thư mục profile mới
   const newDataDir = getProfileDataDir(newProfile.id)
+  const resolvedDataDir = path.resolve(newDataDir)
   const entries = zip.getEntries()
   for (const entry of entries) {
     if (entry.entryName.startsWith('data/') && !entry.isDirectory) {
       const relativePath = entry.entryName.slice('data/'.length)
-      const targetPath = path.join(newDataDir, relativePath)
+      const targetPath = path.resolve(newDataDir, relativePath)
+      // Zip Slip protection: ensure path stays within target directory
+      if (!targetPath.startsWith(resolvedDataDir + path.sep) && targetPath !== resolvedDataDir) {
+        throw new Error(`Zip entry "${entry.entryName}" resolves outside target directory — possible Zip Slip attack`)
+      }
       fs.mkdirSync(path.dirname(targetPath), { recursive: true })
       fs.writeFileSync(targetPath, entry.getData())
     }
@@ -179,27 +189,45 @@ export async function uploadProfile(profileId: string): Promise<void> {
   }
 
   const { url, token } = getServerConfig()
-
   // Zip vào thư mục temp
   const tempZip = path.join(os.tmpdir(), `backup-${profileId}-${Date.now()}.zip`)
   try {
     await zipProfile(profile, tempZip)
 
-    const zipBuffer = fs.readFileSync(tempZip)
-    const formData = new FormData()
-    formData.append('profileId', profileId)
-    formData.append('name', profile.name)
-    formData.append('file', new Blob([zipBuffer], { type: 'application/zip' }), `${profileId}.zip`)
+    const zipBuffer = await fs.promises.readFile(tempZip)
+    const checksum = crypto.createHash('sha256').update(zipBuffer).digest('hex')
 
+    // 1. Xin presigned URL từ server
     const res = await fetch(`${url}/api/profiles/backup/upload`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        profileId,
+        name: profile.name,
+        size: zipBuffer.length,
+        checksum,
+      }),
     })
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      throw new Error(data.error || `Upload failed: ${res.status}`)
+      throw new Error(data.error || `Failed to get upload URL: ${res.status}`)
+    }
+
+    const { uploadUrl } = await res.json()
+
+    // 2. Upload thẳng lên cloud storage
+    const uploadRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/zip' },
+      body: zipBuffer,
+    })
+
+    if (!uploadRes.ok) {
+      throw new Error(`Upload to storage failed: ${uploadRes.status}`)
     }
   } finally {
     if (fs.existsSync(tempZip)) fs.unlinkSync(tempZip)
@@ -220,15 +248,17 @@ export async function downloadBackup(backupId: string): Promise<BrowserProfile> 
 
   const { url: downloadUrl } = await res.json()
 
-  // Download file
+  // Download file — stream to disk instead of buffering in memory
   const dlRes = await fetch(downloadUrl)
   if (!dlRes.ok) throw new Error('Download failed')
 
-  const buffer = Buffer.from(await dlRes.arrayBuffer())
   const tempZip = path.join(os.tmpdir(), `download-${backupId}-${Date.now()}.zip`)
 
   try {
-    fs.writeFileSync(tempZip, buffer)
+    const body = dlRes.body
+    if (!body) throw new Error('Empty response body')
+    const nodeStream = Readable.fromWeb(body as any)
+    await pipeline(nodeStream, fs.createWriteStream(tempZip))
     return await importProfile(tempZip)
   } finally {
     if (fs.existsSync(tempZip)) fs.unlinkSync(tempZip)

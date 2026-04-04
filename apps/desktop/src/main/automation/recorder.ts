@@ -110,6 +110,34 @@ const RECORDER_SCRIPT = `
     }
   }, true);
 
+  // Ghi scroll (debounced, gộp các scroll liên tiếp thành 1 action)
+  let scrollTimer = null;
+  let scrollStartY = window.scrollY;
+  let scrollRecording = false;
+
+  function handleScroll() {
+    if (!scrollRecording) {
+      scrollStartY = window.scrollY;
+      scrollRecording = true;
+    }
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      const delta = window.scrollY - scrollStartY;
+      scrollRecording = false;
+      if (Math.abs(delta) < 20) return; // bỏ qua scroll rất nhỏ
+
+      const direction = delta > 0 ? 'down' : 'up';
+      const amount = Math.abs(Math.round(delta));
+      window.__recordAction({
+        type: 'scroll',
+        value: JSON.stringify({ direction: direction, amount: amount }),
+        description: 'Scroll ' + direction + ' ' + amount + 'px'
+      });
+    }, 300);
+  }
+
+  window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+
   console.log('[BrowserAuto] Recorder đã kích hoạt');
 })();
 `
@@ -218,9 +246,12 @@ export function actionsToWorkflow(actions: RecordedAction[]): {
       case 'select':
         config = { selector: action.selector || '', value: action.value || '' }
         break
-      case 'scroll':
-        config = { direction: 'down', amount: 300 }
+      case 'scroll': {
+        let scrollData = { direction: 'down', amount: 300 }
+        try { scrollData = JSON.parse(action.value || '{}') } catch {}
+        config = { direction: scrollData.direction || 'down', amount: scrollData.amount || 300 }
         break
+      }
       case 'wait':
         config = { ms: 1000 }
         break

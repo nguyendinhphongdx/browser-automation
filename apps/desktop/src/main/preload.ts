@@ -93,8 +93,18 @@ const api = {
   testConnection: () => ipcRenderer.invoke('auth:testConnection'),
   openBrowserLogin: () => ipcRenderer.invoke('auth:openBrowser'),
 
-  // API proxy
-  apiRequest: (method: string, path: string, body?: any) => ipcRenderer.invoke('api:request', method, path, body),
+  // API proxy (restricted to known safe paths)
+  apiRequest: (method: string, path: string, body?: any) => {
+    const allowedMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+    const allowedPrefixes = ['/api/profiles/', '/api/auth/']
+    if (!allowedMethods.includes(method.toUpperCase())) {
+      return Promise.reject(new Error(`Method "${method}" not allowed`))
+    }
+    if (!allowedPrefixes.some((prefix) => path.startsWith(prefix))) {
+      return Promise.reject(new Error(`Path "${path}" not allowed`))
+    }
+    return ipcRenderer.invoke('api:request', method, path, body)
+  },
 
   // Backup
   exportProfile: (profileId: string) => ipcRenderer.invoke('backup:export', profileId),
@@ -107,12 +117,24 @@ const api = {
   // AI Chat (qua main process, tránh CORS)
   aiChat: (systemPrompt: string, messages: any[]) => ipcRenderer.invoke('ai:chat', systemPrompt, messages),
 
-  // Events
+  // Events (restricted to allowed channels)
   on: (channel: string, callback: (...args: any[]) => void) => {
-    ipcRenderer.on(channel, (_event, ...args) => callback(...args))
+    const allowedChannels = ['auth:deeplink-success', 'recorder:action', 'workflow:log', 'campaign:update']
+    if (!allowedChannels.includes(channel)) {
+      console.warn(`IPC channel "${channel}" is not in the allowlist`)
+      return
+    }
+    const wrappedCallback = (_event: any, ...args: any[]) => callback(...args)
+    ;(callback as any).__wrappedIpc = wrappedCallback
+    ipcRenderer.on(channel, wrappedCallback)
   },
   off: (channel: string, callback: (...args: any[]) => void) => {
-    ipcRenderer.removeListener(channel, callback)
+    const allowedChannels = ['auth:deeplink-success', 'recorder:action', 'workflow:log', 'campaign:update']
+    if (!allowedChannels.includes(channel)) return
+    const wrappedCallback = (callback as any).__wrappedIpc
+    if (wrappedCallback) {
+      ipcRenderer.removeListener(channel, wrappedCallback)
+    }
   }
 }
 

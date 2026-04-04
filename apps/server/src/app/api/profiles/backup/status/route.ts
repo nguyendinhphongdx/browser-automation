@@ -8,10 +8,11 @@ export async function GET(request: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Lấy tất cả backups, group by profileId lấy bản mới nhất
-  const backups = await prisma.profileBackup.findMany({
+  // Use distinct on profileId to get latest backup per profile efficiently
+  const latestBackups = await prisma.profileBackup.findMany({
     where: { userId: user.id },
     orderBy: { createdAt: "desc" },
+    distinct: ["profileId"],
     select: {
       profileId: true,
       name: true,
@@ -21,15 +22,7 @@ export async function GET(request: Request) {
     },
   });
 
-  // Chỉ giữ backup mới nhất cho mỗi profileId
-  const statusMap = new Map<string, (typeof backups)[0]>();
-  for (const b of backups) {
-    if (!statusMap.has(b.profileId)) {
-      statusMap.set(b.profileId, b);
-    }
-  }
-
-  const statuses = Array.from(statusMap.values()).map((b) => ({
+  const statuses = latestBackups.map((b) => ({
     profileId: b.profileId,
     name: b.name,
     latestBackupAt: b.createdAt,

@@ -8,9 +8,19 @@ import {
   getBackupStatus
 } from '../services/backup-service'
 
+// Validate ID format to prevent path traversal / injection
+const ID_PATTERN = /^[a-zA-Z0-9_-]+$/
+
+function validateId(id: unknown, label: string): string {
+  if (typeof id !== 'string' || !ID_PATTERN.test(id)) {
+    throw new Error(`${label} không hợp lệ`)
+  }
+  return id
+}
+
 export function registerBackupHandlers(ipcMain: IpcMain) {
   ipcMain.handle('backup:export', async (_event, profileId: string) => {
-    const filePath = await exportProfile(profileId)
+    const filePath = await exportProfile(validateId(profileId, 'profileId'))
     return { success: true, filePath }
   })
 
@@ -25,12 +35,12 @@ export function registerBackupHandlers(ipcMain: IpcMain) {
   })
 
   ipcMain.handle('backup:upload', async (_event, profileId: string) => {
-    await uploadProfile(profileId)
+    await uploadProfile(validateId(profileId, 'profileId'))
     return { success: true }
   })
 
   ipcMain.handle('backup:download', async (_event, backupId: string) => {
-    const profile = await downloadBackup(backupId)
+    const profile = await downloadBackup(validateId(backupId, 'backupId'))
     return { success: true, profile }
   })
 

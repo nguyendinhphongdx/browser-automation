@@ -1,16 +1,20 @@
-import { prisma } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { createToken } from "@/lib/jwt";
 
-// POST: Tạo JWT token cho desktop app từ email (gọi sau khi OAuth thành công)
-export async function POST(request: Request) {
-  const { email } = await request.json();
+// POST: Tạo JWT token cho desktop app (chỉ khi đã có NextAuth session)
+export async function POST() {
+  const session = await auth();
 
-  if (!email) {
-    return Response.json({ error: "Email là bắt buộc" }, { status: 400 });
+  if (!session?.user?.email) {
+    return Response.json(
+      { error: "Unauthorized — cần đăng nhập trước" },
+      { status: 401 }
+    );
   }
 
+  const { prisma } = await import("@/lib/db");
   const user = await prisma.user.findUnique({
-    where: { email },
+    where: { email: session.user.email },
     select: { id: true, name: true, email: true, role: true },
   });
 

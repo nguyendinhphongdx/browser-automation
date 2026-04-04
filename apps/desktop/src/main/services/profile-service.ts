@@ -136,7 +136,7 @@ export function duplicateProfile(id: string): BrowserProfile | null {
   const original = getProfileById(id)
   if (!original) return null
 
-  return createProfile({
+  const newProfile = createProfile({
     name: `${original.name} (copy)`,
     browserType: original.browserType,
     browserVersion: original.browserVersion,
@@ -147,6 +147,15 @@ export function duplicateProfile(id: string): BrowserProfile | null {
     notes: original.notes,
     proxyId: original.proxyId
   })
+
+  // Copy browser data directory (cookies, localStorage, etc.)
+  const srcDir = path.join(app.getPath('userData'), 'profiles', id)
+  const destDir = path.join(app.getPath('userData'), 'profiles', newProfile.id)
+  if (fs.existsSync(srcDir)) {
+    fs.cpSync(srcDir, destDir, { recursive: true })
+  }
+
+  return newProfile
 }
 
 export function updateLastUsed(id: string): void {

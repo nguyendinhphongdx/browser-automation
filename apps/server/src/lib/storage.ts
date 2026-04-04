@@ -14,6 +14,7 @@ export interface StorageProvider {
   download(key: string): Promise<Buffer>;
   delete(key: string): Promise<void>;
   getSignedUrl(key: string, expiresInSeconds?: number): Promise<string>;
+  getSignedUploadUrl(key: string, contentType?: string, expiresInSeconds?: number): Promise<string>;
 }
 
 // ─── S3 Provider ────────────────────────────────────────────
@@ -23,13 +24,17 @@ class S3Provider implements StorageProvider {
   private bucket: string;
 
   constructor() {
-    this.bucket = process.env.S3_BUCKET!;
+    const bucket = process.env.S3_BUCKET;
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+    if (!bucket) throw new Error("S3_BUCKET env var is required");
+    if (!accessKeyId) throw new Error("AWS_ACCESS_KEY_ID env var is required");
+    if (!secretAccessKey) throw new Error("AWS_SECRET_ACCESS_KEY env var is required");
+
+    this.bucket = bucket;
     this.client = new S3Client({
       region: process.env.AWS_REGION || "us-east-1",
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-      },
+      credentials: { accessKeyId, secretAccessKey },
     });
   }
 
@@ -69,6 +74,14 @@ class S3Provider implements StorageProvider {
       { expiresIn: expiresInSeconds }
     );
   }
+
+  async getSignedUploadUrl(key: string, contentType = "application/zip", expiresInSeconds = 3600): Promise<string> {
+    return s3GetSignedUrl(
+      this.client,
+      new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }),
+      { expiresIn: expiresInSeconds }
+    );
+  }
 }
 
 // ─── GCS Provider ───────────────────────────────────────────
@@ -78,7 +91,9 @@ class GCSProvider implements StorageProvider {
   private bucket: string;
 
   constructor() {
-    this.bucket = process.env.GCS_BUCKET!;
+    const bucket = process.env.GCS_BUCKET;
+    if (!bucket) throw new Error("GCS_BUCKET env var is required");
+    this.bucket = bucket;
     const credentials = process.env.GCS_CREDENTIALS;
     const keyFile = process.env.GCS_KEY_FILE;
 
@@ -116,6 +131,18 @@ class GCSProvider implements StorageProvider {
       .getSignedUrl({
         action: "read",
         expires: Date.now() + expiresInSeconds * 1000,
+      });
+    return url;
+  }
+
+  async getSignedUploadUrl(key: string, contentType = "application/zip", expiresInSeconds = 3600): Promise<string> {
+    const [url] = await this.storage
+      .bucket(this.bucket)
+      .file(key)
+      .getSignedUrl({
+        action: "write",
+        expires: Date.now() + expiresInSeconds * 1000,
+        contentType,
       });
     return url;
   }

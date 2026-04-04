@@ -19,7 +19,9 @@ export default function DesktopLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const callback = searchParams.get("callback") || "browserauto://auth";
+  const rawCallback = searchParams.get("callback") || "browserauto://auth";
+  // Only allow browserauto:// scheme to prevent open redirect attacks
+  const callback = rawCallback.startsWith("browserauto://") ? rawCallback : "browserauto://auth";
 
   // Nếu đã có session (NextAuth), tạo JWT và redirect
   useEffect(() => {

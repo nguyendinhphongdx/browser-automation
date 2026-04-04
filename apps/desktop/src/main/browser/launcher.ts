@@ -48,19 +48,22 @@ function buildFingerprintArgs(fingerprint: Fingerprint): string[] {
 }
 
 function buildFingerprintScript(fingerprint: Fingerprint): string {
+  // Use JSON.stringify for all interpolated values to prevent script injection
+  const s = (val: unknown) => JSON.stringify(val)
+
   return `
     // Ghi đè navigator properties
-    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => ${fingerprint.hardwareConcurrency} });
-    Object.defineProperty(navigator, 'deviceMemory', { get: () => ${fingerprint.deviceMemory} });
-    Object.defineProperty(navigator, 'platform', { get: () => '${fingerprint.platform}' });
-    Object.defineProperty(navigator, 'language', { get: () => '${fingerprint.language}' });
-    Object.defineProperty(navigator, 'languages', { get: () => ['${fingerprint.language}', '${fingerprint.language.split('-')[0]}'] });
+    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => ${s(fingerprint.hardwareConcurrency)} });
+    Object.defineProperty(navigator, 'deviceMemory', { get: () => ${s(fingerprint.deviceMemory)} });
+    Object.defineProperty(navigator, 'platform', { get: () => ${s(fingerprint.platform)} });
+    Object.defineProperty(navigator, 'language', { get: () => ${s(fingerprint.language)} });
+    Object.defineProperty(navigator, 'languages', { get: () => [${s(fingerprint.language)}, ${s(fingerprint.language.split('-')[0])}] });
     Object.defineProperty(navigator, 'doNotTrack', { get: () => ${fingerprint.doNotTrack ? '"1"' : 'null'} });
 
     // Ghi đè screen properties
-    Object.defineProperty(screen, 'width', { get: () => ${fingerprint.screenResolution.width} });
-    Object.defineProperty(screen, 'height', { get: () => ${fingerprint.screenResolution.height} });
-    Object.defineProperty(screen, 'colorDepth', { get: () => ${fingerprint.colorDepth} });
+    Object.defineProperty(screen, 'width', { get: () => ${s(fingerprint.screenResolution.width)} });
+    Object.defineProperty(screen, 'height', { get: () => ${s(fingerprint.screenResolution.height)} });
+    Object.defineProperty(screen, 'colorDepth', { get: () => ${s(fingerprint.colorDepth)} });
 
     // Canvas fingerprint noise
     const origToDataURL = HTMLCanvasElement.prototype.toDataURL;
@@ -69,7 +72,7 @@ function buildFingerprintScript(fingerprint: Fingerprint): string {
       if (ctx) {
         const imageData = ctx.getImageData(0, 0, this.width, this.height);
         for (let i = 0; i < imageData.data.length; i += 4) {
-          imageData.data[i] = imageData.data[i] + (${fingerprint.canvas.noise} * (Math.random() - 0.5) * 2) | 0;
+          imageData.data[i] = imageData.data[i] + (${s(fingerprint.canvas.noise)} * (Math.random() - 0.5) * 2) | 0;
         }
         ctx.putImageData(imageData, 0, 0);
       }
@@ -81,8 +84,8 @@ function buildFingerprintScript(fingerprint: Fingerprint): string {
     WebGLRenderingContext.prototype.getParameter = function(param) {
       const UNMASKED_VENDOR = 0x9245;
       const UNMASKED_RENDERER = 0x9246;
-      if (param === UNMASKED_VENDOR) return '${fingerprint.webgl.vendor}';
-      if (param === UNMASKED_RENDERER) return '${fingerprint.webgl.renderer}';
+      if (param === UNMASKED_VENDOR) return ${s(fingerprint.webgl.vendor)};
+      if (param === UNMASKED_RENDERER) return ${s(fingerprint.webgl.renderer)};
       return origGetParameter.apply(this, arguments);
     };
 

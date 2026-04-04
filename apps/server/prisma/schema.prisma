@@ -104,7 +104,7 @@ model ProfileBackup {
   userId     String
   profileId  String   // localId từ desktop
   name       String
-  size       Int      // bytes
+  size       BigInt   // bytes
   storageKey String   // path/key trong storage provider
   provider   String   // "s3" hoặc "gcs"
   checksum   String   // SHA-256 hash của file zip
@@ -112,6 +112,8 @@ model ProfileBackup {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, createdAt])
+  @@index([userId, profileId])
   @@map("profile_backups")
 }
 

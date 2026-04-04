@@ -7,7 +7,8 @@ export function AuthPage() {
   const { login, register, openBrowserLogin, listenDeepLink, testConnection, setServerUrl, serverUrl, connected, loading } = useAuthStore()
 
   useEffect(() => {
-    listenDeepLink()
+    const cleanup = listenDeepLink()
+    return cleanup
   }, [])
   const [tab, setTab] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
