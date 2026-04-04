@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Plus, Play, Square, Save, Trash2, Code, GitBranch, FileText, Circle } from 'lucide-react'
+import { Plus, Play, Square, Save, Trash2, Code, GitBranch, FileText, Circle, History, Activity, CalendarClock } from 'lucide-react'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { useProfileStore } from '@/stores/profile-store'
 import { cn } from '@/lib/utils'
 import { VisualEditor } from './VisualEditor'
 import { CodeEditor } from './CodeEditor'
 import { ExecutionPanel } from './ExecutionPanel'
+import { VersionHistory } from './VersionHistory'
+import { ExecutionHistory } from './ExecutionHistory'
+import { SchedulePanel } from './SchedulePanel'
 import { RecorderPanel } from './RecorderPanel'
 import type { WorkflowMode } from '@shared/types'
 
@@ -82,6 +85,9 @@ export function AutomationPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [selectedProfileId, setSelectedProfileId] = useState<string>('')
   const [showLogs, setShowLogs] = useState(false)
+  const [showVersions, setShowVersions] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const [showSchedules, setShowSchedules] = useState(false)
 
   useEffect(() => {
     fetchWorkflows()
@@ -148,7 +154,28 @@ export function AutomationPage() {
         <div className="p-2 border-t">
           <RecorderPanel />
         </div>
+
+        {/* Schedules toggle */}
+        <div className="p-2 border-t">
+          <button
+            onClick={() => setShowSchedules(!showSchedules)}
+            className={cn(
+              'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors',
+              showSchedules ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent'
+            )}
+          >
+            <CalendarClock className="h-3.5 w-3.5" />
+            Schedules
+          </button>
+        </div>
       </div>
+
+      {/* Schedules side panel */}
+      {showSchedules && (
+        <div className="w-80 border-r bg-card overflow-auto">
+          <SchedulePanel />
+        </div>
+      )}
 
       {/* Main Area */}
       {activeWorkflow ? (
@@ -194,6 +221,18 @@ export function AutomationPage() {
                 <FileText className="h-3 w-3" /> Logs
               </button>
 
+              <button onClick={() => setShowVersions(!showVersions)}
+                className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-medium transition-colors",
+                  showVersions ? 'bg-primary/10 text-primary' : 'hover:bg-accent')}>
+                <History className="h-3 w-3" /> Versions
+              </button>
+
+              <button onClick={() => setShowHistory(!showHistory)}
+                className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-medium transition-colors",
+                  showHistory ? 'bg-primary/10 text-primary' : 'hover:bg-accent')}>
+                <Activity className="h-3 w-3" /> History
+              </button>
+
               <button onClick={handleDelete}
                 className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                 <Trash2 className="h-4 w-4" />
@@ -211,6 +250,28 @@ export function AutomationPage() {
 
             {/* Logs drawer */}
             <ExecutionPanel open={showLogs} onClose={() => setShowLogs(false)} />
+
+            {/* Version history drawer */}
+            {showVersions && (
+              <div className="absolute right-0 top-0 bottom-0 w-80 bg-card border-l shadow-lg z-20 overflow-auto">
+                <div className="flex items-center justify-between px-4 py-3 border-b">
+                  <span className="text-sm font-semibold">Lịch sử phiên bản</span>
+                  <button onClick={() => setShowVersions(false)} className="text-lg hover:text-foreground text-muted-foreground">&times;</button>
+                </div>
+                <VersionHistory />
+              </div>
+            )}
+
+            {/* Execution history drawer */}
+            {showHistory && (
+              <div className="absolute right-0 top-0 bottom-0 w-96 bg-card border-l shadow-lg z-20 overflow-auto">
+                <div className="flex items-center justify-between px-4 py-3 border-b">
+                  <span className="text-sm font-semibold">Lịch sử chạy</span>
+                  <button onClick={() => setShowHistory(false)} className="text-lg hover:text-foreground text-muted-foreground">&times;</button>
+                </div>
+                <ExecutionHistory workflowId={activeWorkflow.id} />
+              </div>
+            )}
           </div>
         </div>
       ) : (

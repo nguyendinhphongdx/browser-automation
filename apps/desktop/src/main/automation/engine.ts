@@ -23,7 +23,13 @@ function getNodeType(node: WorkflowNode): string {
 
 function getNextNodes(nodeId: string, edges: WorkflowEdge[], handleFilter?: string): string[] {
   return edges
-    .filter(e => e.source === nodeId && (!handleFilter || e.sourceHandle === handleFilter))
+    .filter(e => e.source === nodeId && (!handleFilter || e.sourceHandle === handleFilter) && e.edgeType !== 'on-error')
+    .map(e => e.target)
+}
+
+function getErrorNodes(nodeId: string, edges: WorkflowEdge[]): string[] {
+  return edges
+    .filter(e => e.source === nodeId && e.edgeType === 'on-error')
     .map(e => e.target)
 }
 
@@ -33,16 +39,24 @@ function getStartNodes(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNo
 }
 
 // ── Branching node types (handled by orchestrator, not by node class) ──
-const BRANCHING_TYPES = new Set(['if-else', 'loop', 'loop-each', 'element-exists', 'try-catch', 'break-loop'])
+const BRANCHING_TYPES = new Set(['if-else', 'loop', 'loop-each', 'element-exists', 'try-catch', 'break-loop', 'parallel-fork', 'parallel-join'])
 
 // ── Execute a single node via registry ─────────
 
 async function runNode(node: WorkflowNode, ctx: ExecutionContext): Promise<void> {
   const nodeType = getNodeType(node)
+  const config = { ...node.data.config }
+
+  // Inject metadata into config for BaseNode
+  config._nodeType = nodeType
+  if (node.data.retryConfig) {
+    config._retryConfig = node.data.retryConfig
+  }
+
   const instance = createNode(nodeType, ctx, {
     nodeId: node.id,
     label: node.data.label,
-    config: node.data.config || {}
+    config
   })
 
   if (!instance) {
@@ -98,6 +112,13 @@ export async function executeVisualWorkflow(
         ctx.onNodeStart?.(node.id)
         ctx.onNodeDone?.(node.id)
         // Không push next — dừng lại
+      } else if (nType === 'parallel-fork') {
+        await handleParallelFork(node, workflow, ctx, nodesMap, queue, visited)
+      } else if (nType === 'parallel-join') {
+        // Join is handled by fork — if we reach it directly, just continue
+        ctx.onNodeStart?.(node.id)
+        ctx.onNodeDone?.(node.id)
+        getNextNodes(nodeId, workflow.edges).forEach(id => queue.push(id))
       } else {
         // Standard node — delegate to registry
         await runNode(node, ctx)
@@ -106,7 +127,16 @@ export async function executeVisualWorkflow(
     } catch (err: any) {
       addLog(ctx, 'error', `Error at "${node.data.label}": ${err.message}`, node.id)
       ctx.onNodeError?.(node.id, err.message)
-      throw err
+
+      // Check for on-error edges — route to error handler instead of throwing
+      const errorTargets = getErrorNodes(nodeId, workflow.edges)
+      if (errorTargets.length > 0) {
+        ctx.variables['_lastError'] = err.message
+        ctx.variables['_lastErrorNodeId'] = node.id
+        errorTargets.forEach(id => queue.push(id))
+      } else {
+        throw err
+      }
     }
   }
 
@@ -219,6 +249,187 @@ async function handleTryCatch(
     ctx.onNodeDone?.(node.id)
     catchNodes.forEach(id => queue.push(id))
   }
+}
+
+// ── Parallel Fork Handler ─────────────────────
+
+async function handleParallelFork(
+  node: WorkflowNode, workflow: Workflow, ctx: ExecutionContext,
+  nodesMap: Map<string, WorkflowNode>, queue: string[], visited: Set<string>
+) {
+  ctx.onNodeStart?.(node.id)
+  const config = node.data.config
+  const timeout = config.timeout || 60000
+
+  // Find all branch targets from fork outputs (branch-0, branch-1, ...)
+  // Branches are all normal outgoing edges from the fork
+  const branchTargets = getNextNodes(node.id, workflow.edges)
+  if (branchTargets.length === 0) {
+    addLog(ctx, 'warn', 'Parallel fork has no branches', node.id)
+    ctx.onNodeDone?.(node.id)
+    return
+  }
+
+  addLog(ctx, 'info', `Parallel fork: ${branchTargets.length} branches`, node.id)
+
+  // Find the matching join node: trace each branch until we find a parallel-join
+  // that all branches converge to
+  const joinNodeId = findJoinNode(branchTargets, workflow, nodesMap)
+
+  // For each branch, collect nodes between fork and join
+  const branchNodeChains = branchTargets.map(startId =>
+    collectBranchNodes(startId, joinNodeId, workflow.edges, nodesMap)
+  )
+
+  // Execute branches concurrently, each with cloned variables
+  const branchResults: Record<string, any>[] = []
+  const branchPromises = branchNodeChains.map(async (chain, i) => {
+    const branchVars = { ...ctx.variables }
+    branchVars['_branchIndex'] = i
+
+    for (const bNode of chain) {
+      if (ctx.aborted) return
+      const bType = getNodeType(bNode)
+      // Skip branching types inside parallel (simplification — run as standard nodes)
+      if (bType === 'parallel-join') continue
+
+      const bConfig: Record<string, any> = { ...bNode.data.config, _nodeType: bType }
+      if (bNode.data.retryConfig) bConfig._retryConfig = bNode.data.retryConfig
+
+      const instance = createNode(bType, { ...ctx, variables: branchVars }, {
+        nodeId: bNode.id,
+        label: bNode.data.label,
+        config: bConfig,
+      })
+      if (instance) {
+        await instance.run()
+      }
+      visited.add(bNode.id)
+    }
+
+    branchResults.push(branchVars)
+  })
+
+  // Wait based on join mode
+  const joinNode = joinNodeId ? nodesMap.get(joinNodeId) : null
+  const mode = joinNode?.data.config.mode || 'all'
+  const mergeStrategy = joinNode?.data.config.mergeStrategy || 'merge'
+
+  try {
+    if (mode === 'any') {
+      await Promise.race([
+        Promise.any(branchPromises),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Parallel timeout')), timeout))
+      ])
+    } else {
+      await Promise.race([
+        Promise.all(branchPromises),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Parallel timeout')), timeout))
+      ])
+    }
+  } catch (err: any) {
+    if (err.message === 'Parallel timeout') {
+      addLog(ctx, 'warn', `Parallel branches timed out after ${timeout}ms`, node.id)
+    } else {
+      throw err
+    }
+  }
+
+  // Merge variables from branches back to parent context
+  if (branchResults.length > 0) {
+    if (mergeStrategy === 'collect') {
+      // Collect: for each key that differs, make it an array of branch values
+      const allKeys = new Set(branchResults.flatMap(v => Object.keys(v)))
+      for (const key of allKeys) {
+        if (key.startsWith('_')) continue
+        const values = branchResults.map(v => v[key])
+        const allSame = values.every(v => v === values[0])
+        if (!allSame) {
+          ctx.variables[key] = values
+        } else {
+          ctx.variables[key] = values[0]
+        }
+      }
+    } else if (mergeStrategy === 'last-wins') {
+      const last = branchResults[branchResults.length - 1]
+      Object.assign(ctx.variables, last)
+    } else {
+      // merge: shallow merge all
+      for (const vars of branchResults) {
+        for (const [k, v] of Object.entries(vars)) {
+          if (!k.startsWith('_')) ctx.variables[k] = v
+        }
+      }
+    }
+  }
+
+  addLog(ctx, 'info', `Parallel branches completed (${mergeStrategy})`, node.id)
+  ctx.onNodeDone?.(node.id)
+
+  // Mark join as visited and continue after it
+  if (joinNodeId) {
+    visited.add(joinNodeId)
+    getNextNodes(joinNodeId, workflow.edges).forEach(id => queue.push(id))
+  }
+}
+
+/** Find the parallel-join node that branches converge to */
+function findJoinNode(
+  branchStarts: string[], workflow: Workflow, nodesMap: Map<string, WorkflowNode>
+): string | null {
+  // BFS from each branch start, find the first parallel-join reachable from all branches
+  const reachable = new Map<string, number>() // joinId → count of branches that reach it
+
+  for (const start of branchStarts) {
+    const seen = new Set<string>()
+    const q = [start]
+    while (q.length > 0) {
+      const id = q.shift()!
+      if (seen.has(id)) continue
+      seen.add(id)
+      const n = nodesMap.get(id)
+      if (!n) continue
+      if (getNodeType(n) === 'parallel-join') {
+        reachable.set(id, (reachable.get(id) || 0) + 1)
+        continue // don't traverse past join
+      }
+      getNextNodes(id, workflow.edges).forEach(next => q.push(next))
+    }
+  }
+
+  // Find join reachable by all branches
+  for (const [joinId, count] of reachable) {
+    if (count >= branchStarts.length) return joinId
+  }
+
+  // Fallback: first join found
+  for (const [joinId] of reachable) return joinId
+  return null
+}
+
+/** Collect nodes in a branch from start until we hit joinNodeId (exclusive) */
+function collectBranchNodes(
+  startId: string, joinNodeId: string | null,
+  edges: WorkflowEdge[], nodesMap: Map<string, WorkflowNode>
+): WorkflowNode[] {
+  const result: WorkflowNode[] = []
+  const seen = new Set<string>()
+  const q = [startId]
+
+  while (q.length > 0) {
+    const id = q.shift()!
+    if (seen.has(id)) continue
+    if (id === joinNodeId) continue // stop at join
+    seen.add(id)
+
+    const node = nodesMap.get(id)
+    if (!node) continue
+    result.push(node)
+
+    getNextNodes(id, edges).forEach(next => q.push(next))
+  }
+
+  return result
 }
 
 // ── Code Workflow ──────────────────────────────

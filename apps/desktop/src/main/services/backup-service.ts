@@ -7,8 +7,9 @@ import os from 'os'
 import { app, dialog } from 'electron'
 import archiver from 'archiver'
 import AdmZip from 'adm-zip'
-import { getProfileById, getAllProfiles, createProfile } from './profile-service'
+import { getProfileById, getAllProfiles, createProfile, upsertProfile } from './profile-service'
 import { getSetting } from './settings-service'
+import { refreshToken } from './api-client'
 import { isBrowserRunning } from '../browser/launcher'
 import type { BrowserProfile, BackupStatusItem } from '../../shared/types'
 
@@ -25,6 +26,21 @@ function getServerConfig(): { url: string; token: string } {
   const token = getSetting('auth.token')
   if (!url || !token) throw new Error('Chưa đăng nhập hoặc chưa cấu hình server')
   return { url, token }
+}
+
+/** Fetch với auto-refresh: nếu 401 → refresh token → retry 1 lần */
+async function authedFetch(input: string, init?: RequestInit): Promise<Response> {
+  const res = await fetch(input, init)
+  if (res.status === 401) {
+    const refreshed = await refreshToken()
+    if (refreshed) {
+      // Cập nhật Authorization header với token mới
+      const { token } = getServerConfig()
+      const newInit = { ...init, headers: { ...init?.headers, Authorization: `Bearer ${token}` } }
+      return fetch(input, newInit)
+    }
+  }
+  return res
 }
 
 // ─── Zip helper ─────────────────────────────────────────────
@@ -128,7 +144,7 @@ export async function exportAllProfiles(): Promise<string | null> {
 
 // ─── Import ─────────────────────────────────────────────────
 
-export async function importProfile(zipPath?: string): Promise<BrowserProfile> {
+export async function importProfile(zipPath?: string, opts?: { preserveId?: boolean }): Promise<BrowserProfile> {
   if (!zipPath) {
     const { filePaths } = await dialog.showOpenDialog({
       filters: [{ name: 'ZIP', extensions: ['zip'] }],
@@ -144,8 +160,7 @@ export async function importProfile(zipPath?: string): Promise<BrowserProfile> {
 
   const meta = JSON.parse(metaEntry.getData().toString('utf8')) as BrowserProfile
 
-  // Tạo profile mới trong DB (sẽ có ID mới)
-  const newProfile = createProfile({
+  const profileInput = {
     name: meta.name,
     browserType: meta.browserType,
     browserVersion: meta.browserVersion,
@@ -156,9 +171,14 @@ export async function importProfile(zipPath?: string): Promise<BrowserProfile> {
     notes: meta.notes,
     fingerprint: meta.fingerprint,
     proxyId: meta.proxyId,
-  })
+  }
 
-  // Extract data/ vào thư mục profile mới
+  // preserveId: giữ nguyên ID gốc (dùng khi restore từ cloud backup)
+  const newProfile = opts?.preserveId && meta.id
+    ? upsertProfile(meta.id, profileInput)
+    : createProfile(profileInput)
+
+  // Extract data/ vào thư mục profile
   const newDataDir = getProfileDataDir(newProfile.id)
   const resolvedDataDir = path.resolve(newDataDir)
   const entries = zip.getEntries()
@@ -198,7 +218,7 @@ export async function uploadProfile(profileId: string): Promise<void> {
     const checksum = crypto.createHash('sha256').update(zipBuffer).digest('hex')
 
     // 1. Xin presigned URL từ server
-    const res = await fetch(`${url}/api/profiles/backup/upload`, {
+    const res = await authedFetch(`${url}/api/profiles/backup/upload`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -240,7 +260,7 @@ export async function downloadBackup(backupId: string): Promise<BrowserProfile> 
   const { url, token } = getServerConfig()
 
   // Lấy signed URL
-  const res = await fetch(`${url}/api/profiles/backup/download/${backupId}`, {
+  const res = await authedFetch(`${url}/api/profiles/backup/download/${backupId}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
 
@@ -259,18 +279,18 @@ export async function downloadBackup(backupId: string): Promise<BrowserProfile> 
     if (!body) throw new Error('Empty response body')
     const nodeStream = Readable.fromWeb(body as any)
     await pipeline(nodeStream, fs.createWriteStream(tempZip))
-    return await importProfile(tempZip)
+    return await importProfile(tempZip, { preserveId: true })
   } finally {
     if (fs.existsSync(tempZip)) fs.unlinkSync(tempZip)
   }
 }
 
-// ─── Backup status (signal URL) ─────────────────────────────
+// ─── Backup status ─────────────────────────────
 
 export async function getBackupStatus(): Promise<BackupStatusItem[]> {
   const { url, token } = getServerConfig()
 
-  const res = await fetch(`${url}/api/profiles/backup/status`, {
+  const res = await authedFetch(`${url}/api/profiles/backup/status`, {
     headers: { Authorization: `Bearer ${token}` },
   })
 

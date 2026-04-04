@@ -158,6 +158,39 @@ export function duplicateProfile(id: string): BrowserProfile | null {
   return newProfile
 }
 
+/** Upsert: nếu profile đã tồn tại thì update metadata + giữ ID, nếu chưa thì tạo mới với ID chỉ định */
+export function upsertProfile(id: string, input: CreateProfileInput): BrowserProfile {
+  const existing = getProfileById(id)
+  if (existing) {
+    return updateProfile(id, input)!
+  }
+
+  const db = getDatabase()
+  const now = new Date().toISOString()
+  const fingerprint = generateFingerprint(input.browserType, input.fingerprint)
+
+  db.prepare(`
+    INSERT INTO profiles (id, name, tags, folder, color, browser_type, browser_version, browser_executable_path, fingerprint, proxy_id, notes, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    input.name,
+    JSON.stringify(input.tags || []),
+    input.folder || '',
+    input.color || '#3B82F6',
+    input.browserType,
+    input.browserVersion || 'latest',
+    input.browserExecutablePath || null,
+    JSON.stringify(fingerprint),
+    input.proxyId || null,
+    input.notes || '',
+    now,
+    now
+  )
+
+  return getProfileById(id)!
+}
+
 export function updateLastUsed(id: string): void {
   const db = getDatabase()
   const now = new Date().toISOString()

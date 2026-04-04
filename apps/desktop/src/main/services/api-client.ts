@@ -19,7 +19,40 @@ function getAuthToken(): string | null {
   return getSetting('auth.token')
 }
 
-export async function apiRequest<T = any>(
+let isRefreshing = false
+
+export async function refreshToken(): Promise<boolean> {
+  if (isRefreshing) return false
+  isRefreshing = true
+  try {
+    const token = getAuthToken()
+    if (!token) return false
+
+    const baseUrl = getBaseUrl()
+    const res = await fetch(`${baseUrl}/api/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!res.ok) return false
+
+    const data = await res.json()
+    if (data.token) {
+      setSetting('auth.token', data.token)
+      return true
+    }
+    return false
+  } catch {
+    return false
+  } finally {
+    isRefreshing = false
+  }
+}
+
+async function rawRequest<T = any>(
   method: string,
   path: string,
   body?: any,
@@ -75,6 +108,25 @@ export async function apiRequest<T = any>(
     }
     return { ok: false, status: 0, data: null, error: err.message || 'Network error' }
   }
+}
+
+export async function apiRequest<T = any>(
+  method: string,
+  path: string,
+  body?: any,
+  options?: { noAuth?: boolean }
+): Promise<ApiResponse<T>> {
+  const res = await rawRequest<T>(method, path, body, options)
+
+  // Auto-refresh: nếu 401 và không phải request auth → thử refresh rồi retry
+  if (res.status === 401 && !options?.noAuth && !path.startsWith('/api/auth/')) {
+    const refreshed = await refreshToken()
+    if (refreshed) {
+      return rawRequest<T>(method, path, body, options)
+    }
+  }
+
+  return res
 }
 
 // ── Auth ──────────────────────────────────────────

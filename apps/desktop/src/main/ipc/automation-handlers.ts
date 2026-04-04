@@ -4,7 +4,8 @@ import * as fs from 'fs'
 import {
   getAllWorkflows, getWorkflowById, createWorkflow, updateWorkflow, deleteWorkflow,
   createWorkflowLog, updateWorkflowLog, getWorkflowLogs,
-  exportWorkflow, importWorkflow, duplicateWorkflow
+  exportWorkflow, importWorkflow, duplicateWorkflow,
+  getWorkflowVersions, getWorkflowVersion, rollbackWorkflow, labelWorkflowVersion
 } from '../services/workflow-service'
 import {
   getAllCampaigns, getCampaignById, createCampaign, updateCampaign, deleteCampaign,
@@ -75,9 +76,12 @@ export function registerAutomationHandlers(ipcMain: IpcMain) {
       page: null as any,
       context: null as any,
       profileId: actualProfileId,
+      workflowId,
+      workflowLogId: log.id,
       variables: {},
       logs: [],
-      aborted: false
+      aborted: false,
+      depth: 0
     }
 
     // Set up abort handler
@@ -230,6 +234,27 @@ export function registerAutomationHandlers(ipcMain: IpcMain) {
 
   ipcMain.handle('campaign:resume', (_e, campaignId: string) => {
     resumeCampaign(campaignId)
+    return { success: true }
+  })
+
+  // ── Workflow Versions ─────────────────────────
+
+  ipcMain.handle('workflow:getVersions', (_e, workflowId: string) => {
+    return getWorkflowVersions(workflowId)
+  })
+
+  ipcMain.handle('workflow:getVersion', (_e, versionId: string) => {
+    return getWorkflowVersion(versionId)
+  })
+
+  ipcMain.handle('workflow:rollback', (_e, workflowId: string, versionId: string) => {
+    const result = rollbackWorkflow(workflowId, versionId)
+    if (!result) throw new Error('Rollback failed')
+    return result
+  })
+
+  ipcMain.handle('workflow:labelVersion', (_e, versionId: string, label: string) => {
+    labelWorkflowVersion(versionId, label)
     return { success: true }
   })
 }

@@ -22,11 +22,10 @@ interface AuthStore {
   openBrowserLogin: () => Promise<void>
   logout: () => void
   checkAuth: () => Promise<void>
-  syncProfiles: () => Promise<void>
   listenDeepLink: () => (() => void)
 }
 
-export const useAuthStore = create<AuthStore>((set, get) => ({
+export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   isLoggedIn: false,
   loading: false,
@@ -124,15 +123,4 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
-  syncProfiles: async () => {
-    const { isLoggedIn } = get()
-    if (!isLoggedIn) return
-
-    try {
-      const profiles = await window.api.getProfiles()
-      await window.api.apiRequest('POST', '/api/profiles/sync', { profiles })
-    } catch (err) {
-      console.error('Sync profiles failed:', err)
-    }
-  },
 }))

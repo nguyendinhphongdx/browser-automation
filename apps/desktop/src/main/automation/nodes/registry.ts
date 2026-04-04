@@ -10,6 +10,12 @@ import { GetTextNode, GetAttributeNode, GetUrlNode, GetTitleNode, CountElementsN
 import { DelayNode, WaitNode, ElementExistsNode } from './flow'
 // Integration
 import { HttpRequestNode, SetCookieNode, GetCookieNode, LocalStorageNode, NotificationNode, LogNode } from './integration'
+// Sub-workflow
+import { RunWorkflowNode } from './sub-workflow'
+// Data pipeline
+import { PaginateNode, ExportDataNode, MapDataNode, FilterDataNode, ReduceDataNode, SortDataNode } from './data-pipeline'
+// Parallel
+import { ParallelForkNode, ParallelJoinNode } from './parallel'
 
 type NodeClass = new (ctx: ExecutionContext, input: NodeInput) => BaseNode
 
@@ -62,6 +68,21 @@ const NODE_REGISTRY: Record<string, NodeClass> = {
   'local-storage': LocalStorageNode,
   'notification': NotificationNode,
   'log': LogNode,
+
+  // Sub-workflow
+  'run-workflow': RunWorkflowNode,
+
+  // Data pipeline
+  'paginate': PaginateNode,
+  'export-data': ExportDataNode,
+  'map-data': MapDataNode,
+  'filter-data': FilterDataNode,
+  'reduce-data': ReduceDataNode,
+  'sort-data': SortDataNode,
+
+  // Parallel
+  'parallel-fork': ParallelForkNode,
+  'parallel-join': ParallelJoinNode,
 }
 
 export function createNode(type: string, ctx: ExecutionContext, input: NodeInput): BaseNode | null {

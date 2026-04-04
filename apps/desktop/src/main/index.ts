@@ -7,6 +7,10 @@ import { registerResourceHandlers } from './ipc/resource-handlers'
 import { registerAutomationHandlers } from './ipc/automation-handlers'
 import { registerSettingsHandlers } from './ipc/settings-handlers'
 import { registerBackupHandlers } from './ipc/backup-handlers'
+import { registerMetricsHandlers } from './ipc/metrics-handlers'
+import { registerScheduleHandlers } from './ipc/schedule-handlers'
+import { startScheduler, stopScheduler } from './automation/scheduler'
+import { startWebhookServer, stopWebhookServer } from './automation/webhook-server'
 import { closeAllBrowsers } from './browser/launcher'
 import { initAutoUpdater } from './services/auto-updater'
 import { setSetting } from './services/settings-service'
@@ -124,6 +128,8 @@ app.whenReady().then(() => {
   registerAutomationHandlers(ipcMain)
   registerSettingsHandlers(ipcMain)
   registerBackupHandlers(ipcMain)
+  registerMetricsHandlers(ipcMain)
+  registerScheduleHandlers(ipcMain)
 
   // IPC: mở browser để đăng nhập
   ipcMain.handle('auth:openBrowser', async () => {
@@ -139,6 +145,10 @@ app.whenReady().then(() => {
   // Trên Windows/Linux, URL nằm trong process.argv
   const launchUrl = process.argv.find((arg) => arg.startsWith(`${PROTOCOL}://`))
   if (launchUrl) handleDeepLink(launchUrl)
+
+  // Start background scheduler + webhook server
+  startScheduler()
+  startWebhookServer()
 
   // Auto-updater (chỉ trong production)
   if (mainWindow && process.env.NODE_ENV !== 'development') {
@@ -158,6 +168,9 @@ app.on('before-quit', (e) => {
   if (isQuitting) return
   isQuitting = true
   e.preventDefault()
+
+  stopScheduler()
+  stopWebhookServer()
 
   Promise.resolve()
     .then(() => closeAllBrowsers())

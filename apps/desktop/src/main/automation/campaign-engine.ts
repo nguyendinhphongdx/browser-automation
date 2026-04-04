@@ -5,6 +5,8 @@ import type {
 } from '../../shared/types'
 import { getProfileById, updateLastUsed } from '../services/profile-service'
 import { getWorkflowById } from '../services/workflow-service'
+import { checkQuota, filterProfiles, topologicalSort, pickABVariant } from '../services/quota-service'
+import type { ProfileSelectionRule, ABTestVariant, WorkflowDependency, QuotaConfig } from '../services/quota-service'
 import { createCampaignRun, updateCampaignRun, updateCampaign } from '../services/campaign-service'
 import { launchBrowser, closeBrowser, getActiveBrowserContext } from '../browser/launcher'
 import { executeVisualWorkflow, executeCodeWorkflow, type ExecutionContext } from './engine'
@@ -60,9 +62,11 @@ async function runSingleTask(
     page: null as any,
     context: active.context,
     profileId: profile.id,
+    workflowId: workflow.id,
     variables: {},
     logs: [],
     aborted: false,
+    depth: 0,
     onNodeStart: (nodeId) => {
       sender.send('campaign:node-progress', { profileId: profile.id, workflowId: workflow.id, nodeId, status: 'running' })
     },
@@ -111,7 +115,7 @@ export async function executeCampaign(
   sender.send('campaign:status', { campaignId: campaign.id, status: 'running', runId: run.id })
 
   // Resolve profiles & workflows
-  const profiles = campaign.profileIds
+  let profiles = campaign.profileIds
     .map(id => getProfileById(id))
     .filter((p): p is BrowserProfile => p !== null)
 
@@ -124,21 +128,69 @@ export async function executeCampaign(
     throw new Error('Cần ít nhất 1 profile và 1 workflow')
   }
 
+  // ── Advanced: Profile selection rules ──
+  if (exec.profileSelectionRules && exec.profileSelectionRules.length > 0) {
+    profiles = filterProfiles(
+      profiles.map(p => ({ id: p.id, tags: p.tags, proxyId: p.proxyId, lastUsed: p.lastUsed })),
+      exec.profileSelectionRules as ProfileSelectionRule[]
+    ).map(f => profiles.find(p => p.id === f.id)!).filter(Boolean)
+  }
+
+  // ── Advanced: Dependency ordering ──
+  let orderedWorkflowIds = allWorkflows.map(w => w.id)
+  if (exec.dependencies && exec.dependencies.length > 0) {
+    try {
+      orderedWorkflowIds = topologicalSort(orderedWorkflowIds, exec.dependencies as WorkflowDependency[])
+    } catch (err: any) {
+      throw new Error(`Campaign dependency error: ${err.message}`)
+    }
+  }
+
   // Order profiles
   const orderedProfiles = exec.profileOrder === 'random' ? shuffleArray(profiles) : profiles
 
   // Build task list: each profile × workflows
-  interface Task { profile: BrowserProfile; workflow: Workflow; result: CampaignProfileResult }
+  interface Task { profile: BrowserProfile; workflow: Workflow; result: CampaignProfileResult; abVariant?: string }
   const tasks: Task[] = []
 
   for (const profile of orderedProfiles) {
+    // ── Advanced: Quota check ──
+    if (exec.quotaConfig) {
+      const quota = checkQuota(profile.id, exec.quotaConfig as QuotaConfig)
+      if (!quota.allowed) {
+        // Add skipped result
+        tasks.push({
+          profile,
+          workflow: allWorkflows[0],
+          result: {
+            profileId: profile.id,
+            profileName: profile.name,
+            workflowId: allWorkflows[0].id,
+            workflowName: allWorkflows[0].name,
+            status: 'skipped',
+            error: quota.reason,
+            logs: [],
+          }
+        })
+        continue
+      }
+    }
+
+    // Select workflows for this profile
     let wfs: Workflow[]
-    if (exec.workflowOrder === 'random') {
+
+    // ── Advanced: A/B test variant selection ──
+    if (exec.abTestVariants && exec.abTestVariants.length > 0) {
+      const variant = pickABVariant(exec.abTestVariants as ABTestVariant[])
+      const variantWf = allWorkflows.find(w => w.id === variant.workflowId)
+      wfs = variantWf ? [variantWf] : allWorkflows.slice(0, 1)
+    } else if (exec.workflowOrder === 'random') {
       wfs = [allWorkflows[Math.floor(Math.random() * allWorkflows.length)]]
     } else if (exec.workflowOrder === 'shuffle') {
       wfs = shuffleArray(allWorkflows)
     } else {
-      wfs = allWorkflows
+      // Sequential — respect dependency order
+      wfs = orderedWorkflowIds.map(id => allWorkflows.find(w => w.id === id)!).filter(Boolean)
     }
 
     for (const wf of wfs) {

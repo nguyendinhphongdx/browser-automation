@@ -1,12 +1,36 @@
-import { Trash2 } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Trash2, ChevronDown, ChevronRight, BarChart3 } from 'lucide-react'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { Drawer } from './Drawer'
 import { ICON_MAP, CATEGORY_COLORS } from './NodePalette'
 import { KeyRecorderInput } from '@/components/KeyRecorderInput'
 import { Zap } from 'lucide-react'
+import type { NodeRetryConfig, Workflow } from '@shared/types'
 
 export function NodePropertiesPanel() {
   const { activeWorkflow, selectedNodeId, setSelectedNode, updateNodes, nodeDefinitions } = useWorkflowStore()
+  const [workflows, setWorkflows] = useState<Workflow[]>([])
+  const [retryOpen, setRetryOpen] = useState(false)
+  const [statsOpen, setStatsOpen] = useState(false)
+  const [nodeStats, setNodeStats] = useState<any>(null)
+
+  // Load workflows for workflow-select field
+  useEffect(() => {
+    window.api.getWorkflows?.()?.then?.((wfs: Workflow[]) => setWorkflows(wfs || []))?.catch?.(() => {})
+  }, [selectedNodeId])
+
+  // Load node performance stats
+  const loadNodeStats = useCallback(async () => {
+    if (!activeWorkflow || !selectedNodeId) return
+    try {
+      const stats = await window.api.getNodeInstanceStats(activeWorkflow.id, selectedNodeId)
+      setNodeStats(stats)
+    } catch { setNodeStats(null) }
+  }, [activeWorkflow?.id, selectedNodeId])
+
+  useEffect(() => {
+    if (statsOpen) loadNodeStats()
+  }, [statsOpen, loadNodeStats])
 
   const open = !!(activeWorkflow && selectedNodeId)
   const node = activeWorkflow?.nodes.find(n => n.id === selectedNodeId)
@@ -25,6 +49,25 @@ export function NodePropertiesPanel() {
         data: {
           ...n.data,
           config: { ...n.data.config, [key]: value }
+        }
+      }
+    })
+    updateNodes(updatedNodes)
+  }
+
+  const retryConfig: NodeRetryConfig = node?.data.retryConfig || {
+    maxRetries: 0, backoffStrategy: 'fixed', backoffBaseMs: 1000, backoffMaxMs: 30000
+  }
+
+  const updateRetryConfig = (key: keyof NodeRetryConfig, value: any) => {
+    if (!activeWorkflow || !selectedNodeId) return
+    const updatedNodes = activeWorkflow.nodes.map(n => {
+      if (n.id !== selectedNodeId) return n
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          retryConfig: { ...retryConfig, [key]: value }
         }
       }
     })
@@ -126,9 +169,153 @@ export function NodePropertiesPanel() {
                   rows={4}
                   className="w-full px-3 py-2 border rounded-lg bg-background text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none transition-shadow"
                 />
+              ) : field.type === 'workflow-select' ? (
+                <select
+                  value={config[field.key] || ''}
+                  onChange={e => updateConfig(field.key, e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
+                >
+                  <option value="">-- Chọn workflow --</option>
+                  {workflows
+                    .filter(w => w.id !== activeWorkflow?.id) // prevent self-reference
+                    .map(w => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                </select>
+              ) : field.type === 'variable-mapping' ? (
+                <textarea
+                  value={
+                    typeof config[field.key] === 'object'
+                      ? Object.entries(config[field.key] || {}).map(([k, v]) => `${k}:${v}`).join('\n')
+                      : config[field.key] || ''
+                  }
+                  onChange={e => {
+                    const mapping: Record<string, string> = {}
+                    e.target.value.split('\n').filter(Boolean).forEach(line => {
+                      const [left, right] = line.split(':').map(s => s.trim())
+                      if (left && right) mapping[left] = right
+                    })
+                    updateConfig(field.key, mapping)
+                  }}
+                  placeholder={field.placeholder || 'parentVar:childVar (mỗi dòng 1 cặp)'}
+                  rows={3}
+                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ring resize-none transition-shadow"
+                />
               ) : null}
             </div>
           ))}
+
+          {/* Retry / Error Handling */}
+          <div className="border rounded-lg">
+            <button
+              onClick={() => setRetryOpen(!retryOpen)}
+              className="flex items-center justify-between w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span>Retry / Error Handling</span>
+              {retryOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            </button>
+            {retryOpen && (
+              <div className="px-3 pb-3 space-y-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1">Số lần retry</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={20}
+                    value={retryConfig.maxRetries}
+                    onChange={e => updateRetryConfig('maxRetries', Number(e.target.value))}
+                    className="w-full px-3 py-2 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
+                  />
+                </div>
+                {retryConfig.maxRetries > 0 && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium mb-1">Backoff strategy</label>
+                      <select
+                        value={retryConfig.backoffStrategy}
+                        onChange={e => updateRetryConfig('backoffStrategy', e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
+                      >
+                        <option value="fixed">Fixed</option>
+                        <option value="linear">Linear</option>
+                        <option value="exponential">Exponential</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1">Delay cơ bản (ms)</label>
+                      <input
+                        type="number"
+                        min={100}
+                        value={retryConfig.backoffBaseMs}
+                        onChange={e => updateRetryConfig('backoffBaseMs', Number(e.target.value))}
+                        className="w-full px-3 py-2 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1">Delay tối đa (ms)</label>
+                      <input
+                        type="number"
+                        min={1000}
+                        value={retryConfig.backoffMaxMs}
+                        onChange={e => updateRetryConfig('backoffMaxMs', Number(e.target.value))}
+                        className="w-full px-3 py-2 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Performance Stats */}
+          <div className="border rounded-lg">
+            <button
+              onClick={() => setStatsOpen(!statsOpen)}
+              className="flex items-center justify-between w-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span className="flex items-center gap-1.5"><BarChart3 className="h-3 w-3" /> Performance</span>
+              {statsOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            </button>
+            {statsOpen && nodeStats && (
+              <div className="px-3 pb-3 space-y-2">
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="bg-secondary/50 rounded-md px-2 py-1.5">
+                    <div className="text-[10px] text-muted-foreground">Runs</div>
+                    <div className="text-xs font-semibold">{nodeStats.total}</div>
+                  </div>
+                  <div className="bg-secondary/50 rounded-md px-2 py-1.5">
+                    <div className="text-[10px] text-muted-foreground">Success</div>
+                    <div className="text-xs font-semibold text-green-600">
+                      {nodeStats.total > 0 ? Math.round(nodeStats.successRate * 100) : 0}%
+                    </div>
+                  </div>
+                  <div className="bg-secondary/50 rounded-md px-2 py-1.5">
+                    <div className="text-[10px] text-muted-foreground">Avg</div>
+                    <div className="text-xs font-semibold">{nodeStats.avgTimeMs}ms</div>
+                  </div>
+                </div>
+                {nodeStats.runs?.length > 0 && (
+                  <div className="space-y-1 max-h-32 overflow-auto">
+                    <div className="text-[10px] text-muted-foreground font-medium">Recent runs:</div>
+                    {nodeStats.runs.slice(0, 8).map((r: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between text-[10px]">
+                        <span className={r.success ? 'text-green-600' : 'text-red-500'}>
+                          {r.success ? 'OK' : 'FAIL'}
+                        </span>
+                        <span className="text-muted-foreground">{r.executionTimeMs}ms</span>
+                        <span className="text-muted-foreground">
+                          {new Date(r.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {nodeStats.total === 0 && (
+                  <div className="text-[10px] text-muted-foreground text-center py-1">Chưa có dữ liệu</div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Footer */}
           <div className="pt-3 border-t space-y-2">

@@ -179,6 +179,7 @@ export interface WorkflowNodeData {
   config: Record<string, any>
   icon?: string
   nodeType?: string
+  retryConfig?: NodeRetryConfig
 }
 
 export interface WorkflowNode {
@@ -194,12 +195,22 @@ export interface WorkflowEdge {
   target: string
   sourceHandle?: string
   targetHandle?: string
+  edgeType?: 'normal' | 'on-error'
 }
 
 export interface WorkflowVariable {
   name: string
   type: 'string' | 'number' | 'boolean' | 'array' | 'object'
   defaultValue: string
+  direction?: 'in' | 'out' | 'inout'
+}
+
+// Retry config per-node
+export interface NodeRetryConfig {
+  maxRetries: number
+  backoffStrategy: 'fixed' | 'linear' | 'exponential'
+  backoffBaseMs: number
+  backoffMaxMs: number
 }
 
 export interface Workflow {
@@ -256,6 +267,20 @@ export interface LogEntry {
   data?: any
 }
 
+// ── Workflow Version ──────────────────────────
+
+export interface WorkflowVersion {
+  id: string
+  workflowId: string
+  versionNumber: number
+  label: string
+  nodes: WorkflowNode[]
+  edges: WorkflowEdge[]
+  code: string
+  variables: WorkflowVariable[]
+  createdAt: string
+}
+
 // ── Campaign ──────────────────────────────────
 
 export type CampaignStatus = 'draft' | 'running' | 'paused' | 'completed' | 'error'
@@ -275,6 +300,34 @@ export interface CampaignExecution {
   warmUp: boolean
   warmUpStep: number
   warmUpDelay: number
+  // Advanced (Phase 8)
+  dependencies?: CampaignDependency[]
+  profileSelectionRules?: CampaignProfileSelectionRule[]
+  quotaConfig?: CampaignQuotaConfig
+  abTestVariants?: CampaignABTestVariant[]
+}
+
+export interface CampaignDependency {
+  workflowId: string
+  dependsOn: string[]
+}
+
+export interface CampaignProfileSelectionRule {
+  type: 'tags' | 'last-used-before' | 'random-sample'
+  value: string | number
+}
+
+export interface CampaignQuotaConfig {
+  maxRunsPerProfile: number
+  perPeriod: 'hour' | 'day' | 'week'
+  cooldownMinutes: number
+}
+
+export interface CampaignABTestVariant {
+  id: string
+  name: string
+  workflowId: string
+  weight: number
 }
 
 export interface Campaign {
@@ -326,6 +379,37 @@ export interface CampaignProfileResult {
   startedAt?: string
   finishedAt?: string
   logs: LogEntry[]
+}
+
+// ── Schedule ─────────────────────────────────
+
+export interface Schedule {
+  id: string
+  name: string
+  type: 'cron' | 'webhook' | 'chain'
+  targetType: 'workflow' | 'campaign'
+  targetId: string
+  profileId?: string
+  cronExpression?: string
+  webhookSecret?: string
+  chainSourceId?: string
+  chainOnStatus?: 'completed' | 'error' | 'any'
+  enabled: boolean
+  lastTriggeredAt?: string
+  nextRunAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateScheduleInput {
+  name: string
+  type: 'cron' | 'webhook' | 'chain'
+  targetType: 'workflow' | 'campaign'
+  targetId: string
+  profileId?: string
+  cronExpression?: string
+  chainSourceId?: string
+  chainOnStatus?: 'completed' | 'error' | 'any'
 }
 
 // ── Backup ───────────────────────────────────

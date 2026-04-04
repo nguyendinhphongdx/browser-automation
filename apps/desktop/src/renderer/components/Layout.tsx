@@ -10,7 +10,6 @@ import {
   Globe,
   User,
   LogOut,
-  RefreshCw,
   PanelLeftClose,
   PanelLeftOpen
 } from 'lucide-react'
@@ -30,7 +29,7 @@ const navItems = [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { t } = useI18n()
-  const { user, isLoggedIn, checkAuth, logout, syncProfiles } = useAuthStore()
+  const { user, isLoggedIn, checkAuth, logout } = useAuthStore()
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
 
@@ -108,40 +107,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </div>
               )}
               {collapsed ? (
-                <>
-                  <button
-                    onClick={syncProfiles}
-                    className="flex items-center justify-center p-1.5 rounded-md border hover:bg-accent transition-colors"
-                    title="Đồng bộ profiles"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={logout}
-                    className="flex items-center justify-center p-1.5 rounded-md border hover:bg-destructive/10 hover:text-destructive transition-colors"
-                    title="Đăng xuất"
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                  </button>
-                </>
+                <button
+                  onClick={logout}
+                  className="flex items-center justify-center p-1.5 rounded-md border hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  title="Đăng xuất"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
               ) : (
-                <div className="flex gap-1">
-                  <button
-                    onClick={syncProfiles}
-                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-medium rounded-md border hover:bg-accent transition-colors"
-                    title="Đồng bộ profiles"
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                    Sync
-                  </button>
-                  <button
-                    onClick={logout}
-                    className="flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-medium rounded-md border hover:bg-destructive/10 hover:text-destructive transition-colors"
-                    title="Đăng xuất"
-                  >
-                    <LogOut className="h-3 w-3" />
-                  </button>
-                </div>
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-medium rounded-md border hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  title="Đăng xuất"
+                >
+                  <LogOut className="h-3 w-3" />
+                  Đăng xuất
+                </button>
               )}
             </div>
           ) : (

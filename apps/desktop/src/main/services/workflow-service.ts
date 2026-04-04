@@ -1,7 +1,8 @@
+import crypto from 'crypto'
 import { v4 as uuid } from 'uuid'
 import { getDatabase } from '../database/init'
 import type {
-  Workflow, CreateWorkflowInput, UpdateWorkflowInput, WorkflowLog
+  Workflow, CreateWorkflowInput, UpdateWorkflowInput, WorkflowLog, WorkflowVersion
 } from '../../shared/types'
 
 function rowToWorkflow(row: any): Workflow {
@@ -57,10 +58,50 @@ export function createWorkflow(input: CreateWorkflowInput): Workflow {
   return getWorkflowById(id)!
 }
 
+function contentHash(workflow: Workflow): string {
+  const content = JSON.stringify({
+    nodes: workflow.nodes,
+    edges: workflow.edges,
+    code: workflow.code,
+    variables: workflow.variables,
+  })
+  return crypto.createHash('md5').update(content).digest('hex')
+}
+
 export function updateWorkflow(id: string, input: UpdateWorkflowInput): Workflow | null {
   const db = getDatabase()
   const existing = getWorkflowById(id)
   if (!existing) return null
+
+  // Auto-version: snapshot current state before overwriting if content changed
+  const newContent = {
+    nodes: input.nodes ?? existing.nodes,
+    edges: input.edges ?? existing.edges,
+    code: input.code ?? existing.code,
+    variables: input.variables ?? existing.variables,
+  }
+  const oldHash = contentHash(existing)
+  const newHash = crypto.createHash('md5').update(JSON.stringify(newContent)).digest('hex')
+
+  if (oldHash !== newHash) {
+    const lastVersion = db.prepare(
+      'SELECT MAX(version_number) as maxV FROM workflow_versions WHERE workflow_id = ?'
+    ).get(id) as any
+    const nextVersion = ((lastVersion?.maxV as number) || 0) + 1
+
+    db.prepare(`
+      INSERT INTO workflow_versions (id, workflow_id, version_number, nodes, edges, code, variables)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      uuid(),
+      id,
+      nextVersion,
+      JSON.stringify(existing.nodes),
+      JSON.stringify(existing.edges),
+      existing.code,
+      JSON.stringify(existing.variables)
+    )
+  }
 
   const now = new Date().toISOString()
 
@@ -170,6 +211,53 @@ export function importWorkflow(jsonContent: string): Workflow {
     code: data.code || '',
     variables: data.variables || []
   })!
+}
+
+// ── Workflow Versions ──────────────────────────────
+
+function rowToVersion(row: any): WorkflowVersion {
+  return {
+    id: row.id,
+    workflowId: row.workflow_id,
+    versionNumber: row.version_number,
+    label: row.label || '',
+    nodes: JSON.parse(row.nodes || '[]'),
+    edges: JSON.parse(row.edges || '[]'),
+    code: row.code || '',
+    variables: JSON.parse(row.variables || '[]'),
+    createdAt: row.created_at,
+  }
+}
+
+export function getWorkflowVersions(workflowId: string): WorkflowVersion[] {
+  const db = getDatabase()
+  return db
+    .prepare('SELECT * FROM workflow_versions WHERE workflow_id = ? ORDER BY version_number DESC LIMIT 50')
+    .all(workflowId)
+    .map(rowToVersion)
+}
+
+export function getWorkflowVersion(versionId: string): WorkflowVersion | null {
+  const db = getDatabase()
+  const row = db.prepare('SELECT * FROM workflow_versions WHERE id = ?').get(versionId)
+  return row ? rowToVersion(row) : null
+}
+
+export function rollbackWorkflow(workflowId: string, versionId: string): Workflow | null {
+  const version = getWorkflowVersion(versionId)
+  if (!version || version.workflowId !== workflowId) return null
+
+  return updateWorkflow(workflowId, {
+    nodes: version.nodes,
+    edges: version.edges,
+    code: version.code,
+    variables: version.variables,
+  })
+}
+
+export function labelWorkflowVersion(versionId: string, label: string): void {
+  const db = getDatabase()
+  db.prepare('UPDATE workflow_versions SET label = ? WHERE id = ?').run(label, versionId)
 }
 
 export function duplicateWorkflow(id: string): Workflow | null {

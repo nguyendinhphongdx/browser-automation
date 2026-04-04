@@ -14,7 +14,7 @@ export interface NodeDefinition {
 export interface ConfigField {
   key: string
   label: string
-  type: 'text' | 'number' | 'select' | 'boolean' | 'code' | 'selector' | 'keyrecorder'
+  type: 'text' | 'number' | 'select' | 'boolean' | 'code' | 'selector' | 'keyrecorder' | 'workflow-select' | 'variable-mapping'
   placeholder?: string
   options?: { label: string; value: string }[]
   defaultValue?: any
@@ -499,6 +499,153 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
     configSchema: [
       { key: 'selector', label: 'Selector', type: 'selector', required: true },
       { key: 'timeout', label: 'Timeout (ms)', type: 'number', defaultValue: 3000 }
+    ]
+  },
+
+  // ── Data Pipeline ────────────────────────────
+  {
+    type: 'paginate',
+    label: 'Phân trang',
+    category: 'data',
+    icon: 'ChevronsRight',
+    description: 'Tự động click nút tiếp theo và thu thập dữ liệu qua nhiều trang',
+    inputs: 1,
+    outputs: 1,
+    configSchema: [
+      { key: 'itemSelector', label: 'Selector phần tử cần lấy', type: 'selector', placeholder: '.item, .card', required: true },
+      { key: 'nextButtonSelector', label: 'Selector nút tiếp theo', type: 'selector', placeholder: '.next, [aria-label="Next"]', required: true },
+      { key: 'maxPages', label: 'Số trang tối đa', type: 'number', defaultValue: 10 },
+      { key: 'variable', label: 'Lưu vào biến', type: 'text', defaultValue: 'items', required: true }
+    ]
+  },
+  {
+    type: 'export-data',
+    label: 'Xuất dữ liệu',
+    category: 'data',
+    icon: 'Download',
+    description: 'Xuất dữ liệu ra file CSV hoặc JSON',
+    inputs: 1,
+    outputs: 1,
+    configSchema: [
+      { key: 'variable', label: 'Biến chứa dữ liệu', type: 'text', placeholder: 'items', required: true },
+      { key: 'format', label: 'Định dạng', type: 'select', options: [
+        { label: 'JSON', value: 'json' },
+        { label: 'CSV', value: 'csv' }
+      ], defaultValue: 'json' },
+      { key: 'filePath', label: 'Đường dẫn file (tùy chọn)', type: 'text', placeholder: 'Bỏ trống để chọn' }
+    ]
+  },
+  {
+    type: 'map-data',
+    label: 'Map (biến đổi)',
+    category: 'data',
+    icon: 'Sparkles',
+    description: 'Biến đổi từng phần tử trong mảng bằng biểu thức JS',
+    inputs: 1,
+    outputs: 1,
+    configSchema: [
+      { key: 'sourceVariable', label: 'Biến nguồn (array)', type: 'text', required: true },
+      { key: 'expression', label: 'Biểu thức (item, index)', type: 'code', placeholder: 'item.toUpperCase()', required: true },
+      { key: 'outputVariable', label: 'Lưu kết quả vào biến', type: 'text', placeholder: 'Mặc định ghi đè biến nguồn' }
+    ]
+  },
+  {
+    type: 'filter-data',
+    label: 'Filter (lọc)',
+    category: 'data',
+    icon: 'Filter',
+    description: 'Lọc mảng theo điều kiện JS',
+    inputs: 1,
+    outputs: 1,
+    configSchema: [
+      { key: 'sourceVariable', label: 'Biến nguồn (array)', type: 'text', required: true },
+      { key: 'expression', label: 'Điều kiện (item, index)', type: 'code', placeholder: 'item.length > 0', required: true },
+      { key: 'outputVariable', label: 'Lưu kết quả vào biến', type: 'text', placeholder: 'Mặc định ghi đè biến nguồn' }
+    ]
+  },
+  {
+    type: 'reduce-data',
+    label: 'Reduce (gộp)',
+    category: 'data',
+    icon: 'Sigma',
+    description: 'Gộp mảng thành một giá trị (tổng, nối, đếm...)',
+    inputs: 1,
+    outputs: 1,
+    configSchema: [
+      { key: 'sourceVariable', label: 'Biến nguồn (array)', type: 'text', required: true },
+      { key: 'expression', label: 'Biểu thức (acc, item, index)', type: 'code', placeholder: 'acc + item', required: true },
+      { key: 'initialValue', label: 'Giá trị khởi tạo', type: 'text', defaultValue: '0' },
+      { key: 'outputVariable', label: 'Lưu kết quả vào biến', type: 'text', defaultValue: 'result', required: true }
+    ]
+  },
+  {
+    type: 'sort-data',
+    label: 'Sort (sắp xếp)',
+    category: 'data',
+    icon: 'ArrowUpDown',
+    description: 'Sắp xếp mảng theo key hoặc giá trị',
+    inputs: 1,
+    outputs: 1,
+    configSchema: [
+      { key: 'sourceVariable', label: 'Biến nguồn (array)', type: 'text', required: true },
+      { key: 'key', label: 'Key (nếu array of objects)', type: 'text', placeholder: 'Bỏ trống nếu array đơn giản' },
+      { key: 'order', label: 'Thứ tự', type: 'select', options: [
+        { label: 'Tăng dần (A→Z, 0→9)', value: 'asc' },
+        { label: 'Giảm dần (Z→A, 9→0)', value: 'desc' }
+      ], defaultValue: 'asc' },
+      { key: 'outputVariable', label: 'Lưu kết quả vào biến', type: 'text', placeholder: 'Mặc định ghi đè biến nguồn' }
+    ]
+  },
+
+  // ── Parallel ─────────────────────────────────
+  {
+    type: 'parallel-fork',
+    label: 'Parallel Fork',
+    category: 'flow',
+    icon: 'GitFork',
+    description: 'Chia thành N nhánh chạy song song. Mỗi nhánh có biến riêng.',
+    inputs: 1,
+    outputs: 4, // max 4 branches
+    configSchema: [
+      { key: 'branches', label: 'Số nhánh', type: 'number', defaultValue: 2 }
+    ]
+  },
+  {
+    type: 'parallel-join',
+    label: 'Parallel Join',
+    category: 'flow',
+    icon: 'GitMerge',
+    description: 'Chờ các nhánh song song hoàn thành rồi gộp kết quả.',
+    inputs: 4, // max 4 branches
+    outputs: 1,
+    configSchema: [
+      { key: 'mode', label: 'Chế độ chờ', type: 'select', options: [
+        { label: 'Chờ tất cả', value: 'all' },
+        { label: 'Chờ 1 xong', value: 'any' },
+      ], defaultValue: 'all' },
+      { key: 'mergeStrategy', label: 'Gộp biến', type: 'select', options: [
+        { label: 'Merge (gộp shallow)', value: 'merge' },
+        { label: 'Last wins', value: 'last-wins' },
+        { label: 'Collect (thành array)', value: 'collect' },
+      ], defaultValue: 'merge' },
+      { key: 'timeout', label: 'Timeout (ms)', type: 'number', defaultValue: 60000 }
+    ]
+  },
+
+  // ── Sub-workflow ─────────────────────────────
+  {
+    type: 'run-workflow',
+    label: 'Chạy Workflow',
+    category: 'flow',
+    icon: 'Workflow',
+    description: 'Chạy một workflow khác như sub-routine. Hỗ trợ truyền biến vào/ra.',
+    inputs: 1,
+    outputs: 1,
+    configSchema: [
+      { key: 'workflowId', label: 'Workflow', type: 'workflow-select', required: true },
+      { key: 'inputMappings', label: 'Input (parent → child)', type: 'variable-mapping', placeholder: 'parentVar:childVar' },
+      { key: 'outputMappings', label: 'Output (child → parent)', type: 'variable-mapping', placeholder: 'parentVar:childVar' },
+      { key: 'maxDepth', label: 'Giới hạn đệ quy', type: 'number', defaultValue: 10 }
     ]
   },
 

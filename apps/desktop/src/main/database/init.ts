@@ -132,6 +132,55 @@ export function initDatabase() {
       finished_at TEXT,
       FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS schedules (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'cron',
+      target_type TEXT NOT NULL DEFAULT 'workflow',
+      target_id TEXT NOT NULL,
+      profile_id TEXT,
+      cron_expression TEXT,
+      webhook_secret TEXT,
+      chain_source_id TEXT,
+      chain_on_status TEXT DEFAULT 'completed',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      last_triggered_at TEXT,
+      next_run_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS node_metrics (
+      id TEXT PRIMARY KEY,
+      workflow_id TEXT NOT NULL,
+      workflow_log_id TEXT,
+      node_id TEXT NOT NULL,
+      node_type TEXT NOT NULL,
+      node_label TEXT DEFAULT '',
+      execution_time_ms INTEGER NOT NULL DEFAULT 0,
+      success INTEGER NOT NULL DEFAULT 1,
+      error_message TEXT,
+      screenshot_path TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_node_metrics_workflow ON node_metrics(workflow_id, node_type);
+    CREATE INDEX IF NOT EXISTS idx_node_metrics_created ON node_metrics(created_at);
+
+    CREATE TABLE IF NOT EXISTS workflow_versions (
+      id TEXT PRIMARY KEY,
+      workflow_id TEXT NOT NULL,
+      version_number INTEGER NOT NULL DEFAULT 1,
+      label TEXT DEFAULT '',
+      nodes TEXT DEFAULT '[]',
+      edges TEXT DEFAULT '[]',
+      code TEXT DEFAULT '',
+      variables TEXT DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+    );
   `)
 
   // Tạo Default Browser profile nếu chưa có

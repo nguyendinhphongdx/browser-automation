@@ -8,7 +8,9 @@ import {
   CheckSquare, Upload, GripVertical,
   Type, Code2, Link, Heading, Hash, Variable, FileCode, Table,
   GitBranch, Repeat, ListOrdered, Clock, Timer, ShieldAlert, LogOut, HelpCircle,
-  Send, Cookie, Database, Bell, FileText, Zap
+  Send, Cookie, Database, Bell, FileText, Zap, Boxes,
+  ChevronsRight, Download, Sparkles, Filter, Sigma, ArrowUpDown,
+  GitFork, GitMerge
 } from 'lucide-react'
 
 export const ICON_MAP: Record<string, any> = {
@@ -17,7 +19,9 @@ export const ICON_MAP: Record<string, any> = {
   CheckSquare, Upload, GripVertical,
   Type, Code2, Link, Heading, Hash, Variable, FileCode, Table,
   GitBranch, Repeat, ListOrdered, Clock, Timer, ShieldAlert, LogOut, HelpCircle,
-  Send, Cookie, Database, Bell, FileText, Zap
+  Send, Cookie, Database, Bell, FileText, Zap, Workflow: Boxes,
+  ChevronsRight, Download, Sparkles, Filter, Sigma, ArrowUpDown,
+  GitFork, GitMerge
 }
 
 export const CATEGORY_COLORS: Record<string, string> = {

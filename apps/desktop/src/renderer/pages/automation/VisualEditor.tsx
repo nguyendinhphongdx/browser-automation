@@ -42,6 +42,9 @@ function AutomationNode({ id, data, selected }: { id: string; data: any; selecte
     data.label === 'Lặp danh sách' || data.label === 'Try / Catch' ||
     data.label === 'Phần tử tồn tại?'
   )
+  const isParallelFork = (data as any).nodeType === 'parallel-fork'
+  const isParallelJoin = (data as any).nodeType === 'parallel-join'
+  const branchCount = isParallelFork ? (data.config?.branches || 2) : 0
   // Kiểm tra node này có edge ra không (nếu không → là node cuối)
   const hasOutgoingEdge = edges.some(e => e.source === id)
 
@@ -115,7 +118,29 @@ function AutomationNode({ id, data, selected }: { id: string; data: any; selecte
       </div>
 
       {/* Output handle(s) */}
-      {isFlowBranch ? (
+      {isParallelFork ? (
+        <>
+          {/* Fork: multiple bottom outputs */}
+          {Array.from({ length: branchCount }).map((_, i) => {
+            const pct = ((i + 1) / (branchCount + 1)) * 100
+            const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899']
+            return (
+              <Handle key={i} type="source" position={Position.Bottom} id={`branch-${i}`}
+                className="!w-[10px] !h-[10px] !bg-white !border-[2px] !rounded-full"
+                style={{ borderColor: colors[i % colors.length], left: `${pct}%`, bottom: -5 }}
+              />
+            )
+          })}
+        </>
+      ) : isParallelJoin ? (
+        <>
+          {/* Join: single right output */}
+          <Handle type="source" position={Position.Right}
+            className="!w-[10px] !h-[10px] !bg-white !border-[2px] !rounded-full !-right-[5px]"
+            style={{ borderColor: '#b1b1b7', top: '50%' }}
+          />
+        </>
+      ) : isFlowBranch ? (
         <>
           {/* Left branch */}
           <Handle
@@ -141,6 +166,15 @@ function AutomationNode({ id, data, selected }: { id: string; data: any; selecte
             position={Position.Right}
             className="!w-[10px] !h-[10px] !bg-white !border-[2px] !rounded-full !-right-[5px]"
             style={{ borderColor: '#b1b1b7', top: '50%' }}
+          />
+          {/* Error output handle (bottom-right) */}
+          <Handle
+            type="source"
+            position={Position.Bottom}
+            id="on-error"
+            className="!w-[8px] !h-[8px] !bg-white !border-[2px] !rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{ borderColor: '#ef4444', right: 8, left: 'auto', bottom: -4 }}
+            title="On Error"
           />
           {/* Nút "+" — hiện khi hover, luôn hiện nếu là node cuối */}
           <button
@@ -207,16 +241,24 @@ function VisualEditorInner() {
   )
 
   const edges: Edge[] = useMemo(() =>
-    (activeWorkflow?.edges || []).map(e => ({
-      id: e.id,
-      source: e.source,
-      target: e.target,
-      sourceHandle: e.sourceHandle,
-      targetHandle: e.targetHandle,
-      type: 'smoothstep',
-      style: { strokeWidth: 2, stroke: '#b1b1b7' },
-      markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: '#b1b1b7' },
-    })),
+    (activeWorkflow?.edges || []).map(e => {
+      const isError = e.edgeType === 'on-error'
+      const color = isError ? '#EF4444' : '#b1b1b7'
+      return {
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+        type: 'smoothstep',
+        animated: isError,
+        style: { strokeWidth: 2, stroke: color, strokeDasharray: isError ? '6 3' : undefined },
+        markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color },
+        label: isError ? 'on-error' : undefined,
+        labelStyle: isError ? { fill: '#EF4444', fontSize: 10, fontWeight: 500 } : undefined,
+        labelBgStyle: isError ? { fill: '#FEF2F2', stroke: '#FECACA' } : undefined,
+      }
+    }),
     [activeWorkflow?.edges]
   )
 
@@ -293,7 +335,9 @@ function VisualEditorInner() {
       source: e.source,
       target: e.target,
       sourceHandle: e.sourceHandle || undefined,
-      targetHandle: e.targetHandle || undefined
+      targetHandle: e.targetHandle || undefined,
+      // Tag edges from on-error handle
+      edgeType: (e.sourceHandle === 'on-error' ? 'on-error' : undefined) as any,
     })))
   }, [updateEdges])
 

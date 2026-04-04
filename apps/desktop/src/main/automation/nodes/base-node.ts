@@ -1,16 +1,25 @@
+import path from 'path'
+import fs from 'fs'
+import { app } from 'electron'
 import type { Page, BrowserContext } from 'playwright-core'
-import type { LogEntry } from '../../../shared/types'
+import type { LogEntry, NodeRetryConfig } from '../../../shared/types'
+import { recordNodeMetric } from '../../services/metrics-service'
 
 export interface ExecutionContext {
   page: Page
   context: BrowserContext
   profileId: string
+  workflowId?: string
+  workflowLogId?: string
   variables: Record<string, any>
   logs: LogEntry[]
   aborted: boolean
+  depth: number  // sub-workflow recursion depth
+  parentWorkflowId?: string
   onNodeStart?: (nodeId: string) => void
   onNodeDone?: (nodeId: string) => void
   onNodeError?: (nodeId: string, error: string) => void
+  onNodeRetry?: (nodeId: string, attempt: number, maxRetries: number) => void
 }
 
 export interface NodeInput {
@@ -32,19 +41,93 @@ export abstract class BaseNode {
     this.config = input.config
   }
 
-  // ── Template Method ──────────────────────────
+  // ── Template Method (with retry + metrics) ───
   async run(): Promise<void> {
     if (this.ctx.aborted) return
 
-    try {
-      this.onStart()
-      await this.init()
-      await this.execute()
-      this.onSuccess()
-    } catch (err: any) {
-      this.onError(err)
-      throw err
+    const retryConfig = this.config._retryConfig as NodeRetryConfig | undefined
+    const maxRetries = retryConfig?.maxRetries || 0
+    const nodeType = this.config._nodeType || 'unknown'
+    const startTime = Date.now()
+
+    this.onStart()
+    await this.init()
+
+    let lastError: Error | null = null
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (this.ctx.aborted) return
+      try {
+        if (attempt > 0) {
+          const delay = this.getBackoffDelay(attempt, retryConfig!)
+          this.log('warn', `Retry ${attempt}/${maxRetries} after ${delay}ms`)
+          this.ctx.onNodeRetry?.(this.nodeId, attempt, maxRetries)
+          await new Promise(r => setTimeout(r, delay))
+        }
+        await this.execute()
+        this.onSuccess()
+        this.recordMetric(nodeType, Date.now() - startTime, true)
+        return
+      } catch (err: any) {
+        lastError = err
+        if (attempt < maxRetries) continue
+      }
     }
+
+    // Record failure metric + screenshot
+    const screenshotPath = await this.captureErrorScreenshot()
+    this.recordMetric(nodeType, Date.now() - startTime, false, lastError!.message, screenshotPath)
+
+    this.onError(lastError!)
+    throw lastError!
+  }
+
+  private recordMetric(nodeType: string, timeMs: number, success: boolean, errorMessage?: string, screenshotPath?: string) {
+    try {
+      if (this.ctx.workflowId) {
+        recordNodeMetric({
+          workflowId: this.ctx.workflowId,
+          workflowLogId: this.ctx.workflowLogId,
+          nodeId: this.nodeId,
+          nodeType,
+          nodeLabel: this.label,
+          executionTimeMs: timeMs,
+          success,
+          errorMessage,
+          screenshotPath,
+        })
+      }
+    } catch { /* metrics should never break execution */ }
+  }
+
+  private async captureErrorScreenshot(): Promise<string | undefined> {
+    try {
+      if (!this.ctx.page || this.ctx.page.isClosed()) return undefined
+      const dir = path.join(app.getPath('userData'), 'screenshots')
+      fs.mkdirSync(dir, { recursive: true })
+      const filePath = path.join(dir, `error-${this.nodeId}-${Date.now()}.png`)
+      await this.ctx.page.screenshot({ path: filePath, fullPage: false })
+      this.log('info', `Screenshot saved: ${filePath}`)
+      return filePath
+    } catch {
+      return undefined
+    }
+  }
+
+  private getBackoffDelay(attempt: number, config: NodeRetryConfig): number {
+    const base = config.backoffBaseMs || 1000
+    const max = config.backoffMaxMs || 30000
+    let delay: number
+    switch (config.backoffStrategy) {
+      case 'linear':
+        delay = base * attempt
+        break
+      case 'exponential':
+        delay = base * Math.pow(2, attempt - 1)
+        break
+      default: // fixed
+        delay = base
+    }
+    return Math.min(delay, max)
   }
 
   // ── Lifecycle hooks ──────────────────────────

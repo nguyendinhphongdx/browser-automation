@@ -1,5 +1,18 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
+const ALLOWED_CHANNELS = new Set([
+  'auth:deeplink-success',
+  'recorder:action',
+  'workflow:node-progress',
+  'workflow:status',
+  'campaign:results',
+  'campaign:profile-progress',
+  'campaign:status',
+  'campaign:node-progress',
+  'updater:downloading',
+  'updater:progress',
+])
+
 const api = {
   // Profile
   getProfiles: () => ipcRenderer.invoke('profile:getAll'),
@@ -56,6 +69,28 @@ const api = {
   stopWorkflow: (logId: string) => ipcRenderer.invoke('workflow:stop', logId),
   getNodeDefinitions: () => ipcRenderer.invoke('automation:getNodeDefinitions'),
   getNodeCategories: () => ipcRenderer.invoke('automation:getNodeCategories'),
+
+  // Schedules
+  getSchedules: () => ipcRenderer.invoke('schedule:getAll'),
+  getSchedule: (id: string) => ipcRenderer.invoke('schedule:get', id),
+  createSchedule: (data: any) => ipcRenderer.invoke('schedule:create', data),
+  updateSchedule: (id: string, data: any) => ipcRenderer.invoke('schedule:update', id, data),
+  deleteSchedule: (id: string) => ipcRenderer.invoke('schedule:delete', id),
+  toggleSchedule: (id: string, enabled: boolean) => ipcRenderer.invoke('schedule:toggle', id, enabled),
+  triggerSchedule: (id: string) => ipcRenderer.invoke('schedule:trigger', id),
+  getWebhookPort: () => ipcRenderer.invoke('schedule:webhookPort'),
+
+  // Metrics
+  getNodeStats: (workflowId: string) => ipcRenderer.invoke('metrics:nodeStats', workflowId),
+  getNodeInstanceStats: (workflowId: string, nodeId: string) => ipcRenderer.invoke('metrics:nodeInstanceStats', workflowId, nodeId),
+  getExecutionHistory: (opts?: any) => ipcRenderer.invoke('metrics:executionHistory', opts),
+  cleanupMetrics: (retentionDays?: number) => ipcRenderer.invoke('metrics:cleanup', retentionDays),
+
+  // Workflow Versions
+  getWorkflowVersions: (workflowId: string) => ipcRenderer.invoke('workflow:getVersions', workflowId),
+  getWorkflowVersion: (versionId: string) => ipcRenderer.invoke('workflow:getVersion', versionId),
+  rollbackWorkflow: (workflowId: string, versionId: string) => ipcRenderer.invoke('workflow:rollback', workflowId, versionId),
+  labelWorkflowVersion: (versionId: string, label: string) => ipcRenderer.invoke('workflow:labelVersion', versionId, label),
 
   // Campaign
   getCampaigns: () => ipcRenderer.invoke('campaign:getAll'),
@@ -119,8 +154,7 @@ const api = {
 
   // Events (restricted to allowed channels)
   on: (channel: string, callback: (...args: any[]) => void) => {
-    const allowedChannels = ['auth:deeplink-success', 'recorder:action', 'workflow:log', 'campaign:update']
-    if (!allowedChannels.includes(channel)) {
+    if (!ALLOWED_CHANNELS.has(channel)) {
       console.warn(`IPC channel "${channel}" is not in the allowlist`)
       return
     }
@@ -129,8 +163,7 @@ const api = {
     ipcRenderer.on(channel, wrappedCallback)
   },
   off: (channel: string, callback: (...args: any[]) => void) => {
-    const allowedChannels = ['auth:deeplink-success', 'recorder:action', 'workflow:log', 'campaign:update']
-    if (!allowedChannels.includes(channel)) return
+    if (!ALLOWED_CHANNELS.has(channel)) return
     const wrappedCallback = (callback as any).__wrappedIpc
     if (wrappedCallback) {
       ipcRenderer.removeListener(channel, wrappedCallback)
