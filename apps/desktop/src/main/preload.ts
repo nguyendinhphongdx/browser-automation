@@ -91,9 +91,18 @@ const api = {
   logout: () => ipcRenderer.invoke('auth:logout'),
   checkAuth: () => ipcRenderer.invoke('auth:check'),
   testConnection: () => ipcRenderer.invoke('auth:testConnection'),
+  openBrowserLogin: () => ipcRenderer.invoke('auth:openBrowser'),
 
   // API proxy
   apiRequest: (method: string, path: string, body?: any) => ipcRenderer.invoke('api:request', method, path, body),
+
+  // Backup
+  exportProfile: (profileId: string) => ipcRenderer.invoke('backup:export', profileId),
+  importProfile: () => ipcRenderer.invoke('backup:import'),
+  exportAllProfiles: () => ipcRenderer.invoke('backup:exportAll'),
+  uploadProfile: (profileId: string) => ipcRenderer.invoke('backup:upload', profileId),
+  downloadBackup: (backupId: string) => ipcRenderer.invoke('backup:download', backupId),
+  getBackupStatus: () => ipcRenderer.invoke('backup:status'),
 
   // AI Chat (qua main process, tránh CORS)
   aiChat: (systemPrompt: string, messages: any[]) => ipcRenderer.invoke('ai:chat', systemPrompt, messages),

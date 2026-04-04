@@ -1,3 +1,6 @@
+import path from 'path'
+import fs from 'fs'
+import { app } from 'electron'
 import { v4 as uuid } from 'uuid'
 import { getDatabase } from '../database/init'
 import { generateFingerprint } from '../browser/fingerprint'
@@ -118,7 +121,15 @@ export function deleteProfile(id: string): boolean {
   if (id === 'default-browser') return false
   const db = getDatabase()
   const result = db.prepare('DELETE FROM profiles WHERE id = ?').run(id)
-  return result.changes > 0
+  if (result.changes > 0) {
+    // Xóa thư mục data browser của profile
+    const profileDir = path.join(app.getPath('userData'), 'profiles', id)
+    if (fs.existsSync(profileDir)) {
+      fs.rmSync(profileDir, { recursive: true, force: true })
+    }
+    return true
+  }
+  return false
 }
 
 export function duplicateProfile(id: string): BrowserProfile | null {

@@ -19,9 +19,11 @@ interface AuthStore {
   testConnection: () => Promise<boolean>
   login: (email: string, password: string) => Promise<void>
   register: (name: string, email: string, password: string) => Promise<void>
+  openBrowserLogin: () => Promise<void>
   logout: () => void
   checkAuth: () => Promise<void>
   syncProfiles: () => Promise<void>
+  listenDeepLink: () => void
 }
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -77,6 +79,24 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     } finally {
       set({ loading: false })
     }
+  },
+
+  openBrowserLogin: async () => {
+    await window.api.openBrowserLogin()
+  },
+
+  listenDeepLink: () => {
+    window.api.on('auth:deeplink-success', (data: any) => {
+      set({
+        user: {
+          id: data.userId,
+          name: data.name || null,
+          email: data.email,
+          role: 'USER',
+        },
+        isLoggedIn: true,
+      })
+    })
   },
 
   logout: () => {

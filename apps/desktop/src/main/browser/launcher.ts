@@ -1,9 +1,18 @@
-import { chromium, firefox, type Browser, type BrowserContext } from 'playwright-core'
+import { app } from 'electron'
+import path from 'path'
+import fs from 'fs'
+import { chromium, firefox, type BrowserContext } from 'playwright-core'
 import type { BrowserProfile, BrowserType, Fingerprint } from '../../shared/types'
 import { detectInstalledBrowsers } from './detect'
 
 // Lưu trữ các browser context đang chạy
-const activeBrowsers = new Map<string, { browser: Browser; context: BrowserContext }>()
+const activeBrowsers = new Map<string, { context: BrowserContext }>()
+
+export function getProfileDataDir(profileId: string): string {
+  const dir = path.join(app.getPath('userData'), 'profiles', profileId)
+  fs.mkdirSync(dir, { recursive: true })
+  return dir
+}
 
 function getPlaywrightBrowserType(browserType: BrowserType) {
   if (browserType === 'firefox') {
@@ -114,14 +123,13 @@ export async function launchBrowser(profile: BrowserProfile): Promise<void> {
 
   const fp = profile.fingerprint
   const args = buildFingerprintArgs(fp)
+  const userDataDir = getProfileDataDir(profile.id)
 
-  const browser = await browserType.launch({
+  // Dùng persistent context để lưu cookies, localStorage, cache giữa các phiên
+  const context = await browserType.launchPersistentContext(userDataDir, {
     executablePath,
     headless: false,
-    args
-  })
-
-  const context = await browser.newContext({
+    args,
     userAgent: fp.userAgent,
     viewport: {
       width: fp.screenResolution.width,
@@ -139,14 +147,13 @@ export async function launchBrowser(profile: BrowserProfile): Promise<void> {
   const page = await context.newPage()
   await page.goto('about:blank')
 
-  activeBrowsers.set(profile.id, { browser, context })
+  activeBrowsers.set(profile.id, { context })
 }
 
 export async function closeBrowser(profileId: string): Promise<void> {
   const entry = activeBrowsers.get(profileId)
   if (entry) {
     await entry.context.close()
-    await entry.browser.close()
     activeBrowsers.delete(profileId)
   }
 }

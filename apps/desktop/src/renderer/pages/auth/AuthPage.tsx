@@ -1,10 +1,14 @@
-import { useState } from 'react'
-import { Globe, LogIn, UserPlus, Server, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Globe, LogIn, UserPlus, Server, CheckCircle, XCircle, Loader2, ExternalLink } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 
 export function AuthPage() {
-  const { login, register, testConnection, setServerUrl, serverUrl, connected, loading } = useAuthStore()
+  const { login, register, openBrowserLogin, listenDeepLink, testConnection, setServerUrl, serverUrl, connected, loading } = useAuthStore()
+
+  useEffect(() => {
+    listenDeepLink()
+  }, [])
   const [tab, setTab] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -168,6 +172,28 @@ export function AuthPage() {
             )}
           </button>
         </form>
+
+        {/* Divider */}
+        <div className="relative my-5">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">hoặc</span>
+          </div>
+        </div>
+
+        {/* Browser login */}
+        <button
+          onClick={openBrowserLogin}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium hover:bg-accent transition-colors"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Đăng nhập bằng Browser
+        </button>
+        <p className="text-xs text-muted-foreground text-center mt-2">
+          Mở trình duyệt để đăng nhập với Google, GitHub hoặc email
+        </p>
       </div>
     </div>
   )

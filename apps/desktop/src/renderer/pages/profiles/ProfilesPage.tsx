@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Plus, LayoutGrid, LayoutList, Search, Play, Square, Trash2, Edit, Copy, Users } from 'lucide-react'
+import { Plus, LayoutGrid, LayoutList, Search, Play, Square, Trash2, Edit, Copy, Users, Cloud, Upload, Download, FolderArchive } from 'lucide-react'
 import { useProfileStore } from '@/stores/profile-store'
 import { useResourceStore } from '@/stores/resource-store'
 import { cn } from '@/lib/utils'
 import { CreateProfileDialog } from './CreateProfileDialog'
 import { EditProfileDialog } from './EditProfileDialog'
+import { CloudProfilesTab } from './CloudProfilesTab'
 import type { BrowserProfile } from '@shared/types'
+
+const api = window.api
 
 const BROWSER_ICONS: Record<string, string> = {
   chrome: '🌐',
@@ -96,6 +99,20 @@ function ProfileTableRow({ profile, getProxyName, onEdit }: { profile: BrowserPr
             <Copy className="h-4 w-4" />
           </button>
           <button
+            onClick={() => api.uploadProfile(profile.id).catch((e: any) => alert(e.message))}
+            className="p-1.5 rounded-md hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 transition-colors"
+            title="Upload lên cloud"
+          >
+            <Upload className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => api.exportProfile(profile.id).catch((e: any) => alert(e.message))}
+            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"
+            title="Export backup"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+          <button
             onClick={() => {
               if (confirm('Bạn có chắc muốn xoá profile này?')) {
                 deleteProfile(profile.id)
@@ -183,6 +200,13 @@ function ProfileGridCard({ profile, getProxyName, onEdit }: { profile: BrowserPr
           <Copy className="h-3.5 w-3.5" />
         </button>
         <button
+          onClick={() => api.uploadProfile(profile.id).catch((e: any) => alert(e.message))}
+          className="p-1.5 rounded-lg hover:bg-blue-500/10 text-muted-foreground hover:text-blue-500 transition-colors"
+          title="Upload lên cloud"
+        >
+          <Upload className="h-3.5 w-3.5" />
+        </button>
+        <button
           onClick={() => {
             if (confirm('Bạn có chắc muốn xoá profile này?')) {
               deleteProfile(profile.id)
@@ -204,6 +228,7 @@ export function ProfilesPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [editingProfile, setEditingProfile] = useState<BrowserProfile | null>(null)
   const [search, setSearch] = useState('')
+  const [activeTab, setActiveTab] = useState<'local' | 'cloud'>('local')
 
   const getProxyName = (proxyId: string | null) => {
     if (!proxyId) return 'Không có'
@@ -215,6 +240,11 @@ export function ProfilesPage() {
     fetchProfiles()
     fetchBrowsers()
     fetchProxies()
+
+    // Listen for refresh from CloudProfilesTab after download
+    const handleRefresh = () => fetchProfiles()
+    window.addEventListener('profiles:refresh', handleRefresh)
+    return () => window.removeEventListener('profiles:refresh', handleRefresh)
   }, [])
 
   const filtered = profiles.filter(
@@ -233,113 +263,161 @@ export function ProfilesPage() {
             Quản lý {profiles.length} browser profile
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          {activeTab === 'local' && (
+            <>
+              <button
+                onClick={() => api.importProfile().then(() => fetchProfiles()).catch((e: any) => e.message && alert(e.message))}
+                className="inline-flex items-center gap-2 px-3 py-2.5 border rounded-lg text-sm font-medium hover:bg-accent transition-colors"
+                title="Import backup"
+              >
+                <FolderArchive className="h-4 w-4" />
+                Import
+              </button>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Tạo Profile
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center gap-4 mb-4 border-b">
         <button
-          onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          onClick={() => setActiveTab('local')}
+          className={cn(
+            'flex items-center gap-2 px-1 pb-2.5 text-sm font-medium border-b-2 transition-colors',
+            activeTab === 'local'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
         >
-          <Plus className="h-4 w-4" />
-          Tạo Profile
+          <Users className="h-4 w-4" />
+          Local
+        </button>
+        <button
+          onClick={() => setActiveTab('cloud')}
+          className={cn(
+            'flex items-center gap-2 px-1 pb-2.5 text-sm font-medium border-b-2 transition-colors',
+            activeTab === 'cloud'
+              ? 'border-primary text-foreground'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          )}
+        >
+          <Cloud className="h-4 w-4" />
+          Cloud
         </button>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Tìm kiếm profile..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-        </div>
-
-        <div className="flex items-center border rounded-lg">
-          <button
-            onClick={() => setViewMode('table')}
-            className={cn(
-              'p-2 transition-colors',
-              viewMode === 'table'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <LayoutList className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('grid')}
-            className={cn(
-              'p-2 transition-colors',
-              viewMode === 'grid'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Content */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20 text-muted-foreground">
-          Đang tải...
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-          <Users className="h-12 w-12 mb-3 opacity-40" />
-          <p className="text-lg font-medium">Chưa có profile nào</p>
-          <p className="text-sm mt-1">Tạo profile đầu tiên để bắt đầu</p>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Tạo Profile
-          </button>
-        </div>
-      ) : viewMode === 'table' ? (
-        <div className="border rounded-xl overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Tên
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Trình duyệt
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Platform
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Proxy
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Tags
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Lần dùng cuối
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((profile) => (
-                <ProfileTableRow key={profile.id} profile={profile} getProxyName={getProxyName} onEdit={setEditingProfile} />
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {activeTab === 'cloud' ? (
+        <CloudProfilesTab />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map((profile) => (
-            <ProfileGridCard key={profile.id} profile={profile} getProxyName={getProxyName} onEdit={setEditingProfile} />
-          ))}
-        </div>
+        <>
+          {/* Toolbar */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Tìm kiếm profile..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            <div className="flex items-center border rounded-lg">
+              <button
+                onClick={() => setViewMode('table')}
+                className={cn(
+                  'p-2 transition-colors',
+                  viewMode === 'table'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <LayoutList className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={cn(
+                  'p-2 transition-colors',
+                  viewMode === 'grid'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          {loading ? (
+            <div className="flex items-center justify-center py-20 text-muted-foreground">
+              Đang tải...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <Users className="h-12 w-12 mb-3 opacity-40" />
+              <p className="text-lg font-medium">Chưa có profile nào</p>
+              <p className="text-sm mt-1">Tạo profile đầu tiên để bắt đầu</p>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Tạo Profile
+              </button>
+            </div>
+          ) : viewMode === 'table' ? (
+            <div className="border rounded-xl overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Tên
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Trình duyệt
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Platform
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Proxy
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Tags
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Lần dùng cuối
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Thao tác
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((profile) => (
+                    <ProfileTableRow key={profile.id} profile={profile} getProxyName={getProxyName} onEdit={setEditingProfile} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filtered.map((profile) => (
+                <ProfileGridCard key={profile.id} profile={profile} getProxyName={getProxyName} onEdit={setEditingProfile} />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Create dialog */}

@@ -25,6 +25,7 @@ model User {
   scripts        Script[]
   reviews        Review[]
   syncedProfiles SyncedProfile[]
+  profileBackups ProfileBackup[]
 
   @@map("users")
 }
@@ -94,6 +95,24 @@ model SyncedProfile {
 
   @@unique([userId, localId])
   @@map("synced_profiles")
+}
+
+// ─── Profile Backup ─────────────────────────────────────────
+
+model ProfileBackup {
+  id         String   @id @default(cuid())
+  userId     String
+  profileId  String   // localId từ desktop
+  name       String
+  size       Int      // bytes
+  storageKey String   // path/key trong storage provider
+  provider   String   // "s3" hoặc "gcs"
+  checksum   String   // SHA-256 hash của file zip
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profile_backups")
 }
 
 // ─── Marketplace ─────────────────────────────────────────────

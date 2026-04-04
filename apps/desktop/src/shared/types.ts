@@ -327,3 +327,21 @@ export interface CampaignProfileResult {
   finishedAt?: string
   logs: LogEntry[]
 }
+
+// ── Backup ───────────────────────────────────
+
+export interface BackupMetadata {
+  profileId: string
+  profileName: string
+  browserType: BrowserType
+  exportedAt: string
+  version: string
+}
+
+export interface BackupStatusItem {
+  profileId: string
+  name: string
+  latestBackupAt: string
+  checksum: string
+  size: number
+}
