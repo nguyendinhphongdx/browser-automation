@@ -7,7 +7,10 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "lint": "eslint . --ext .ts,.tsx",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
     "postinstall": "electron-rebuild -f -w better-sqlite3"
@@ -91,6 +94,7 @@
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.3",
+    "@eslint/js": "^9.18.0",
     "@types/adm-zip": "^0.5.8",
     "@types/archiver": "^7.0.0",
     "@types/better-sqlite3": "^7.6.12",
@@ -102,8 +106,14 @@
     "electron": "^31.7.7",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react": "^7.37.3",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "globals": "^15.14.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0",
+    "vitest": "^3.2.4"
   }
 }

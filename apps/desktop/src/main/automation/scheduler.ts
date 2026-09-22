@@ -1,10 +1,9 @@
-import { ipcMain } from 'electron'
 import { getEnabledCronSchedules, getChainSchedules, markTriggered } from '../services/schedule-service'
 import { getWorkflowById } from '../services/workflow-service'
-import { getCampaignById } from '../services/campaign-service'
 import { getProfileById } from '../services/profile-service'
-import { launchBrowser, getActiveBrowserContext, closeBrowser } from '../browser/launcher'
-import { executeVisualWorkflow, executeCodeWorkflow, type ExecutionContext } from './engine'
+import { acquireBrowserPage, closeBrowser } from '../browser/launcher'
+import type { ExecutionContext } from './engine'
+import { buildExecutionContext, runWorkflowOnce } from './run-workflow'
 import { createWorkflowLog, updateWorkflowLog } from '../services/workflow-service'
 import { DEFAULT_PROFILE_ID } from '../database/init'
 import type { Schedule } from '../../shared/types'
@@ -64,52 +63,32 @@ async function runScheduledWorkflow(schedule: Schedule) {
 
   const log = createWorkflowLog(workflow.id, profileId)
 
-  const ctx: ExecutionContext = {
-    page: null as any,
-    context: null as any,
-    profileId,
-    workflowId: workflow.id,
-    workflowLogId: log.id,
-    variables: {},
-    logs: [],
-    aborted: false,
-    depth: 0,
-  }
-
-  let needsClose = false
+  let ctx: ExecutionContext | undefined
+  let launchedNow = false
   try {
-    let active = getActiveBrowserContext(profileId)
-    if (!active) {
-      await launchBrowser(profile)
-      active = getActiveBrowserContext(profileId)
-      needsClose = true
-    }
-    if (!active) throw new Error('Cannot launch browser')
+    const acquired = await acquireBrowserPage(profile)
+    launchedNow = acquired.launchedNow
 
-    ctx.context = active.context
-    const pages = active.context.pages()
-    ctx.page = pages.length > 0 ? pages[pages.length - 1] : await active.context.newPage()
+    ctx = buildExecutionContext({
+      page: acquired.page,
+      context: acquired.context,
+      profileId,
+      workflow,
+      workflowId: workflow.id,
+      workflowLogId: log.id,
+    })
 
-    // Initialize workflow variables
-    for (const v of workflow.variables) {
-      ctx.variables[v.name] = v.defaultValue
-    }
-
-    if (workflow.mode === 'code' && workflow.code) {
-      await executeCodeWorkflow(workflow.code, ctx)
-    } else {
-      await executeVisualWorkflow(workflow, ctx)
-    }
+    await runWorkflowOnce(workflow, ctx)
 
     updateWorkflowLog(log.id, 'completed', JSON.stringify(ctx.logs))
 
     // Trigger chain schedules
     await processChains(workflow.id, 'completed')
-  } catch (err: any) {
-    updateWorkflowLog(log.id, 'error', JSON.stringify(ctx.logs))
+  } catch {
+    updateWorkflowLog(log.id, 'error', JSON.stringify(ctx?.logs ?? []))
     await processChains(workflow.id, 'error')
   } finally {
-    if (needsClose) {
+    if (launchedNow) {
       await closeBrowser(profileId).catch(() => {})
     }
   }

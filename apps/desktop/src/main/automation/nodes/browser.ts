@@ -73,7 +73,7 @@ export class CloseBrowserNode extends BaseNode {
 
 export class ScreenshotNode extends BaseNode {
   protected async execute() {
-    const opts: any = {}
+    const opts: { path?: string; fullPage?: boolean } = {}
     if (this.config.path) opts.path = this.resolve(this.config.path)
     if (this.config.fullPage) opts.fullPage = true
 

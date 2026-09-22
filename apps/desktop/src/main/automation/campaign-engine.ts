@@ -1,15 +1,15 @@
 import type { WebContents } from 'electron'
 import type {
   Campaign, CampaignProfileResult, CampaignExecution,
-  Workflow, BrowserProfile, LogEntry
+  Workflow, BrowserProfile
 } from '../../shared/types'
 import { getProfileById, updateLastUsed } from '../services/profile-service'
 import { getWorkflowById } from '../services/workflow-service'
 import { checkQuota, filterProfiles, topologicalSort, pickABVariant } from '../services/quota-service'
 import type { ProfileSelectionRule, ABTestVariant, WorkflowDependency, QuotaConfig } from '../services/quota-service'
 import { createCampaignRun, updateCampaignRun, updateCampaign } from '../services/campaign-service'
-import { launchBrowser, closeBrowser, getActiveBrowserContext } from '../browser/launcher'
-import { executeVisualWorkflow, executeCodeWorkflow, type ExecutionContext } from './engine'
+import { acquireBrowserPage } from '../browser/launcher'
+import { buildExecutionContext, runWorkflowOnce } from './run-workflow'
 
 interface RunningCampaign {
   aborted: boolean
@@ -43,30 +43,16 @@ async function runSingleTask(
   result.startedAt = new Date().toISOString()
   sender.send('campaign:profile-progress', { ...result })
 
-  // Launch browser
-  let active = getActiveBrowserContext(profile.id)
-  if (active) {
-    try { active.context.pages() } catch {
-      await closeBrowser(profile.id).catch(() => {})
-      active = null
-    }
-  }
-  if (!active) {
-    await launchBrowser(profile)
-    active = getActiveBrowserContext(profile.id)
-  }
-  if (!active) throw new Error('Không thể khởi chạy browser')
+  // Launch browser (shared helper: staleness detection + closed-page filtering)
+  const { context, page } = await acquireBrowserPage(profile)
   updateLastUsed(profile.id)
 
-  const ctx: ExecutionContext = {
-    page: null as any,
-    context: active.context,
+  const ctx = buildExecutionContext({
+    page,
+    context,
     profileId: profile.id,
+    workflow,
     workflowId: workflow.id,
-    variables: {},
-    logs: [],
-    aborted: false,
-    depth: 0,
     onNodeStart: (nodeId) => {
       sender.send('campaign:node-progress', { profileId: profile.id, workflowId: workflow.id, nodeId, status: 'running' })
     },
@@ -76,22 +62,10 @@ async function runSingleTask(
     onNodeError: (nodeId, error) => {
       sender.send('campaign:node-progress', { profileId: profile.id, workflowId: workflow.id, nodeId, status: 'error', error })
     },
-  }
-
-  const pages = active.context.pages().filter(p => !p.isClosed())
-  ctx.page = pages[pages.length - 1] || await active.context.newPage()
-
-  // Init variables
-  for (const v of workflow.variables) {
-    ctx.variables[v.name] = v.defaultValue
-  }
+  })
 
   // Execute
-  if (workflow.mode === 'visual') {
-    await executeVisualWorkflow(workflow, ctx)
-  } else {
-    await executeCodeWorkflow(workflow.code, ctx)
-  }
+  await runWorkflowOnce(workflow, ctx)
 
   result.logs = ctx.logs
   result.status = 'completed'
@@ -141,8 +115,9 @@ export async function executeCampaign(
   if (exec.dependencies && exec.dependencies.length > 0) {
     try {
       orderedWorkflowIds = topologicalSort(orderedWorkflowIds, exec.dependencies as WorkflowDependency[])
-    } catch (err: any) {
-      throw new Error(`Campaign dependency error: ${err.message}`)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      throw new Error(`Campaign dependency error: ${message}`)
     }
   }
 
@@ -247,10 +222,11 @@ export async function executeCampaign(
     sender.send('campaign:status', { campaignId: campaign.id, status: finalStatus, runId: run.id })
 
     return run.id
-  } catch (err: any) {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
     updateCampaignRun(run.id, 'error', allResults)
     updateCampaign(campaign.id, { status: 'error' })
-    sender.send('campaign:status', { campaignId: campaign.id, status: 'error', runId: run.id, error: err.message })
+    sender.send('campaign:status', { campaignId: campaign.id, status: 'error', runId: run.id, error: message })
     throw err
   } finally {
     runningCampaigns.delete(campaign.id)
@@ -349,8 +325,8 @@ async function runTaskWithRetry(
     try {
       await runSingleTask(task.profile, task.workflow, sender, state, task.result)
       return // Success
-    } catch (err: any) {
-      task.result.error = err.message
+    } catch (err) {
+      task.result.error = err instanceof Error ? err.message : String(err)
       if (attempt < maxRetries) {
         task.result.status = 'pending'
         sender.send('campaign:profile-progress', { ...task.result })

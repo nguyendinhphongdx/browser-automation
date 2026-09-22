@@ -151,6 +151,8 @@ const api = {
 
   // AI Chat (qua main process, tránh CORS)
   aiChat: (systemPrompt: string, messages: any[]) => ipcRenderer.invoke('ai:chat', systemPrompt, messages),
+  testAIConnection: (provider: string, apiKey: string, baseUrl: string, model: string) =>
+    ipcRenderer.invoke('ai:testConnection', provider, apiKey, baseUrl, model),
 
   // Events (restricted to allowed channels)
   on: (channel: string, callback: (...args: any[]) => void) => {

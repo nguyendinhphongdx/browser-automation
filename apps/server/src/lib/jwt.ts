@@ -1,9 +1,17 @@
 import { SignJWT, jwtVerify } from "jose";
 import { prisma } from "./db";
 
-const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || "fallback-secret-change-me"
-);
+const secretValue =
+  process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
+
+if (!secretValue) {
+  throw new Error(
+    "JWT_SECRET (or NEXTAUTH_SECRET/AUTH_SECRET) không được cấu hình. " +
+      "Đặt biến môi trường này trước khi khởi động server — xem apps/server/.env.example."
+  );
+}
+
+const secret = new TextEncoder().encode(secretValue);
 
 export interface JWTPayload {
   sub: string; // user id

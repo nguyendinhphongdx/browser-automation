@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getUserFromRequest } from "@/lib/jwt";
+import { getRequestUser } from "@/lib/api-auth";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -34,7 +34,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
 // PATCH: Cập nhật script (chỉ tác giả)
 export async function PATCH(request: Request, { params }: RouteParams) {
   const { id } = await params;
-  const user = await getUserFromRequest(request);
+  const user = await getRequestUser(request);
   if (!user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -66,7 +66,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 // DELETE: Xoá script (chỉ tác giả hoặc admin)
 export async function DELETE(request: Request, { params }: RouteParams) {
   const { id } = await params;
-  const user = await getUserFromRequest(request);
+  const user = await getRequestUser(request);
   if (!user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }

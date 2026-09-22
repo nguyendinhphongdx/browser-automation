@@ -3,6 +3,9 @@ import { Sparkles, Send, Loader2, Bot, User, Copy, Check, RotateCcw, X } from 'l
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { Drawer } from './Drawer'
 import { cn } from '@/lib/utils'
+import { buildNodeCatalog } from './ai-node-catalog'
+import { validateAction, type AIExistingNode } from './validate-ai-workflow'
+import type { WorkflowNode, WorkflowEdge, WorkflowNodeData } from '@shared/types'
 
 interface Message {
   id: string
@@ -12,18 +15,50 @@ interface Message {
   pending?: boolean
 }
 
+// Shape of a node/edge as the AI is instructed to emit them inside an action
+// JSON block (see buildSystemPrompt's QUY TẮC section) — "id" on a node is a
+// LOCAL/temporary id used only to wire edges within the same action.
+interface AIActionNodeInput {
+  id?: string
+  type?: string
+  nodeType?: string
+  label?: string
+  category?: string
+  icon?: string
+  config?: Record<string, unknown>
+}
+
+interface AIActionEdgeInput {
+  source: string
+  target: string
+  sourceHandle?: string
+  targetHandle?: string
+  edgeType?: string
+}
+
+interface AIAction {
+  type: 'add_nodes' | 'update_node' | 'remove_nodes' | 'replace_all'
+  nodes?: AIActionNodeInput[]
+  edges?: AIActionEdgeInput[]
+  nodeId?: string
+  label?: string
+  config?: Record<string, unknown>
+  nodeIds?: string[]
+}
+
+type BuiltNode = WorkflowNode
+type BuiltEdge = WorkflowEdge
+
 // Tạo system prompt mô tả workflow hiện tại cho AI
 function buildSystemPrompt(workflow: any, nodeDefinitions: any[]): string {
-  const nodeTypes = nodeDefinitions.map((n: any) =>
-    `- ${n.type}: ${n.label} (${n.category}) — ${n.description}`
-  ).join('\n')
+  const nodeCatalog = buildNodeCatalog(nodeDefinitions)
 
   const currentNodes = (workflow?.nodes || []).map((n: any, i: number) =>
     `  ${i + 1}. [${n.id}] ${n.data.label} (${n.data.nodeType || n.type}) — config: ${JSON.stringify(n.data.config || {})}`
   ).join('\n')
 
   const currentEdges = (workflow?.edges || []).map((e: any) =>
-    `  ${e.source} → ${e.target}`
+    `  ${e.source} → ${e.target}${e.sourceHandle ? ` (${e.sourceHandle})` : ''}`
   ).join('\n')
 
   return `Bạn là AI assistant cho BrowserAuto — nền tảng tự động hoá browser.
@@ -38,8 +73,8 @@ ${currentNodes || '  (trống)'}
 - Edges (kết nối):
 ${currentEdges || '  (không có)'}
 
-CÁC LOẠI NODE CÓ SẴN:
-${nodeTypes}
+CÁC LOẠI NODE CÓ SẴN (kèm config schema):
+${nodeCatalog}
 
 QUY TẮC:
 1. Khi người dùng yêu cầu thêm/sửa/xoá nodes, trả lời bằng JSON action block:
@@ -59,12 +94,19 @@ QUY TẮC:
    { "type": "replace_all", "nodes": [...], "edges": [...] }
    \`\`\`
 
-2. Mỗi node trong action phải có format:
-   { "type": "automationNode", "nodeType": "<node-type>", "label": "<tên hiển thị>", "category": "<category>", "icon": "<icon-name>", "config": {...} }
+2. Mỗi node trong "nodes" phải có format:
+   { "id": "n1", "type": "automationNode", "nodeType": "<node-type>", "label": "<tên hiển thị>", "category": "<category>", "icon": "<icon-name>", "config": {...theo configSchema ở trên...} }
+   Trường "id" là id TẠM để nối edge trong cùng action này (vd "n1", "n2"...) — hệ thống sẽ tự sinh id thật khi áp dụng, không cần trùng với id thật nào.
 
-3. Trả lời ngắn gọn, rõ ràng, bằng tiếng Việt.
-4. Giải thích ngắn gọn trước action block.
-5. Nếu câu hỏi không liên quan đến workflow, trả lời bình thường không cần action block.`
+3. Mảng "edges" (nếu có), mỗi edge có format:
+   { "source": "<id>", "target": "<id>", "sourceHandle": "<xem QUY TẮC RẼ NHÁNH>", "edgeType": "on-error" (tuỳ chọn) }
+   "source"/"target" có thể là id tạm ("n1") của node mới trong action này, hoặc id thật của node đã có sẵn (xem mục "Nodes" ở trên, ví dụ "${'{node-id}'}").
+   Nếu không khai báo "edges", hệ thống sẽ tự nối các node mới theo thứ tự tuần tự — CHỈ dùng cách này cho chuỗi bước tuần tự đơn giản, không có rẽ nhánh.
+   Nếu bất kỳ node nào trong "nodes" là loại rẽ nhánh (if-else, element-exists, loop, loop-each, try-catch), BẮT BUỘC phải khai báo đủ "edges" với đúng sourceHandle theo QUY TẮC RẼ NHÁNH ở trên — nếu thiếu, hệ thống sẽ từ chối áp dụng toàn bộ action.
+
+4. Trả lời ngắn gọn, rõ ràng, bằng tiếng Việt.
+5. Giải thích ngắn gọn trước action block.
+6. Nếu câu hỏi không liên quan đến workflow, trả lời bình thường không cần action block.`
 }
 
 // Parse action blocks từ response
@@ -112,62 +154,101 @@ export function AIChatPanel({ open, onClose }: Props) {
     setTimeout(() => setCopied(null), 2000)
   }
 
-  // Áp dụng action vào workflow
-  const applyAction = (action: any) => {
-    if (!activeWorkflow) return
+  // Xây dựng node/edge thật từ action.nodes/action.edges — ánh xạ id tạm
+  // ("n1", "n2"...) mà AI dùng để nối edge sang id thật do canvas sinh ra.
+  // Nếu action không khai báo "edges", tự nối tuần tự (chỉ phù hợp cho
+  // chuỗi bước đơn giản không rẽ nhánh — đã được validateAction bắt buộc
+  // khai báo "edges" cho các node rẽ nhánh).
+  const buildNodesAndEdges = (
+    actionNodes: AIActionNodeInput[],
+    actionEdges: AIActionEdgeInput[],
+    startX: number,
+    startY: number,
+    bridgeFrom?: string
+  ): { newNodes: BuiltNode[]; newEdges: BuiltEdge[] } => {
+    const idMap = new Map<string, string>()
+    const newNodes: BuiltNode[] = actionNodes.map((n, i) => {
+      const realId = `node-${Date.now()}-${i}`
+      if (n.id) idMap.set(String(n.id), realId)
+      const data: WorkflowNodeData = {
+        label: n.label || '',
+        category: (n.category || 'browser') as WorkflowNodeData['category'],
+        icon: n.icon || 'Zap',
+        nodeType: n.nodeType || n.type,
+        config: n.config || {}
+      }
+      return {
+        id: realId,
+        type: 'automationNode',
+        position: { x: startX + i * 250, y: startY },
+        data
+      }
+    })
+
+    let newEdges: BuiltEdge[]
+    if (actionEdges.length > 0) {
+      const resolve = (ref: string) => idMap.get(ref) ?? ref // fallback: existing canvas node id
+      newEdges = actionEdges.map((e, i) => ({
+        id: `e-${Date.now()}-a${i}`,
+        source: resolve(String(e.source)),
+        target: resolve(String(e.target)),
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+        edgeType: e.edgeType as WorkflowEdge['edgeType']
+      }))
+    } else {
+      // Tự nối tuần tự: bridge từ node hiện tại cuối cùng (nếu có) rồi nối các node mới liên tiếp
+      newEdges = newNodes.slice(1).map((n, i) => ({
+        id: `e-${Date.now()}-${i}`,
+        source: newNodes[i].id,
+        target: n.id
+      }))
+      if (bridgeFrom && newNodes.length > 0) {
+        newEdges = [{ id: `e-${Date.now()}-bridge`, source: bridgeFrom, target: newNodes[0].id }, ...newEdges]
+      }
+    }
+
+    return { newNodes, newEdges }
+  }
+
+  // Áp dụng action vào workflow — trả về lỗi validate (nếu có) thay vì
+  // âm thầm ghi đè canvas với dữ liệu sai cấu trúc.
+  const applyAction = (action: AIAction): string[] => {
+    if (!activeWorkflow) return []
 
     const existingNodes = [...activeWorkflow.nodes]
     const existingEdges = [...activeWorkflow.edges]
+    const existingForValidation: AIExistingNode[] = existingNodes.map((n) => ({
+      id: n.id,
+      nodeType: (n.data as { nodeType?: string }).nodeType || n.type
+    }))
+
+    if (action.type === 'add_nodes' || action.type === 'replace_all') {
+      const { errors } = validateAction(action, nodeDefinitions, existingForValidation)
+      if (errors.length > 0) return errors
+    }
 
     if (action.type === 'add_nodes') {
       const lastNode = existingNodes[existingNodes.length - 1]
       const startX = lastNode ? lastNode.position.x + 250 : 80
       const startY = lastNode ? lastNode.position.y : 200
 
-      const newNodes = (action.nodes || []).map((n: any, i: number) => ({
-        id: `node-${Date.now()}-${i}`,
-        type: 'automationNode',
-        position: { x: startX + i * 250, y: startY },
-        data: {
-          label: n.label,
-          category: n.category || 'browser',
-          icon: n.icon || 'Zap',
-          nodeType: n.nodeType || n.type,
-          config: n.config || {}
-        }
-      }))
-
-      // Nối node cuối hiện tại → node đầu mới
-      const bridgeEdges: any[] = []
-      if (lastNode && newNodes.length > 0) {
-        bridgeEdges.push({
-          id: `e-${Date.now()}-bridge`,
-          source: lastNode.id,
-          target: newNodes[0].id
-        })
-      }
-
-      // Nối các node mới với nhau
-      const newEdges = newNodes.slice(1).map((n: any, i: number) => ({
-        id: `e-${Date.now()}-${i}`,
-        source: newNodes[i].id,
-        target: n.id
-      }))
-
-      // Thêm edges từ action (nếu có)
-      const actionEdges = (action.edges || []).map((e: any, i: number) => ({
-        id: `e-${Date.now()}-a${i}`,
-        source: e.source,
-        target: e.target,
-        sourceHandle: e.sourceHandle,
-        targetHandle: e.targetHandle
-      }))
+      const { newNodes, newEdges } = buildNodesAndEdges(
+        action.nodes || [],
+        action.edges || [],
+        startX,
+        startY,
+        lastNode?.id
+      )
 
       updateNodes([...existingNodes, ...newNodes])
-      updateEdges([...existingEdges, ...bridgeEdges, ...newEdges, ...actionEdges])
+      updateEdges([...existingEdges, ...newEdges])
     }
 
     if (action.type === 'update_node') {
+      const { errors } = validateAction(action, nodeDefinitions, existingForValidation)
+      if (errors.length > 0) return errors
+
       const updated = existingNodes.map(n => {
         if (n.id === action.nodeId) {
           return {
@@ -191,28 +272,12 @@ export function AIChatPanel({ open, onClose }: Props) {
     }
 
     if (action.type === 'replace_all') {
-      const newNodes = (action.nodes || []).map((n: any, i: number) => ({
-        id: `node-${Date.now()}-${i}`,
-        type: 'automationNode',
-        position: { x: 80 + i * 250, y: 200 },
-        data: {
-          label: n.label,
-          category: n.category || 'browser',
-          icon: n.icon || 'Zap',
-          nodeType: n.nodeType || n.type,
-          config: n.config || {}
-        }
-      }))
-
-      const newEdges = newNodes.slice(1).map((n: any, i: number) => ({
-        id: `e-${Date.now()}-${i}`,
-        source: newNodes[i].id,
-        target: n.id
-      }))
-
+      const { newNodes, newEdges } = buildNodesAndEdges(action.nodes || [], action.edges || [], 80, 200)
       updateNodes(newNodes)
       updateEdges(newEdges)
     }
+
+    return []
   }
 
   const handleSend = async () => {
@@ -269,9 +334,19 @@ export function AIChatPanel({ open, onClose }: Props) {
 
       setMessages(prev => prev.filter(m => !m.pending).concat(assistantMsg))
 
-      // Auto-apply actions
+      // Auto-apply actions — thu lại lỗi validate thay vì âm thầm bỏ qua
+      const allErrors: string[] = []
       for (const action of actions) {
-        applyAction(action)
+        allErrors.push(...applyAction(action))
+      }
+      if (allErrors.length > 0) {
+        const validationErrorMsg: Message = {
+          id: `msg-${Date.now()}-validation`,
+          role: 'assistant',
+          content: `**Lỗi:** AI đã sinh ra cấu trúc workflow không hợp lệ, một số thay đổi đã bị bỏ qua:\n${allErrors.map(e => `- ${e}`).join('\n')}\n\nVui lòng thử mô tả lại rõ hơn.`,
+          timestamp: Date.now()
+        }
+        setMessages(prev => prev.concat(validationErrorMsg))
       }
     } catch (err) {
       const errorMsg: Message = {

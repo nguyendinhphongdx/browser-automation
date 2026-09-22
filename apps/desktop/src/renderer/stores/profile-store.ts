@@ -93,6 +93,7 @@ declare global {
       actionsToWorkflow: (actions: any[]) => Promise<{ nodes: any[]; edges: any[] }>
       // AI Chat
       aiChat: (systemPrompt: string, messages: any[]) => Promise<any>
+      testAIConnection: (provider: string, apiKey: string, baseUrl: string, model: string) => Promise<{ ok: boolean; error?: string }>
       // App info
       getDbPath: () => Promise<string>
       // Events

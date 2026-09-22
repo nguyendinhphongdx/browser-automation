@@ -1,13 +1,11 @@
 import { prisma } from "@/lib/db";
-import { getUserFromRequest } from "@/lib/jwt";
+import { requireAdmin } from "@/lib/api-auth";
 import type { NextRequest } from "next/server";
 
 // GET: Danh sách tất cả scripts (cho admin duyệt)
 export async function GET(request: NextRequest) {
-  const user = await getUserFromRequest(request);
-  if (!user || user.role !== "ADMIN") {
-    return Response.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const { error } = await requireAdmin(request);
+  if (error) return error;
 
   const { searchParams } = request.nextUrl;
   const status = searchParams.get("status") || ""; // PENDING, APPROVED, REJECTED, hoặc rỗng = tất cả

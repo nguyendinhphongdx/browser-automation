@@ -17,7 +17,7 @@ export interface ConfigField {
   type: 'text' | 'number' | 'select' | 'boolean' | 'code' | 'selector' | 'keyrecorder' | 'workflow-select' | 'variable-mapping'
   placeholder?: string
   options?: { label: string; value: string }[]
-  defaultValue?: any
+  defaultValue?: unknown
   required?: boolean
 }
 

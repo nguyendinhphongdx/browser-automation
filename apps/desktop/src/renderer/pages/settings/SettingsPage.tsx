@@ -180,40 +180,10 @@ function AIProviderSection() {
     setTesting(true)
     setTestResult(null)
     try {
-      // Gửi test request tới provider
-      let url = ''
-      let headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      let body = ''
-
-      if (provider === 'ollama') {
-        url = (baseUrl || 'http://localhost:11434') + '/api/tags'
-        const res = await fetch(url)
-        setTestResult(res.ok ? 'success' : 'error')
-      } else if (provider === 'anthropic') {
-        // Anthropic: gọi messages API với max_tokens nhỏ
-        url = 'https://api.anthropic.com/v1/messages'
-        headers['x-api-key'] = apiKey
-        headers['anthropic-version'] = '2023-06-01'
-        headers['anthropic-dangerous-direct-browser-access'] = 'true'
-        body = JSON.stringify({
-          model: model || 'claude-sonnet-4-20250514',
-          max_tokens: 10,
-          messages: [{ role: 'user', content: 'Hi' }]
-        })
-        const res = await fetch(url, { method: 'POST', headers, body })
-        setTestResult(res.ok || res.status === 200 ? 'success' : 'error')
-      } else {
-        // OpenAI-compatible (OpenAI, Groq, Google, Custom)
-        const base = baseUrl || (
-          provider === 'google' ? 'https://generativelanguage.googleapis.com/v1beta/openai' :
-          provider === 'groq' ? 'https://api.groq.com/openai' :
-          'https://api.openai.com'
-        )
-        url = `${base}/v1/models`
-        headers['Authorization'] = `Bearer ${apiKey}`
-        const res = await fetch(url, { headers })
-        setTestResult(res.ok ? 'success' : 'error')
-      }
+      // Gọi qua main process (như aiChat) — tránh gửi API key + gọi thẳng
+      // provider từ renderer, tránh phải bypass CORS bằng header đặc biệt.
+      const result = await window.api.testAIConnection(provider, apiKey, baseUrl, model || customModel)
+      setTestResult(result.ok ? 'success' : 'error')
     } catch {
       setTestResult('error')
     } finally {

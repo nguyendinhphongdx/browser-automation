@@ -2,7 +2,7 @@ import { getDatabase } from '../database/init'
 import { encrypt, decrypt } from './encryption'
 
 // Keys that contain sensitive data — will be encrypted
-const SENSITIVE_KEYS = ['auth.token', 'auth.refreshToken', 'api.secret']
+const SENSITIVE_KEYS = ['auth.token', 'auth.refreshToken', 'api.secret', 'ai.apiKey']
 
 export interface AppSettings {
   // Server / API

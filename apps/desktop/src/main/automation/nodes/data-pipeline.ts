@@ -74,24 +74,26 @@ export class ExportDataNode extends BaseNode {
     this.log('info', `Exported ${format.toUpperCase()} to ${filePath}`)
   }
 
-  private toCsv(data: any): string {
+  private toCsv(data: unknown): string {
     if (!Array.isArray(data) || data.length === 0) return ''
 
     // Array of arrays (e.g. from extract-table)
     if (Array.isArray(data[0])) {
-      return data.map((row: any[]) => row.map(cell => this.escapeCsv(String(cell ?? ''))).join(',')).join('\n')
+      return data
+        .map((row: unknown[]) => row.map(cell => this.escapeCsv(String(cell ?? ''))).join(','))
+        .join('\n')
     }
 
     // Array of objects
-    if (typeof data[0] === 'object') {
-      const keys = Object.keys(data[0])
+    if (typeof data[0] === 'object' && data[0] !== null) {
+      const keys = Object.keys(data[0] as Record<string, unknown>)
       const header = keys.map(k => this.escapeCsv(k)).join(',')
-      const rows = data.map((obj: any) => keys.map(k => this.escapeCsv(String(obj[k] ?? ''))).join(','))
+      const rows = data.map((obj: Record<string, unknown>) => keys.map(k => this.escapeCsv(String(obj[k] ?? ''))).join(','))
       return [header, ...rows].join('\n')
     }
 
     // Array of primitives
-    return data.map((v: any) => this.escapeCsv(String(v ?? ''))).join('\n')
+    return data.map((v: unknown) => this.escapeCsv(String(v ?? ''))).join('\n')
   }
 
   private escapeCsv(val: string): string {
@@ -142,7 +144,7 @@ export class ReduceDataNode extends BaseNode {
     const initialValue = this.config.initialValue ?? ''
     const fn = new Function('acc', 'item', 'index', `return ${expression}`)
 
-    let parsed: any = initialValue
+    let parsed: unknown = initialValue
     try { parsed = JSON.parse(initialValue) } catch {}
 
     const result = source.reduce((acc, item, index) => fn(acc, item, index), parsed)

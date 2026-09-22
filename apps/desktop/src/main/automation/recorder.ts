@@ -1,4 +1,4 @@
-import type { Page, BrowserContext } from 'playwright-core'
+import type { Page, Frame } from 'playwright-core'
 import type { WorkflowNode, WorkflowEdge, NodeCategory } from '../../shared/types'
 import { v4 as uuid } from 'uuid'
 
@@ -169,7 +169,7 @@ export async function startRecording(page: Page): Promise<void> {
   })
 
   // Ghi navigate
-  const onNavigation = (frame: any) => {
+  const onNavigation = (frame: Frame) => {
     if (frame === page.mainFrame() && state.recording) {
       const url = page.url()
       if (url && url !== 'about:blank') {

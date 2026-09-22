@@ -124,14 +124,15 @@ export async function executeVisualWorkflow(
         await runNode(node, ctx)
         getNextNodes(nodeId, workflow.edges).forEach(id => queue.push(id))
       }
-    } catch (err: any) {
-      addLog(ctx, 'error', `Error at "${node.data.label}": ${err.message}`, node.id)
-      ctx.onNodeError?.(node.id, err.message)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      addLog(ctx, 'error', `Error at "${node.data.label}": ${message}`, node.id)
+      ctx.onNodeError?.(node.id, message)
 
       // Check for on-error edges — route to error handler instead of throwing
       const errorTargets = getErrorNodes(nodeId, workflow.edges)
       if (errorTargets.length > 0) {
-        ctx.variables['_lastError'] = err.message
+        ctx.variables['_lastError'] = message
         ctx.variables['_lastErrorNodeId'] = node.id
         errorTargets.forEach(id => queue.push(id))
       } else {
@@ -243,9 +244,10 @@ async function handleTryCatch(
       if (tryNode) await runNode(tryNode, ctx)
     }
     ctx.onNodeDone?.(node.id)
-  } catch (e: any) {
-    ctx.variables[node.data.config.errorVar || 'error'] = e.message
-    addLog(ctx, 'warn', `Try failed: ${e.message}`, node.id)
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    ctx.variables[node.data.config.errorVar || 'error'] = message
+    addLog(ctx, 'warn', `Try failed: ${message}`, node.id)
     ctx.onNodeDone?.(node.id)
     catchNodes.forEach(id => queue.push(id))
   }
@@ -327,8 +329,8 @@ async function handleParallelFork(
         new Promise((_, reject) => setTimeout(() => reject(new Error('Parallel timeout')), timeout))
       ])
     }
-  } catch (err: any) {
-    if (err.message === 'Parallel timeout') {
+  } catch (err) {
+    if (err instanceof Error && err.message === 'Parallel timeout') {
       addLog(ctx, 'warn', `Parallel branches timed out after ${timeout}ms`, node.id)
     } else {
       throw err
@@ -455,8 +457,9 @@ export async function executeCodeWorkflow(
     `)
     await fn(api)
     addLog(ctx, 'info', 'Code execution completed')
-  } catch (err: any) {
-    addLog(ctx, 'error', `Code error: ${err.message}`)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    addLog(ctx, 'error', `Code error: ${message}`)
     throw err
   }
 }

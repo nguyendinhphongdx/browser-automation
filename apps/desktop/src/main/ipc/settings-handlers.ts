@@ -7,7 +7,7 @@ import {
 import {
   login, register, logout, checkAuth, testConnection, apiRequest
 } from '../services/api-client'
-import { aiChat } from '../services/ai-service'
+import { aiChat, testAIConnection } from '../services/ai-service'
 
 export function registerSettingsHandlers(ipcMain: IpcMain) {
   // ── App info ─────────────────────────────────
@@ -36,5 +36,8 @@ export function registerSettingsHandlers(ipcMain: IpcMain) {
   // ── AI Chat (main process — không bị CORS) ──
   ipcMain.handle('ai:chat', async (_e, systemPrompt: string, messages: any[]) => {
     return aiChat(systemPrompt, messages)
+  })
+  ipcMain.handle('ai:testConnection', async (_e, provider: string, apiKey: string, baseUrl: string, model: string) => {
+    return testAIConnection(provider, apiKey, baseUrl, model)
   })
 }

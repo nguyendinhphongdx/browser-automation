@@ -60,9 +60,10 @@ export function startWebhookServer(port = 9876): number {
       markTriggered(schedule.id)
       res.writeHead(200)
       res.end(JSON.stringify({ ok: true, schedule: schedule.name }))
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
       res.writeHead(500)
-      res.end(JSON.stringify({ error: err.message }))
+      res.end(JSON.stringify({ error: message }))
     }
   })
 
@@ -70,7 +71,7 @@ export function startWebhookServer(port = 9876): number {
     console.log(`[Webhook] Server listening on http://127.0.0.1:${port}`)
   })
 
-  server.on('error', (err: any) => {
+  server.on('error', (err: NodeJS.ErrnoException) => {
     if (err.code === 'EADDRINUSE') {
       console.warn(`[Webhook] Port ${port} in use, trying ${port + 1}`)
       server = null

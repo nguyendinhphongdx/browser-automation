@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import path from 'path'
 import fs from 'fs'
-import { chromium, firefox, type BrowserContext } from 'playwright-core'
+import { chromium, firefox, type BrowserContext, type Page } from 'playwright-core'
 import type { BrowserProfile, BrowserType, Fingerprint } from '../../shared/types'
 import { detectInstalledBrowsers } from './detect'
 
@@ -174,4 +174,44 @@ export async function closeAllBrowsers(): Promise<void> {
   for (const id of ids) {
     await closeBrowser(id)
   }
+}
+
+/**
+ * Single source of truth for "get me a ready-to-use page" used by both the
+ * scheduler and the campaign engine. Resolves the active browser context for
+ * a profile (detecting a dead/stale context and relaunching it), launching a
+ * fresh browser if none is active, then picks a usable page (reusing the
+ * last non-closed open page, or opening a new one).
+ */
+export async function acquireBrowserPage(
+  profile: BrowserProfile
+): Promise<{ context: BrowserContext; page: Page; launchedNow: boolean }> {
+  let active = getActiveBrowserContext(profile.id)
+
+  // Detect a stale/dead context (e.g. browser process crashed/closed outside
+  // of our tracking) and force a relaunch instead of using it.
+  if (active) {
+    try {
+      active.context.pages()
+    } catch {
+      await closeBrowser(profile.id).catch(() => {})
+      active = null
+    }
+  }
+
+  let launchedNow = false
+  if (!active) {
+    await launchBrowser(profile)
+    active = getActiveBrowserContext(profile.id)
+    launchedNow = true
+  }
+
+  if (!active) {
+    throw new Error('Không thể khởi chạy browser')
+  }
+
+  const pages = active.context.pages().filter((p) => !p.isClosed())
+  const page = pages.length > 0 ? pages[pages.length - 1] : await active.context.newPage()
+
+  return { context: active.context, page, launchedNow }
 }

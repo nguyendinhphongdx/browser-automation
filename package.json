@@ -37,6 +37,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
+    "test": "turbo run test",
     "desktop:dev": "pnpm --filter @browser-automation/desktop dev",
     "desktop:build": "pnpm --filter @browser-automation/desktop build",
     "desktop:pack": "pnpm --filter @browser-automation/desktop pack",

@@ -1,9 +1,9 @@
-import { getUserFromRequest } from "@/lib/jwt";
+import { getRequestUser } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 
 // POST: Tạo checkout session (Stripe placeholder)
 export async function POST(request: Request) {
-  const user = await getUserFromRequest(request);
+  const user = await getRequestUser(request);
   if (!user) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }

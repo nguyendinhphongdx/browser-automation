@@ -67,8 +67,8 @@ export abstract class BaseNode {
         this.onSuccess()
         this.recordMetric(nodeType, Date.now() - startTime, true)
         return
-      } catch (err: any) {
-        lastError = err
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err))
         if (attempt < maxRetries) continue
       }
     }
@@ -187,11 +187,11 @@ export abstract class BaseNode {
   }
 
   /** Shortcut lấy/set variable */
-  protected getVar(name: string): any {
+  protected getVar<T = unknown>(name: string): T | undefined {
     return this.ctx.variables[name]
   }
 
-  protected setVar(name: string, value: any): void {
+  protected setVar(name: string, value: unknown): void {
     this.ctx.variables[name] = value
   }
 }
