@@ -5,8 +5,10 @@ import type {
   EmailAccount, CreateEmailInput, UpdateEmailInput,
   CookieEntry, CreateCookieInput, UpdateCookieInput,
   Workflow, CreateWorkflowInput, UpdateWorkflowInput, WorkflowLog, LogEntry,
-  Campaign, CreateCampaignInput, UpdateCampaignInput, CampaignRun
+  Campaign, CreateCampaignInput, UpdateCampaignInput, CampaignRun,
+  WorkflowNode, WorkflowEdge
 } from '@shared/types'
+import type { ModelMessage } from 'ai'
 
 declare global {
   interface Window {
@@ -91,9 +93,16 @@ declare global {
       stopRecording: () => Promise<{ actions: any[] }>
       getRecorderStatus: () => Promise<{ recording: boolean; actions: any[] }>
       actionsToWorkflow: (actions: any[]) => Promise<{ nodes: any[]; edges: any[] }>
-      // AI Chat
-      aiChat: (systemPrompt: string, messages: any[]) => Promise<any>
+      // AI Provider test connection
       testAIConnection: (provider: string, apiKey: string, baseUrl: string, model: string) => Promise<{ ok: boolean; error?: string }>
+      runAgent: (payload: {
+        profileId: string
+        workflowId?: string
+        workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[] }
+        messages: ModelMessage[]
+      }) => Promise<{ runId: string }>
+      respondAgentApproval: (payload: { approvalId: string; approved: boolean; reason?: string }) => Promise<{ success: boolean }>
+      cancelAgentRun: (runId: string) => Promise<{ success: boolean }>
       // App info
       getDbPath: () => Promise<string>
       // Events

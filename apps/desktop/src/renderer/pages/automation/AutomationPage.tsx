@@ -243,7 +243,7 @@ export function AutomationPage() {
           {/* Editor Area */}
           <div className="flex-1 relative overflow-hidden">
             {activeWorkflow.mode === 'visual' ? (
-              <VisualEditor />
+              <VisualEditor profileId={selectedProfileId} />
             ) : (
               <CodeEditor />
             )}

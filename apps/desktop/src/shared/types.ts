@@ -173,6 +173,31 @@ export type WorkflowStatus = 'draft' | 'ready' | 'running' | 'completed' | 'erro
 // Node categories
 export type NodeCategory = 'browser' | 'interaction' | 'data' | 'flow' | 'integration'
 
+// Canonical node-type registry shape — moved here (from
+// main/automation/node-definitions.ts, which re-exports these) so it's
+// usable from both main (building tool schemas/system prompts for the AI
+// agent) and renderer (the node palette) without a hand-mirrored copy.
+export interface NodeDefinition {
+  type: string
+  label: string
+  category: NodeCategory
+  description: string
+  icon: string // lucide icon name
+  inputs: number
+  outputs: number
+  configSchema: ConfigField[]
+}
+
+export interface ConfigField {
+  key: string
+  label: string
+  type: 'text' | 'number' | 'select' | 'boolean' | 'code' | 'selector' | 'keyrecorder' | 'workflow-select' | 'variable-mapping'
+  placeholder?: string
+  options?: { label: string; value: string }[]
+  defaultValue?: unknown
+  required?: boolean
+}
+
 export interface WorkflowNodeData {
   label: string
   category: NodeCategory

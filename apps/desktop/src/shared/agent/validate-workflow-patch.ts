@@ -1,6 +1,6 @@
-import type { AIConfigField, AINodeDefinition } from './ai-node-catalog'
+import type { NodeDefinition } from '../types'
 
-export interface AIExistingNode {
+export interface ExistingNodeRef {
   id: string
   nodeType?: string
 }
@@ -9,9 +9,7 @@ export interface ValidationResult {
   errors: string[]
 }
 
-// Loose shapes for the untrusted JSON the AI returns — mirrors
-// AIActionNodeInput/AIActionEdgeInput in AIChatPanel.tsx (not imported from
-// there to avoid a circular dependency between the two modules).
+// Loose shapes for the untrusted JSON the AI produces.
 interface ActionNodeLike {
   id?: string
   type?: string
@@ -33,21 +31,21 @@ const BRANCH_REQUIREMENTS: Record<string, string[]> = {
   'element-exists': ['true', 'false'],
   loop: ['body', 'done'],
   'loop-each': ['body', 'done'],
-  'try-catch': ['try', 'catch'],
+  'try-catch': ['try', 'catch']
 }
 
 function validateConfig(
   nodeLabel: string,
   nodeType: string,
   config: Record<string, unknown>,
-  def: AINodeDefinition | undefined,
+  def: NodeDefinition | undefined,
   errors: string[]
 ) {
   if (!def) {
     errors.push(`Node "${nodeLabel}": loại node không tồn tại "${nodeType}"`)
     return
   }
-  for (const field of (def.configSchema || []) as AIConfigField[]) {
+  for (const field of def.configSchema) {
     const value = config?.[field.key]
     if (field.required && (value === undefined || value === null || value === '')) {
       errors.push(`Node "${nodeLabel}" (${nodeType}): thiếu field bắt buộc "${field.key}"`)
@@ -63,19 +61,22 @@ function validateConfig(
 }
 
 /**
- * Validates an AI-produced action JSON object against the real node schema
- * and branching rules before it's ever applied to the canvas. Returns hard
- * errors only — a non-empty result means the action must be rejected, not
- * just warned about.
+ * Validates an AI-produced workflow-patch JSON object against the real node
+ * schema and branching rules. Returns hard errors only — a non-empty result
+ * means the patch must be rejected, not just warned about. Pure/isomorphic:
+ * used both as a fast in-loop check inside the propose-workflow-change tool
+ * (main process, against a start-of-run snapshot) and as the authoritative
+ * re-check right before applying to the live canvas (renderer, against
+ * current state) — see plan's "two-gate validation" note.
  */
-export function validateAction(
-  action: unknown,
-  nodeDefinitions: AINodeDefinition[],
-  existingNodes: AIExistingNode[]
+export function validateWorkflowPatch(
+  patch: unknown,
+  nodeDefinitions: NodeDefinition[],
+  existingNodes: ExistingNodeRef[]
 ): ValidationResult {
   const errors: string[] = []
-  if (!action || typeof action !== 'object') return { errors: ['Action không hợp lệ'] }
-  const act = action as Record<string, unknown>
+  if (!patch || typeof patch !== 'object') return { errors: ['Patch không hợp lệ'] }
+  const act = patch as Record<string, unknown>
 
   const defsByType = new Map(nodeDefinitions.map((d) => [d.type, d]))
   const existingById = new Map(existingNodes.map((n) => [n.id, n]))
@@ -93,7 +94,7 @@ export function validateAction(
     })
 
     // add_nodes edges may also reference nodes already on the canvas;
-    // replace_all wipes the canvas so only local (in-action) ids are valid.
+    // replace_all wipes the canvas so only local (in-patch) ids are valid.
     const resolvable = (ref: unknown) =>
       typeof ref === 'string' && (localIds.has(ref) || (act.type === 'add_nodes' && existingById.has(ref)))
 
@@ -120,13 +121,28 @@ export function validateAction(
     })
   }
 
+  if (act.type === 'remove_nodes') {
+    const nodeIds = Array.isArray(act.nodeIds) ? (act.nodeIds as unknown[]) : []
+    for (const id of nodeIds) {
+      if (typeof id !== 'string' || !existingById.has(id)) {
+        errors.push(`remove_nodes: không tìm thấy node "${String(id)}"`)
+      }
+    }
+  }
+
   if (act.type === 'update_node') {
     const nodeId = typeof act.nodeId === 'string' ? act.nodeId : ''
     const existing = existingById.get(nodeId)
     if (!existing) {
       errors.push(`update_node: không tìm thấy node "${nodeId}"`)
     } else if (act.config && typeof act.config === 'object') {
-      validateConfig(nodeId, existing.nodeType || '', act.config as Record<string, unknown>, defsByType.get(existing.nodeType || ''), errors)
+      validateConfig(
+        nodeId,
+        existing.nodeType || '',
+        act.config as Record<string, unknown>,
+        defsByType.get(existing.nodeType || ''),
+        errors
+      )
     }
   }
 

@@ -9,6 +9,7 @@ import { registerSettingsHandlers } from './ipc/settings-handlers'
 import { registerBackupHandlers } from './ipc/backup-handlers'
 import { registerMetricsHandlers } from './ipc/metrics-handlers'
 import { registerScheduleHandlers } from './ipc/schedule-handlers'
+import { registerAgentHandlers } from './ipc/agent-handlers'
 import { startScheduler, stopScheduler } from './automation/scheduler'
 import { startWebhookServer, stopWebhookServer } from './automation/webhook-server'
 import { closeAllBrowsers } from './browser/launcher'
@@ -130,6 +131,7 @@ app.whenReady().then(() => {
   registerBackupHandlers(ipcMain)
   registerMetricsHandlers(ipcMain)
   registerScheduleHandlers(ipcMain)
+  registerAgentHandlers(ipcMain)
 
   // IPC: mở browser để đăng nhập
   ipcMain.handle('auth:openBrowser', async () => {

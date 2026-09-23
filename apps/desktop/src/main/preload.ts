@@ -1,4 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { ModelMessage } from 'ai'
+import type { WorkflowNode, WorkflowEdge } from '../shared/types'
 
 const ALLOWED_CHANNELS = new Set([
   'auth:deeplink-success',
@@ -11,6 +13,7 @@ const ALLOWED_CHANNELS = new Set([
   'campaign:node-progress',
   'updater:downloading',
   'updater:progress',
+  'agent:event',
 ])
 
 const api = {
@@ -149,10 +152,21 @@ const api = {
   downloadBackup: (backupId: string) => ipcRenderer.invoke('backup:download', backupId),
   getBackupStatus: () => ipcRenderer.invoke('backup:status'),
 
-  // AI Chat (qua main process, tránh CORS)
-  aiChat: (systemPrompt: string, messages: any[]) => ipcRenderer.invoke('ai:chat', systemPrompt, messages),
+  // AI Provider test connection (qua main process, tránh CORS)
   testAIConnection: (provider: string, apiKey: string, baseUrl: string, model: string) =>
     ipcRenderer.invoke('ai:testConnection', provider, apiKey, baseUrl, model),
+
+  // AI Agent — request/response for run lifecycle, progress streams over the
+  // one-way 'agent:event' channel (see the `on`/`off` wrapper below)
+  runAgent: (payload: {
+    profileId: string
+    workflowId?: string
+    workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[] }
+    messages: ModelMessage[]
+  }) => ipcRenderer.invoke('agent:run', payload),
+  respondAgentApproval: (payload: { approvalId: string; approved: boolean; reason?: string }) =>
+    ipcRenderer.invoke('agent:respondApproval', payload),
+  cancelAgentRun: (runId: string) => ipcRenderer.invoke('agent:cancel', { runId }),
 
   // Events (restricted to allowed channels)
   on: (channel: string, callback: (...args: any[]) => void) => {

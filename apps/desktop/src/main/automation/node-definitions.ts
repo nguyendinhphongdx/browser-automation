@@ -1,25 +1,9 @@
-import type { NodeCategory } from '../../shared/types'
-
-export interface NodeDefinition {
-  type: string
-  label: string
-  category: NodeCategory
-  description: string
-  icon: string // lucide icon name
-  inputs: number
-  outputs: number
-  configSchema: ConfigField[]
-}
-
-export interface ConfigField {
-  key: string
-  label: string
-  type: 'text' | 'number' | 'select' | 'boolean' | 'code' | 'selector' | 'keyrecorder' | 'workflow-select' | 'variable-mapping'
-  placeholder?: string
-  options?: { label: string; value: string }[]
-  defaultValue?: unknown
-  required?: boolean
-}
+// NodeDefinition/ConfigField now live in shared/types.ts (used by the main-
+// process AI agent's tools too, not just this file) — re-exported here so
+// every existing `import type { NodeDefinition } from './node-definitions'`
+// keeps working unchanged.
+import type { NodeCategory, NodeDefinition, ConfigField } from '../../shared/types'
+export type { NodeDefinition, ConfigField }
 
 export const NODE_DEFINITIONS: NodeDefinition[] = [
   // ── Browser ──────────────────────────────────

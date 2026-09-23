@@ -56,6 +56,12 @@
     }
   },
   "dependencies": {
+    "@ag-ui/core": "^1.0.0",
+    "@ai-sdk/anthropic": "^4.0.61",
+    "@ai-sdk/google": "^4.0.78",
+    "@ai-sdk/groq": "^4.0.47",
+    "@ai-sdk/openai": "^4.0.73",
+    "@ai-sdk/openai-compatible": "^3.0.54",
     "@browser-automation/fingerprint": "workspace:*",
     "@browser-automation/shared-types": "workspace:*",
     "@monaco-editor/react": "^4.7.0",
@@ -76,6 +82,7 @@
     "@reactflow/minimap": "^11.7.14",
     "@tanstack/react-virtual": "^3.13.23",
     "adm-zip": "^0.5.17",
+    "ai": "^7.0.112",
     "archiver": "^7.0.1",
     "better-sqlite3": "^13.0.3",
     "class-variance-authority": "^0.7.1",
@@ -90,6 +97,7 @@
     "reactflow": "^11.11.4",
     "tailwind-merge": "^2.6.0",
     "uuid": "^11.0.5",
+    "zod": "^4.6.5",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
