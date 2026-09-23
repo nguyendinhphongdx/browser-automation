@@ -159,6 +159,7 @@ const api = {
   // AI Agent — request/response for run lifecycle, progress streams over the
   // one-way 'agent:event' channel (see the `on`/`off` wrapper below)
   runAgent: (payload: {
+    runId: string
     profileId: string
     workflowId?: string
     workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[] }

@@ -82,14 +82,23 @@ export function useAgentRun({ profileId, workflowId, getWorkflowSnapshot }: UseA
       setError(null)
       setLoading(true)
 
+      // Generated here, not read back from the response: `agent:run`'s
+      // invoke() promise only resolves once the ENTIRE run finishes (it
+      // streams everything else via `agent:event` while still pending), so
+      // waiting for its return value to learn the runId would mean every
+      // event arrives before this hook even knows which run they belong to
+      // and gets filtered out below.
+      const runId = crypto.randomUUID()
+      runIdRef.current = runId
+
       try {
-        const { runId } = await window.api.runAgent({
+        await window.api.runAgent({
+          runId,
           profileId,
           workflowId,
           workflowSnapshot: getWorkflowSnapshot(),
           messages: historyRef.current
         })
-        runIdRef.current = runId
       } catch (err) {
         setLoading(false)
         setError(err instanceof Error ? err.message : String(err))

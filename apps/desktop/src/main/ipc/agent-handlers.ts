@@ -1,5 +1,4 @@
 import type { IpcMain, IpcMainInvokeEvent } from 'electron'
-import { randomUUID } from 'crypto'
 import type { ModelMessage } from 'ai'
 import { getActiveBrowserContext } from '../browser/launcher'
 import { NODE_DEFINITIONS } from '../automation/node-definitions'
@@ -9,6 +8,12 @@ import type { WorkflowNode, WorkflowEdge } from '../../shared/types'
 import { EventType, type AgentEventEnvelope } from '../../shared/agent/ag-ui-events'
 
 interface AgentRunPayload {
+  // Generated on the renderer, not here — the renderer needs the id before
+  // this handler's invoke() promise resolves (it only resolves once the
+  // WHOLE run finishes; every event in between streams over `agent:event`),
+  // so it can't learn the id from this call's return value in time to
+  // correlate the very first event with the run it belongs to.
+  runId: string
   profileId: string
   workflowId?: string
   workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[] }
@@ -23,7 +28,7 @@ interface AgentRespondApprovalPayload {
 
 export function registerAgentHandlers(ipcMain: IpcMain) {
   ipcMain.handle('agent:run', async (event: IpcMainInvokeEvent, payload: AgentRunPayload) => {
-    const runId = randomUUID()
+    const { runId } = payload
     // One thread per profile is a reasonable default for now — nothing in
     // this app supports multiple concurrent conversations per profile yet.
     const threadId = payload.profileId
@@ -61,7 +66,7 @@ export function registerAgentHandlers(ipcMain: IpcMain) {
       (aguiEvent) => emit({ runId, event: aguiEvent })
     )
 
-    return { runId }
+    return { success: true }
   })
 
   ipcMain.handle('agent:respondApproval', (_e, payload: AgentRespondApprovalPayload) => {

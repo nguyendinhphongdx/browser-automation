@@ -96,11 +96,12 @@ declare global {
       // AI Provider test connection
       testAIConnection: (provider: string, apiKey: string, baseUrl: string, model: string) => Promise<{ ok: boolean; error?: string }>
       runAgent: (payload: {
+        runId: string
         profileId: string
         workflowId?: string
         workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[] }
         messages: ModelMessage[]
-      }) => Promise<{ runId: string }>
+      }) => Promise<{ success: boolean }>
       respondAgentApproval: (payload: { approvalId: string; approved: boolean; reason?: string }) => Promise<{ success: boolean }>
       cancelAgentRun: (runId: string) => Promise<{ success: boolean }>
       // App info
