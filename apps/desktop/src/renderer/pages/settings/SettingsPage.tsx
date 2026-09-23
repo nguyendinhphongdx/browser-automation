@@ -88,34 +88,39 @@ const AI_PROVIDERS: AIProviderOption[] = [
   {
     value: 'openai',
     label: 'OpenAI',
-    description: 'GPT-4o, GPT-4o-mini, o1, o3',
+    description: 'GPT-6 Astra, GPT-6 Sol, GPT-6 Luna',
     placeholder: 'sk-...',
     docsUrl: 'https://platform.openai.com/api-keys',
-    models: ['gpt-4o', 'gpt-4o-mini', 'o1', 'o3-mini']
+    models: ['gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna']
   },
   {
     value: 'anthropic',
     label: 'Anthropic',
-    description: 'Claude Sonnet 4, Claude Opus 4',
+    description: 'Claude Sonnet 5, Claude Opus 5, Claude Haiku 4.5',
     placeholder: 'sk-ant-...',
     docsUrl: 'https://console.anthropic.com/settings/keys',
-    models: ['claude-sonnet-4-20250514', 'claude-opus-4-20250514', 'claude-haiku-4-20250514']
+    models: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5-20251001']
   },
   {
     value: 'google',
     label: 'Google AI',
-    description: 'Gemini 2.5 Pro, Gemini 2.5 Flash',
+    description: 'Gemini 3.1 Pro, Gemini 3.5 Flash',
     placeholder: 'AIza...',
     docsUrl: 'https://aistudio.google.com/apikey',
-    models: ['gemini-2.5-pro', 'gemini-2.5-flash']
+    models: ['gemini-3.1-pro-preview', 'gemini-3.5-flash', 'gemini-2.5-flash']
   },
   {
     value: 'groq',
     label: 'Groq',
-    description: 'Llama 3, Mixtral (nhanh, miễn phí tier)',
+    description: 'Llama 3.3, GPT-OSS 120B, Kimi K2 (nhanh, miễn phí tier)',
     placeholder: 'gsk_...',
     docsUrl: 'https://console.groq.com/keys',
-    models: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768']
+    models: [
+      'llama-3.3-70b-versatile',
+      'llama-3.1-8b-instant',
+      'openai/gpt-oss-120b',
+      'moonshotai/kimi-k2-instruct-0905'
+    ]
   },
   {
     value: 'ollama',
@@ -123,7 +128,7 @@ const AI_PROVIDERS: AIProviderOption[] = [
     description: 'Chạy AI cục bộ, không cần API key',
     placeholder: 'http://localhost:11434',
     docsUrl: 'https://ollama.com',
-    models: ['llama3.1', 'mistral', 'codestral', 'qwen2.5']
+    models: ['qwen3:30b', 'qwen3-coder:30b', 'gpt-oss:20b', 'llama3.3']
   },
   {
     value: 'custom',

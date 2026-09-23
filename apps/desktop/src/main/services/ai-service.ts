@@ -35,7 +35,7 @@ export async function aiChat(systemPrompt: string, messages: ChatMessage[]): Pro
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: model || 'claude-sonnet-4-20250514',
+          model: model || 'claude-sonnet-5',
           max_tokens: 4096,
           system: systemPrompt,
           messages: messages.filter(m => m.role !== 'system'),
@@ -64,7 +64,7 @@ export async function aiChat(systemPrompt: string, messages: ChatMessage[]): Pro
 
     // Google Gemini — dùng native API
     if (provider === 'google') {
-      const geminiModel = model || 'gemini-2.5-flash'
+      const geminiModel = model || 'gemini-3.5-flash'
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`
       const geminiMessages = [
         { role: 'user', parts: [{ text: systemPrompt }] },
@@ -96,7 +96,7 @@ export async function aiChat(systemPrompt: string, messages: ChatMessage[]): Pro
       'https://api.openai.com/v1'
     )
     const chatUrl = base.endsWith('/v1') ? `${base}/chat/completions` : `${base}/v1/chat/completions`
-    const defaultModel = provider === 'google' ? 'gemini-2.5-flash' : provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gpt-4o-mini'
+    const defaultModel = provider === 'google' ? 'gemini-3.5-flash' : provider === 'groq' ? 'llama-3.3-70b-versatile' : 'gpt-6-luna'
     const res = await fetch(chatUrl, {
       method: 'POST',
       headers: {
@@ -153,7 +153,7 @@ export async function testAIConnection(
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
-          model: model || 'claude-sonnet-4-20250514',
+          model: model || 'claude-sonnet-5',
           max_tokens: 10,
           messages: [{ role: 'user', content: 'Hi' }],
         }),

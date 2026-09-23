@@ -77,7 +77,7 @@ function ProfileTableRow({ profile, getProxyName, onEdit }: { profile: BrowserPr
             </button>
           ) : (
             <button
-              onClick={() => launchBrowser(profile.id)}
+              onClick={() => launchBrowser(profile.id).catch((e: any) => alert(e.message))}
               className="p-1.5 rounded-md hover:bg-green-500/10 text-green-600 transition-colors"
               title="Khởi chạy trình duyệt"
             >
@@ -178,7 +178,7 @@ function ProfileGridCard({ profile, getProxyName, onEdit }: { profile: BrowserPr
           </button>
         ) : (
           <button
-            onClick={() => launchBrowser(profile.id)}
+            onClick={() => launchBrowser(profile.id).catch((e: any) => alert(e.message))}
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 text-green-600 text-xs font-medium hover:bg-green-500/20 transition-colors"
           >
             <Play className="h-3 w-3" />

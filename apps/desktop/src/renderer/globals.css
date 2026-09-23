@@ -138,3 +138,24 @@
 .animate-in.fade-in {
   animation: slide-in-from-top-2 0.2s ease-out;
 }
+
+/* Onboarding step transition */
+@keyframes onboarding-content-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes onboarding-visual-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-onboarding-content {
+    animation: onboarding-content-in 0.35s ease-out;
+  }
+
+  .animate-onboarding-visual {
+    animation: onboarding-visual-in 0.45s ease-out;
+  }
+}
