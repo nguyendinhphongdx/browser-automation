@@ -37,7 +37,10 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
     })
   })
 
+  const noProfile = !profileId
+
   const handleSend = () => {
+    if (noProfile) return
     const text = input
     setInput('')
     send(text)
@@ -163,7 +166,8 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
           onSubmit={handleSend}
           onStop={cancel}
           loading={loading}
-          placeholder="Hỏi hoặc yêu cầu agent kiểm tra trang, đề xuất workflow..."
+          disabled={noProfile}
+          placeholder={noProfile ? 'Chọn 1 profile trước khi dùng AI Agent' : 'Hỏi hoặc yêu cầu agent kiểm tra trang, đề xuất workflow...'}
         />
         <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
           Enter để gửi · Shift+Enter xuống dòng
