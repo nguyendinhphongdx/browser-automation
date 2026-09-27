@@ -8,7 +8,9 @@ import { ReasoningBlock } from '@/components/ai-elements/ReasoningBlock'
 import { ToolCallCard } from '@/components/ai-elements/ToolCallCard'
 import { ApprovalCard } from '@/components/ai-elements/ApprovalCard'
 import { PromptInput } from '@/components/ai-elements/PromptInput'
+import { BrowserPreview } from '@/components/ai-elements/BrowserPreview'
 import { useAgentRun } from './use-agent-run'
+import { useBrowserPreview } from './use-browser-preview'
 
 interface Props {
   open: boolean
@@ -25,6 +27,7 @@ const SUGGESTIONS = [
 export function AgentChatPanel({ open, onClose, profileId }: Props) {
   const { activeWorkflow } = useWorkflowStore()
   const [input, setInput] = useState('')
+  const browserPreview = useBrowserPreview(open ? profileId : undefined)
   const { items, loading, error, send, respondApproval, cancel, reset } = useAgentRun({
     profileId,
     workflowId: activeWorkflow?.id,
@@ -67,6 +70,9 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
           </button>
         </div>
       </div>
+
+      {/* Live browser preview */}
+      <BrowserPreview status={browserPreview.status} frame={browserPreview.frame} message={browserPreview.message} />
 
       {/* Conversation */}
       <Conversation>
