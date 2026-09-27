@@ -1,6 +1,8 @@
 import type { IpcMain, IpcMainInvokeEvent } from 'electron'
 import type { ModelMessage } from 'ai'
-import { getActiveBrowserContext } from '../browser/launcher'
+import type { Page } from 'playwright-core'
+import { acquireBrowserPage } from '../browser/launcher'
+import { getProfileById } from '../services/profile-service'
 import { NODE_DEFINITIONS } from '../automation/node-definitions'
 import { agentService } from '../agent/agent-service'
 import type { AgentToolContext } from '../agent/tools/types'
@@ -35,16 +37,24 @@ export function registerAgentHandlers(ipcMain: IpcMain) {
 
     const emit = (envelope: AgentEventEnvelope) => event.sender.send('agent:event', envelope)
 
-    // Read-only: only use a browser that's already running for this
-    // profile. Never auto-launch one here — if the agent needs a live page
-    // and none exists, the browser-inspection tools report that explicitly
-    // (see tools/get-page-html.ts etc.), and the agent can tell the user to
-    // open a browser themselves rather than one silently appearing.
-    let page = null
-    const active = getActiveBrowserContext(payload.profileId)
-    if (active) {
-      const pages = active.context.pages().filter((p) => !p.isClosed())
-      page = pages.length > 0 ? pages[pages.length - 1] : await active.context.newPage()
+    // The agent needs a live page to be useful at all, so launch one for
+    // this profile if none is running yet — same `acquireBrowserPage` helper
+    // the scheduler and campaign engine already use, so the browser ends up
+    // configured identically (fingerprint, persistent profile dir, etc.)
+    // regardless of who launched it.
+    let page: Page | null = null
+    const profile = getProfileById(payload.profileId)
+    if (!profile) {
+      throw new Error(`Profile "${payload.profileId}" không tồn tại`)
+    }
+    try {
+      const acquired = await acquireBrowserPage(profile)
+      page = acquired.page
+    } catch (err) {
+      console.error('[agent:run] acquireBrowserPage failed', err)
+      throw new Error(
+        `Không thể khởi chạy trình duyệt cho agent: ${err instanceof Error ? err.message : String(err)}`
+      )
     }
 
     const toolContext: AgentToolContext = {
