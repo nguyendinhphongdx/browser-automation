@@ -14,6 +14,7 @@ const ALLOWED_CHANNELS = new Set([
   'updater:downloading',
   'updater:progress',
   'agent:event',
+  'browserPreview:frame',
 ])
 
 const api = {
@@ -168,6 +169,10 @@ const api = {
   respondAgentApproval: (payload: { approvalId: string; approved: boolean; reason?: string }) =>
     ipcRenderer.invoke('agent:respondApproval', payload),
   cancelAgentRun: (runId: string) => ipcRenderer.invoke('agent:cancel', { runId }),
+
+  // Browser live preview — frames stream over 'browserPreview:frame'
+  startBrowserPreview: (profileId: string) => ipcRenderer.invoke('browserPreview:start', profileId),
+  stopBrowserPreview: (profileId: string) => ipcRenderer.invoke('browserPreview:stop', profileId),
 
   // Events (restricted to allowed channels). Returns an unsubscribe
   // function — callers should not try to pair calls via `off()` by passing

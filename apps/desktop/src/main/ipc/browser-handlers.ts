@@ -2,6 +2,7 @@ import type { IpcMain } from 'electron'
 import { launchBrowser, closeBrowser } from '../browser/launcher'
 import { detectInstalledBrowsers } from '../browser/detect'
 import { getProfileById, updateLastUsed } from '../services/profile-service'
+import { browserPreviewService } from '../agent/browser-preview-service'
 
 export function registerBrowserHandlers(ipcMain: IpcMain) {
   ipcMain.handle('browser:launch', async (_event, profileId: string) => {
@@ -22,6 +23,7 @@ export function registerBrowserHandlers(ipcMain: IpcMain) {
 
   ipcMain.handle('browser:close', async (_event, profileId: string) => {
     try {
+      await browserPreviewService.stop(profileId)
       await closeBrowser(profileId)
       return { success: true }
     } catch (err: any) {

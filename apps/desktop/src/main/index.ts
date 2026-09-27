@@ -10,9 +10,11 @@ import { registerBackupHandlers } from './ipc/backup-handlers'
 import { registerMetricsHandlers } from './ipc/metrics-handlers'
 import { registerScheduleHandlers } from './ipc/schedule-handlers'
 import { registerAgentHandlers } from './ipc/agent-handlers'
+import { registerBrowserPreviewHandlers } from './ipc/browser-preview-handlers'
 import { startScheduler, stopScheduler } from './automation/scheduler'
 import { startWebhookServer, stopWebhookServer } from './automation/webhook-server'
 import { closeAllBrowsers } from './browser/launcher'
+import { browserPreviewService } from './agent/browser-preview-service'
 import { initAutoUpdater } from './services/auto-updater'
 import { setSetting } from './services/settings-service'
 import { getSetting } from './services/settings-service'
@@ -132,6 +134,7 @@ app.whenReady().then(() => {
   registerMetricsHandlers(ipcMain)
   registerScheduleHandlers(ipcMain)
   registerAgentHandlers(ipcMain)
+  registerBrowserPreviewHandlers(ipcMain)
 
   // IPC: mở browser để đăng nhập
   ipcMain.handle('auth:openBrowser', async () => {
@@ -175,6 +178,7 @@ app.on('before-quit', (e) => {
   stopWebhookServer()
 
   Promise.resolve()
+    .then(() => browserPreviewService.stopAll())
     .then(() => closeAllBrowsers())
     .then(() => closeDatabase())
     .catch((err) => console.error('Cleanup error:', err))
