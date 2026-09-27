@@ -118,14 +118,14 @@ export function CampaignRunner() {
       }
     }
 
-    window.api.on('campaign:results', onResults)
-    window.api.on('campaign:profile-progress', onProfileProgress)
-    window.api.on('campaign:status', onStatus)
+    const unsubscribeResults = window.api.on('campaign:results', onResults)
+    const unsubscribeProfileProgress = window.api.on('campaign:profile-progress', onProfileProgress)
+    const unsubscribeStatus = window.api.on('campaign:status', onStatus)
 
     return () => {
-      window.api.off('campaign:results', onResults)
-      window.api.off('campaign:profile-progress', onProfileProgress)
-      window.api.off('campaign:status', onStatus)
+      unsubscribeResults()
+      unsubscribeProfileProgress()
+      unsubscribeStatus()
     }
   }, [activeCampaign])
 

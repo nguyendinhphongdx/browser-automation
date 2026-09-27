@@ -107,8 +107,7 @@ declare global {
       // App info
       getDbPath: () => Promise<string>
       // Events
-      on: (channel: string, callback: (...args: any[]) => void) => void
-      off: (channel: string, callback: (...args: any[]) => void) => void
+      on: (channel: string, callback: (...args: any[]) => void) => () => void
     }
   }
 }

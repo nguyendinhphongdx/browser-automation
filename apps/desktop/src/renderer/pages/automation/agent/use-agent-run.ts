@@ -67,8 +67,7 @@ export function useAgentRun({ profileId, workflowId, getWorkflowSnapshot }: UseA
       }
     }
 
-    window.api.on('agent:event', handler)
-    return () => window.api.off('agent:event', handler)
+    return window.api.on('agent:event', handler)
   }, [])
 
   const send = useCallback(

@@ -149,7 +149,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       const current = get().nodeProgress
       set({ nodeProgress: { ...current, [data.nodeId]: data.status } })
     }
-    window.api.on('workflow:node-progress', onNodeProgress)
+    const unsubscribeNodeProgress = window.api.on('workflow:node-progress', onNodeProgress)
 
     try {
       const result = await window.api.runWorkflow(activeWorkflow.id, profileId)
@@ -159,7 +159,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       })
       await get().fetchLogs(activeWorkflow.id)
     } finally {
-      window.api.off('workflow:node-progress', onNodeProgress)
+      unsubscribeNodeProgress()
       set({ isRunning: false, runningLogId: null })
       // Keep nodeProgress visible for 2s after completion so user sees final state
       setTimeout(() => set({ nodeProgress: {} }), 2000)

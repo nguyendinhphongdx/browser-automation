@@ -169,22 +169,23 @@ const api = {
     ipcRenderer.invoke('agent:respondApproval', payload),
   cancelAgentRun: (runId: string) => ipcRenderer.invoke('agent:cancel', { runId }),
 
-  // Events (restricted to allowed channels)
+  // Events (restricted to allowed channels). Returns an unsubscribe
+  // function — callers should not try to pair calls via `off()` by passing
+  // the same callback reference back: functions crossing the contextBridge
+  // isolation boundary aren't guaranteed to keep a stable identity, so a
+  // property stashed on `callback` during `on()` (the previous approach)
+  // isn't reliably readable again from `off()`. That silently leaked the
+  // ipcRenderer listener on every unmount, so repeated mount/unmount cycles
+  // (e.g. opening a drawer that mounts a subscribing component) accumulated
+  // duplicate listeners, each firing the handler once more per event.
   on: (channel: string, callback: (...args: any[]) => void) => {
     if (!ALLOWED_CHANNELS.has(channel)) {
       console.warn(`IPC channel "${channel}" is not in the allowlist`)
-      return
+      return () => {}
     }
     const wrappedCallback = (_event: any, ...args: any[]) => callback(...args)
-    ;(callback as any).__wrappedIpc = wrappedCallback
     ipcRenderer.on(channel, wrappedCallback)
-  },
-  off: (channel: string, callback: (...args: any[]) => void) => {
-    if (!ALLOWED_CHANNELS.has(channel)) return
-    const wrappedCallback = (callback as any).__wrappedIpc
-    if (wrappedCallback) {
-      ipcRenderer.removeListener(channel, wrappedCallback)
-    }
+    return () => ipcRenderer.removeListener(channel, wrappedCallback)
   }
 }
 

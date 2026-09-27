@@ -96,10 +96,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         isLoggedIn: true,
       })
     }
-    window.api.on('auth:deeplink-success', handler)
-    return () => {
-      window.api.off('auth:deeplink-success', handler)
-    }
+    return window.api.on('auth:deeplink-success', handler)
   },
 
   logout: () => {
