@@ -603,11 +603,14 @@ function VisualEditorInner({ profileId }: { profileId?: string }) {
         }} />
 
         {/* AI Button */}
-        <AIButton onClick={() => {
-          setShowAIPanel(prev => !prev)
-          setShowNodePanel(false)
-          setSelectedNode(null)
-        }} />
+        <AIButton
+          disabled={!profileId}
+          onClick={() => {
+            setShowAIPanel(prev => !prev)
+            setShowNodePanel(false)
+            setSelectedNode(null)
+          }}
+        />
 
         {/* Node Drawer */}
         <NodeDrawer

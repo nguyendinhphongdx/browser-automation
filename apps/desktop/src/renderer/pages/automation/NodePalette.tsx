@@ -214,12 +214,13 @@ export function AddNodeButton({ onClick }: { onClick: () => void }) {
   )
 }
 
-export function AIButton({ onClick }: { onClick: () => void }) {
+export function AIButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   return (
     <button
       onClick={onClick}
-      className="absolute top-16 right-3 z-30 w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group"
-      title="AI Assistant"
+      disabled={disabled}
+      className="absolute top-16 right-3 z-30 w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group disabled:opacity-40 disabled:hover:shadow-lg disabled:hover:scale-100 disabled:cursor-not-allowed"
+      title={disabled ? 'Chọn 1 profile trước khi dùng AI Agent' : 'AI Assistant'}
     >
       <svg className="h-5 w-5 text-purple-500 group-hover:text-purple-600 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
         <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
