@@ -280,7 +280,7 @@ Desktop app dùng `electron-updater` tự động kiểm tra và tải cập nh�
 ## Tài liệu
 
 - [PLAN.md](PLAN.md) — Kế hoạch dự án chi tiết
-- [docs/GUIDE.md](docs/GUIDE.md) — Hướng dẫn sử dụng
+- [docs/](docs/README.md) — Hướng dẫn sử dụng, kiến trúc, đóng góp code (chia theo thư mục)
 
 ## License
 
