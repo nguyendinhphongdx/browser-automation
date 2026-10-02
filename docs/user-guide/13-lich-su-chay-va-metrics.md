@@ -16,6 +16,6 @@ Nhấn vào 1 node cụ thể trên canvas để xem thống kê chi tiết riê
 
 ## Dọn dữ liệu cũ
 
-Dữ liệu metrics tích luỹ theo thời gian — app tự dọn bản ghi cũ hơn số ngày cấu hình (mặc định 30 ngày) để tránh database phình to vô hạn.
+Dữ liệu metrics tích luỹ theo thời gian — ở Cài đặt có nút **dọn bản ghi cũ** (mặc định giữ lại 30 ngày gần nhất). Đây là thao tác **chủ động bấm**, app không tự xoá ngầm, nên dữ liệu cũ không biến mất ngoài ý muốn trước khi bạn kịp xem.
 
 Tiếp theo: [Phiên bản workflow →](14-phien-ban-workflow.md)
