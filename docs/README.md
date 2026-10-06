@@ -24,6 +24,9 @@ Hướng dẫn sử dụng từng tính năng, dành cho người dùng cuối (
 | 13 | [Lịch sử chạy & Metrics](user-guide/13-lich-su-chay-va-metrics.md) | Theo dõi hiệu năng từng node qua thời gian |
 | 14 | [Phiên bản workflow](user-guide/14-phien-ban-workflow.md) | Lịch sử lưu, gắn nhãn, rollback |
 | 15 | [Khắc phục sự cố](user-guide/15-khac-phuc-su-co.md) | Lỗi thường gặp và cách xử lý |
+| 16 | [Giao diện & Ngôn ngữ](user-guide/16-giao-dien-va-ngon-ngu.md) | Theme sáng/tối/hệ thống, chuyển Tiếng Việt/English |
+| 17 | [Import/Export dữ liệu](user-guide/17-import-export-du-lieu.md) | Mọi nơi có thể xuất/nhập dữ liệu trong app, gom 1 chỗ |
+| 18 | [Tính năng Campaign nâng cao](user-guide/18-campaign-nang-cao.md) | Quota, chọn profile theo rule, A/B test, phụ thuộc workflow — đã có ở backend, chưa có UI |
 
 ## [architecture/](architecture/) — Hiểu kiến trúc
 
@@ -48,6 +51,16 @@ Tài liệu kỹ thuật, dành cho người đọc/sửa code trong repo này.
 | 15 | [Auto-update & Release](architecture/15-auto-update-release.md) | electron-updater, electron-builder, GitHub Releases |
 | 16 | [Shared packages](architecture/16-shared-packages.md) | `shared-types`, `fingerprint` — khi nào nên/không nên dùng |
 | 17 | [Electron security](architecture/17-electron-security.md) | contextIsolation, sandbox, vì sao preload là ranh giới tin cậy duy nhất |
+| 18 | [Renderer state](architecture/18-renderer-state.md) | 7 Zustand store, quy ước action/async |
+| 19 | [Routing, theme, i18n](architecture/19-routing-theme-i18n.md) | React Router, dark mode, chuyển ngôn ngữ |
+| 20 | [Visual Editor canvas](architecture/20-visual-editor-canvas.md) | React Flow, custom node/edge, NodePropertiesPanel |
+| 21 | [Service layer pattern](architecture/21-service-layer-pattern.md) | CRUD lặp lại giữa các `*-service.ts`, settings dạng KV |
+| 22 | [Campaign nâng cao](architecture/22-advanced-campaign-features.md) | Quota, rule chọn profile, A/B test, DAG phụ thuộc workflow |
+| 23 | [Kiểm tra proxy](architecture/23-proxy-health-check.md) | TCP connect thô, đo tốc độ, không qua HTTP thật |
+| 24 | [API client & refresh token](architecture/24-api-client.md) | Gọi server, tự refresh JWT khi hết hạn |
+| 25 | [Danh mục IPC channel](architecture/25-ipc-channel-catalog.md) | Toàn bộ channel theo từng domain |
+| 26 | [Onboarding](architecture/26-onboarding-flow.md) | Luồng chào mừng lần đầu mở app |
+| 27 | [Sub-workflow & đệ quy](architecture/27-sub-workflow-recursion.md) | `depth`, chặn đệ quy vô hạn khi 1 workflow gọi workflow khác |
 
 ## [development/](development/) — Đóng góp code
 
@@ -57,6 +70,10 @@ Tài liệu kỹ thuật, dành cho người đọc/sửa code trong repo này.
 | 2 | [Kiểm thử](development/02-kiem-thu.md) | Vitest, quy ước mock theo từng tầng |
 | 3 | [Quy trình Release](development/03-quy-trinh-release.md) | Gắn tag, CI build, prerelease |
 | 4 | [Quy ước commit](development/04-quy-uoc-commit.md) | Tiền tố `feat`/`fix`/`docs`, thông điệp nên viết gì |
+| 5 | [Thêm trang mới](development/05-them-trang-moi.md) | Walkthrough: route + store + sidebar |
+| 6 | [Thêm ngôn ngữ](development/06-them-ngon-ngu.md) | Thêm locale mới vào `i18n.ts` |
+| 7 | [Mẹo debug](development/07-meo-debug.md) | DevTools main vs renderer, log ở đâu |
+| 8 | [Known gaps](development/08-known-gaps.md) | Checklist tổng hợp mọi khoảng trống đã phát hiện qua 2 đợt viết docs |
 
 ## Khác
 
