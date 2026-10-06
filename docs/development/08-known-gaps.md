@@ -4,6 +4,10 @@
 
 Mọi khoảng trống/bất nhất đã phát hiện khi viết tài liệu (xác minh bằng grep/đọc source thật, không đoán) — gom 1 chỗ để không ai phải tự lục lại từng trang mới biết hết. Mỗi mục trỏ tới trang có chi tiết đầy đủ.
 
+## 🔴 Nghiêm trọng — nên xử lý trước mọi mục khác
+
+- [ ] **electron-builder đóng gói sai thư mục** (`dist/**/*` thay vì `out/**/*`) — theo tài liệu electron-builder, `files` khai báo sẽ thay thế hoàn toàn danh sách mặc định, nên bản cài đặt release hiện tại nhiều khả năng **không chứa code app thật**. Xác nhận bằng `git log`: `main` đã đổi từ `dist/` sang `out/` đúng lúc migrate electron-vite, nhưng `build.files` thêm sau đó không được đồng bộ lại → [architecture/39](../architecture/39-electron-builder-files-mismatch.md)
+
 ## Code chết / trùng lặp
 
 - [ ] `packages/shared-types` không được import ở bất kỳ đâu trong `apps/desktop` hay `apps/server` — desktop tự định nghĩa type riêng ở `src/shared/types.ts` → [architecture/16](../architecture/16-shared-packages.md)
@@ -21,6 +25,9 @@ Mọi khoảng trống/bất nhất đã phát hiện khi viết tài liệu (x�
 - [ ] Chưa có test cho `renderer/` (0 file `.test.tsx`) — `vitest.config.ts` dùng `environment: 'node'`, chưa setup được test cần DOM → [development/02](02-kiem-thu.md)
 - [ ] `src/renderer/index.html` chưa có Content-Security-Policy → [architecture/17](../architecture/17-electron-security.md)
 - [ ] Deep link `browserauto://auth?token=...` nhận token thẳng từ URL ngoài app, không tự verify tại chỗ nhận (dựa vào server verify khi token được dùng sau đó) → [architecture/17](../architecture/17-electron-security.md)
+- [ ] Cookie đã lưu ở Resources → Cookie **không có đường nào nạp vào trình duyệt thật** — node `set-cookie` chỉ đọc config riêng của chính nó, không đọc bảng `cookies` → [architecture/38](../architecture/38-email-cookie-formats.md)
+- [ ] Marketplace: checkout Stripe còn nguyên TODO chưa gọi, download không gate theo đã-mua-hay-chưa, không có model `Purchase`, doanh thu creator tính nhầm mọi lượt tải thành đã bán → [architecture/29](../architecture/29-marketplace-payment-flow.md)
+- [ ] Trang `admin/users` là khung tĩnh, hiện chữ "chưa setup auth" dù auth đã hoạt động đầy đủ từ lâu → [architecture/36](../architecture/36-admin-pages.md)
 
 ## Không phải bug — chỉ là thiếu tài liệu/UI, không phải thiếu đúng-sai
 
