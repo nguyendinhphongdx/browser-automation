@@ -61,6 +61,7 @@ Tài liệu kỹ thuật, dành cho người đọc/sửa code trong repo này.
 | 25 | [Danh mục IPC channel](architecture/25-ipc-channel-catalog.md) | Toàn bộ channel theo từng domain |
 | 26 | [Onboarding](architecture/26-onboarding-flow.md) | Luồng chào mừng lần đầu mở app |
 | 27 | [Sub-workflow & đệ quy](architecture/27-sub-workflow-recursion.md) | `depth`, chặn đệ quy vô hạn khi 1 workflow gọi workflow khác |
+| 28 | [Settings keys reference](architecture/28-settings-keys-reference.md) | Mọi key cấu hình đang tồn tại, key nào chưa có UI |
 
 ## [development/](development/) — Đóng góp code
 
