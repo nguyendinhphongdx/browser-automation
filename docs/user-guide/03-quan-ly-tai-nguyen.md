@@ -25,7 +25,8 @@ Mật khẩu email cũng được mã hoá AES-256-GCM như proxy.
 ## Cookie
 
 - Import/Export cookie dạng JSON (tương thích định dạng cookie editor phổ biến)
-- Gán cookie cho profile cụ thể — khi profile khởi chạy, cookie được nạp sẵn vào trình duyệt
-- Dùng để khôi phục phiên đăng nhập mà không cần đăng nhập lại thủ công
+- Gán cookie cho profile cụ thể để lưu trữ/quản lý tập trung
+
+> ⚠️ Hiện tại đây **chỉ là kho lưu trữ** — cookie đã lưu ở đây **không tự nạp vào trình duyệt** khi profile khởi chạy. Muốn áp dụng 1 cookie cụ thể, dùng node **"Gán cookie"** trong Automation Builder và tự nhập giá trị vào cấu hình node đó.
 
 Tiếp theo: [Automation Builder →](04-automation-builder.md)
