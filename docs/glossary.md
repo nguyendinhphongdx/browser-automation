@@ -24,3 +24,7 @@ Tên gọi các khái niệm dùng xuyên suốt tài liệu, theo đúng tên t
 | **Renderer** | Tiến trình hiển thị UI (Chromium + React) — không có quyền hệ thống, phải gọi qua IPC | [architecture/02](architecture/02-main-process.md), [architecture/17](architecture/17-electron-security.md) |
 | **Workflow version** | 1 snapshot nodes/edges/code tại thời điểm lưu — mỗi lần Save tạo 1 bản, rollback được | [user-guide/14](user-guide/14-phien-ban-workflow.md) |
 | **Node metric** | 1 bản ghi thời gian chạy + kết quả của 1 lần 1 node thực thi — dùng tính thống kê hiệu năng | [architecture/11](architecture/11-metrics.md) |
+| **Store** | 1 Zustand store quản lý state của 1 domain (profile/workflow/campaign...) ở renderer | [architecture/18](architecture/18-renderer-state.md) |
+| **Script** | 1 workflow đã đăng lên Marketplace, gắn `status` (PENDING/APPROVED/REJECTED), `price`, `downloads` | [architecture/08](architecture/08-server.md) |
+| **Quota (Campaign)** | Giới hạn tần suất 1 profile được chạy trong 1 khoảng thời gian — có ở backend, chưa có UI | [architecture/22](architecture/22-advanced-campaign-features.md) |
+| **Code mode** | Chế độ viết workflow bằng TypeScript/JS trực tiếp, chạy qua `new Function` với `page`/`context` Playwright thật | [architecture/32](architecture/32-code-mode-execution.md) |
