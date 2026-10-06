@@ -89,6 +89,7 @@ Tài liệu kỹ thuật, dành cho người đọc/sửa code trong repo này.
 | 8 | [Known gaps](development/08-known-gaps.md) | Checklist tổng hợp mọi khoảng trống đã phát hiện |
 | 9 | [Cấu hình Stripe thật](development/09-wiring-up-stripe.md) | Việc còn thiếu để checkout hoạt động thật |
 | 10 | [An toàn của chế độ Code](development/10-code-mode-an-toan.md) | Vì sao không cần (và không nên) approval gate ở đây |
+| 11 | [Xác minh bản đóng gói](development/11-xac-minh-ban-dong-goi.md) | Checklist mở thử file cài đặt thật, không chỉ tin CI xanh |
 
 ## Khác
 
