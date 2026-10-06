@@ -72,7 +72,8 @@ Tài liệu kỹ thuật, dành cho người đọc/sửa code trong repo này.
 | 35 | [Nội dung shared-types](architecture/35-shared-types-content.md) | Những type thật sự nằm trong package không dùng tới |
 | 36 | [Admin dashboard (server)](architecture/36-admin-pages.md) | Trang nào có dữ liệu thật, trang nào còn là khung |
 | 37 | [Campaign Editor UI](architecture/37-campaign-editor-ui.md) | Field nào đã nối, field nào quota/rule chưa nối |
-| 38 | [Định dạng import Email/Cookie](architecture/38-email-cookie-formats.md) | CSV có/không header, JSON cookie |
+| 38 | [Định dạng import Email/Cookie](architecture/38-email-cookie-formats.md) | CSV có/không header, JSON cookie — cookie đã lưu chưa được áp dụng |
+| 39 | [⚠️ electron-builder đóng gói sai thư mục](architecture/39-electron-builder-files-mismatch.md) | `dist/` vs `out/` — khả năng cao installer hiện tại không chạy được |
 
 ## [development/](development/) — Đóng góp code
 
