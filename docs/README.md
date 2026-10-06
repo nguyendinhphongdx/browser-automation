@@ -27,6 +27,7 @@ Hướng dẫn sử dụng từng tính năng, dành cho người dùng cuối (
 | 16 | [Giao diện & Ngôn ngữ](user-guide/16-giao-dien-va-ngon-ngu.md) | Theme sáng/tối/hệ thống, chuyển Tiếng Việt/English |
 | 17 | [Import/Export dữ liệu](user-guide/17-import-export-du-lieu.md) | Mọi nơi có thể xuất/nhập dữ liệu trong app, gom 1 chỗ |
 | 18 | [Tính năng Campaign nâng cao](user-guide/18-campaign-nang-cao.md) | Quota, chọn profile theo rule, A/B test, phụ thuộc workflow — đã có ở backend, chưa có UI |
+| 19 | [Mua bán trên Marketplace](user-guide/19-marketplace-mua-ban.md) | Script trả phí hiện chưa thanh toán được thật |
 
 ## [architecture/](architecture/) — Hiểu kiến trúc
 
@@ -62,6 +63,16 @@ Tài liệu kỹ thuật, dành cho người đọc/sửa code trong repo này.
 | 26 | [Onboarding](architecture/26-onboarding-flow.md) | Luồng chào mừng lần đầu mở app |
 | 27 | [Sub-workflow & đệ quy](architecture/27-sub-workflow-recursion.md) | `depth`, chặn đệ quy vô hạn khi 1 workflow gọi workflow khác |
 | 28 | [Settings keys reference](architecture/28-settings-keys-reference.md) | Mọi key cấu hình đang tồn tại, key nào chưa có UI |
+| 29 | [Thanh toán Marketplace](architecture/29-marketplace-payment-flow.md) | Checkout Stripe còn là TODO, download chưa gate theo thanh toán |
+| 30 | [Đánh giá & review script](architecture/30-script-reviews.md) | Unique constraint, tính avgRating |
+| 31 | [Retry & backoff của node](architecture/31-node-retry-backoff.md) | `NodeRetryConfig`, tự chụp màn hình khi lỗi |
+| 32 | [Chế độ Code](architecture/32-code-mode-execution.md) | `new Function`, API thật rộng hơn autocomplete khai báo |
+| 33 | [Build Electron-Vite](architecture/33-electron-vite-build.md) | 3 target build (main/preload/renderer), alias |
+| 34 | [CORS webhook server](architecture/34-webhook-cors-note.md) | Vì sao `Access-Control-Allow-Origin: *` vẫn an toàn ở đây |
+| 35 | [Nội dung shared-types](architecture/35-shared-types-content.md) | Những type thật sự nằm trong package không dùng tới |
+| 36 | [Admin dashboard (server)](architecture/36-admin-pages.md) | Trang nào có dữ liệu thật, trang nào còn là khung |
+| 37 | [Campaign Editor UI](architecture/37-campaign-editor-ui.md) | Field nào đã nối, field nào quota/rule chưa nối |
+| 38 | [Định dạng import Email/Cookie](architecture/38-email-cookie-formats.md) | CSV có/không header, JSON cookie |
 
 ## [development/](development/) — Đóng góp code
 
@@ -74,7 +85,9 @@ Tài liệu kỹ thuật, dành cho người đọc/sửa code trong repo này.
 | 5 | [Thêm trang mới](development/05-them-trang-moi.md) | Walkthrough: route + store + sidebar |
 | 6 | [Thêm ngôn ngữ](development/06-them-ngon-ngu.md) | Thêm locale mới vào `i18n.ts` |
 | 7 | [Mẹo debug](development/07-meo-debug.md) | DevTools main vs renderer, log ở đâu |
-| 8 | [Known gaps](development/08-known-gaps.md) | Checklist tổng hợp mọi khoảng trống đã phát hiện qua 2 đợt viết docs |
+| 8 | [Known gaps](development/08-known-gaps.md) | Checklist tổng hợp mọi khoảng trống đã phát hiện |
+| 9 | [Cấu hình Stripe thật](development/09-wiring-up-stripe.md) | Việc còn thiếu để checkout hoạt động thật |
+| 10 | [An toàn của chế độ Code](development/10-code-mode-an-toan.md) | Vì sao không cần (và không nên) approval gate ở đây |
 
 ## Khác
 
