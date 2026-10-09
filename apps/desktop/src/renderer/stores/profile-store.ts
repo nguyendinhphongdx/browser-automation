@@ -105,7 +105,7 @@ declare global {
       respondAgentApproval: (payload: { approvalId: string; approved: boolean; reason?: string }) => Promise<{ success: boolean }>
       cancelAgentRun: (runId: string) => Promise<{ success: boolean }>
       // Browser live preview
-      startBrowserPreview: (profileId: string) => Promise<{ success: boolean; reason?: 'no-such-profile' | 'launch-failed' | 'unsupported'; message?: string }>
+      startBrowserPreview: (profileId: string) => Promise<{ success: boolean; reason?: 'no-such-profile' | 'launch-failed' | 'unsupported'; message?: string; profileId?: string }>
       stopBrowserPreview: (profileId: string) => Promise<{ success: boolean }>
       // App info
       getDbPath: () => Promise<string>
