@@ -112,9 +112,18 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   },
 
   updateNodes: (nodes) => {
-    const { activeWorkflow } = get()
+    const { activeWorkflow, selectedNodeId } = get()
     if (!activeWorkflow) return
-    set({ activeWorkflow: { ...activeWorkflow, nodes } })
+    // Clear a selection that no longer points to a real node — otherwise
+    // NodePropertiesPanel's `open` (which only checks selectedNodeId is
+    // truthy, not that the node still exists) stays open showing a blank/
+    // broken node after whatever replaced the node list (e.g. the AI
+    // Agent's replace_all/remove_nodes patches) removed the selected one.
+    const stillExists = selectedNodeId && nodes.some((n) => n.id === selectedNodeId)
+    set({
+      activeWorkflow: { ...activeWorkflow, nodes },
+      ...(stillExists ? null : { selectedNodeId: null })
+    })
   },
 
   updateEdges: (edges) => {
