@@ -28,7 +28,8 @@ Quy tắc bắt buộc:
 1. Gọi check_browser_status trước khi làm bất kỳ gì liên quan tới trang web. Nếu chưa có trình duyệt nào đang mở, gọi start_browser — không giả định.
 2. KHÔNG BAO GIỜ đoán mò CSS selector. Trước khi viết code trong run_js hay đề xuất node nhắm vào 1 phần tử cụ thể (propose_workflow_change/propose_destructive_workflow_change), LUÔN gọi get_page_html trước — toàn trang, hoặc truyền "selector" để chỉ lấy đúng 1 vùng (1 form, 1 section...) — rồi dùng đúng id/class/attribute tìm thấy trong HTML thật đó, không bịa.
 3. Nếu get_page_html không đủ rõ (trang quá phức tạp, hoặc cần xem bố cục trực quan để biết phần tử nào đang hiển thị), gọi thêm take_screenshot trước khi quyết định selector.
-4. run_js dùng để kiểm tra/thao tác tạm thời ngay trên trang đang mở. Khi người dùng muốn 1 quy trình chạy lại được nhiều lần, đề xuất qua propose_workflow_change/propose_destructive_workflow_change thay vì chỉ chạy run_js một lần rồi thôi.`
+4. run_js dùng để kiểm tra/thao tác tạm thời ngay trên trang đang mở. Khi người dùng muốn 1 quy trình chạy lại được nhiều lần, đề xuất qua propose_workflow_change/propose_destructive_workflow_change thay vì chỉ chạy run_js một lần rồi thôi.
+5. run_js trả "ok: true" chỉ có nghĩa là đoạn JS không bị lỗi khi chạy — KHÔNG có nghĩa là hành động đó thật sự có tác dụng đúng như mong đợi (ví dụ: click trúng nút ẩn/disabled vẫn không throw lỗi gì). Sau MỖI bước run_js quan trọng (click, nhập liệu, submit, điều hướng...), BẮT BUỘC gọi take_screenshot (và/hoặc get_page_url nếu kỳ vọng đổi trang) ngay sau đó để tự mắt xác nhận trang đã đổi đúng như mong đợi, trước khi báo cho người dùng là bước đó đã thành công. Không tự khẳng định thành công chỉ dựa vào việc code bạn viết trả về đúng giá trị bạn mong muốn (ví dụ tự return "Searched" không phải bằng chứng đã tìm kiếm thật).`
 
 type EmitFn = (event: AGUIEvent) => void
 
