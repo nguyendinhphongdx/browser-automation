@@ -21,7 +21,7 @@ export function createGetPageHtmlTool(ctx: AgentToolContext) {
       if (!ctx.page) {
         return {
           ok: false,
-          error: 'Chưa có browser nào đang mở cho profile này. Yêu cầu người dùng mở browser trước.'
+          error: 'Chưa có browser nào đang mở cho profile này. Gọi start_browser trước.'
         }
       }
       try {

@@ -15,7 +15,7 @@ export function createTakeScreenshotTool(ctx: AgentToolContext) {
     }),
     execute: async ({ fullPage }) => {
       if (!ctx.page) {
-        return { ok: false, error: 'Chưa có browser nào đang mở cho profile này.' }
+        return { ok: false, error: 'Chưa có browser nào đang mở cho profile này. Gọi start_browser trước.' }
       }
       try {
         const buffer = await ctx.page.screenshot({ type: 'jpeg', quality: 70, fullPage })
