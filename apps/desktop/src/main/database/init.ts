@@ -181,6 +181,28 @@ export function initDatabase() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS resources (
+      id TEXT PRIMARY KEY,
+      parent_id TEXT REFERENCES resources(id) ON DELETE SET NULL,
+      name TEXT NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'file',
+      mime_type TEXT NOT NULL DEFAULT 'application/octet-stream',
+      original_filename TEXT,
+      extension TEXT NOT NULL DEFAULT '',
+      size_bytes INTEGER NOT NULL DEFAULT 0,
+      tags TEXT DEFAULT '[]',
+      category TEXT DEFAULT '',
+      object_type TEXT NOT NULL DEFAULT 'manual',
+      object_id TEXT,
+      notes TEXT DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_resources_parent ON resources(parent_id);
+    CREATE INDEX IF NOT EXISTS idx_resources_kind ON resources(kind);
+    CREATE INDEX IF NOT EXISTS idx_resources_object ON resources(object_type, object_id);
   `)
 
   // Tạo Default Browser profile nếu chưa có

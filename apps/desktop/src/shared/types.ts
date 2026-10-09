@@ -154,6 +154,27 @@ export interface CookieEntry {
   updatedAt: string
 }
 
+export type LibraryResourceKind = 'folder' | 'file' | 'image' | 'prompt-template' | 'data-export'
+export type LibraryResourceObjectType = 'manual' | 'workflow' | 'agent'
+
+export interface LibraryResource {
+  id: string
+  parentId: string | null
+  name: string
+  kind: LibraryResourceKind
+  mimeType: string
+  originalFilename: string | null
+  extension: string
+  sizeBytes: number
+  tags: string[]
+  category: string
+  objectType: LibraryResourceObjectType
+  objectId: string | null
+  notes: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CreateCookieInput {
   name: string
   profileId?: string | null
