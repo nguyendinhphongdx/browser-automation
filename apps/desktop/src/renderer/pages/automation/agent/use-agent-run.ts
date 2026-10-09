@@ -38,6 +38,7 @@ export type AgentUIItem =
       status: 'pending' | 'approved' | 'denied'
     }
   | { kind: 'screenshot'; id: string; dataUrl: string }
+  | { kind: 'resource-preview'; id: string; dataUrl: string; name: string }
 
 interface UseAgentRunOptions {
   profileId: string
@@ -233,6 +234,10 @@ function reduceEvent(items: AgentUIItem[], event: AGUIEvent): AgentUIItem[] {
       if (event.name === 'screenshot') {
         const { dataUrl } = event.value as { dataUrl: string }
         return [...items, { kind: 'screenshot', id: `shot-${Date.now()}`, dataUrl }]
+      }
+      if (event.name === 'resource-preview') {
+        const { dataUrl, name } = event.value as { dataUrl: string; name: string }
+        return [...items, { kind: 'resource-preview', id: `res-${Date.now()}`, dataUrl, name }]
       }
       return items
     }

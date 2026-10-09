@@ -22,4 +22,10 @@ export interface AgentToolContext {
    * otherwise get stuffed straight into the model's context on the next step.
    */
   onScreenshot?: (dataUrl: string) => void
+  /**
+   * Called with a `data:image/...;base64,...` URL when get_resource reads an
+   * image resource, so the UI can show it — same reasoning as onScreenshot:
+   * the model only ever sees metadata in the tool result, never raw pixels.
+   */
+  onResourcePreview?: (dataUrl: string, name: string) => void
 }

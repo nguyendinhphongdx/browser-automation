@@ -12,6 +12,9 @@ import { createGetExecutionLogsTool } from './get-execution-logs'
 import { createProposeWorkflowChangeTool } from './propose-workflow-change'
 import { createProposeDestructiveWorkflowChangeTool } from './propose-destructive-workflow-change'
 import { createProposeCodeChangeTool } from './propose-code-change'
+import { createListResourcesTool } from './list-resources'
+import { createGetResourceTool } from './get-resource'
+import { createSaveResourceTool } from './save-resource'
 
 /**
  * Tool names that must pause for human approval before executing — read by
@@ -45,6 +48,9 @@ export function buildToolset(ctx: AgentToolContext): ToolSet {
     get_execution_logs: createGetExecutionLogsTool(ctx),
     propose_workflow_change: createProposeWorkflowChangeTool(ctx),
     propose_destructive_workflow_change: createProposeDestructiveWorkflowChangeTool(ctx),
-    propose_code_change: createProposeCodeChangeTool(ctx)
+    propose_code_change: createProposeCodeChangeTool(ctx),
+    list_resources: createListResourcesTool(ctx),
+    get_resource: createGetResourceTool(ctx),
+    save_resource: createSaveResourceTool(ctx)
   }
 }

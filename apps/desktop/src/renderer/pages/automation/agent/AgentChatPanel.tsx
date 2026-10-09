@@ -210,6 +210,13 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
                   <img src={item.dataUrl} alt="Ảnh chụp màn hình trang" className="w-full" />
                 </div>
               )
+            case 'resource-preview':
+              return (
+                <div key={item.id} className="max-w-[85%] overflow-hidden rounded-lg border">
+                  <img src={item.dataUrl} alt={item.name} className="w-full" />
+                  <p className="px-2 py-1 text-[11px] text-muted-foreground border-t bg-muted/30">{item.name}</p>
+                </div>
+              )
             default:
               return null
           }

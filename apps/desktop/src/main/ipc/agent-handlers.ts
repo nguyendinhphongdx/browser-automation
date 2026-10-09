@@ -68,6 +68,12 @@ export function registerAgentHandlers(ipcMain: IpcMain) {
           runId,
           event: { type: EventType.CUSTOM, name: 'screenshot', value: { dataUrl }, timestamp: Date.now() }
         })
+      },
+      onResourcePreview: (dataUrl, name) => {
+        emit({
+          runId,
+          event: { type: EventType.CUSTOM, name: 'resource-preview', value: { dataUrl, name }, timestamp: Date.now() }
+        })
       }
     }
 
