@@ -21,6 +21,14 @@ import { getSetting } from './services/settings-service'
 
 const PROTOCOL = 'browserauto'
 
+// package.json's "name" is the scoped npm name "@browser-automation/desktop"
+// — Electron falls back to it for app.getName() otherwise, and the literal
+// "/" in that string makes path.join nest userData two folders deep (e.g.
+// "Application Support/@browser-automation/desktop/" instead of a clean
+// "Application Support/BrowserAuto/"). Must run before anything reads
+// app.getPath('userData') (initDatabase() et al, right below).
+app.setName('BrowserAuto')
+
 let mainWindow: BrowserWindow | null = null
 
 // ── Deep Link Protocol ──────────────────────────
