@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { X, Search, ChevronRight, Home } from 'lucide-react'
-import { LibraryGridCard } from '@/pages/library/LibraryGridCard'
+import { LibraryGridCard } from './LibraryGridCard'
 import type { LibraryResource, LibraryResourceKind } from '@shared/types'
 
 interface Props {

@@ -1,5 +1,16 @@
 import type { NodeDefinition } from '../types'
 
+/**
+ * Single source of truth for the globals a Code-mode workflow's sandbox
+ * exposes — main/automation/engine.ts's executeCodeWorkflow() builds its
+ * `api` object and destructure line from this same array, so adding a new
+ * sandbox global here automatically keeps both the real runtime and this
+ * file's syntax-check in sync (previously these were two independent
+ * hardcoded parameter lists, connected only by a comment asking whoever
+ * edits one to remember the other).
+ */
+export const CODE_SANDBOX_GLOBALS = ['page', 'context', 'variables', 'log', 'delay', 'resources'] as const
+
 export interface ExistingNodeRef {
   id: string
   nodeType?: string
@@ -156,12 +167,11 @@ export function validateWorkflowPatch(
       // parses the body, so this is a pure syntax check. Must match that
       // wrapping exactly, otherwise ordinary top-level `await` in valid code
       // would wrongly fail here (await is only legal inside an async
-      // function, which this wrapping provides). This includes keeping the
-      // parameter list in sync with engine.ts's sandbox globals — e.g.
-      // `resources` (the Resource Library helper) must be listed here too,
-      // or valid code using it gets wrongly rejected as a syntax error.
+      // function, which this wrapping provides). The parameter list comes
+      // from CODE_SANDBOX_GLOBALS (above) rather than being hardcoded here
+      // a second time.
       try {
-        new Function('page', 'context', 'variables', 'log', 'delay', 'resources', `return (async () => { ${code} })();`)
+        new Function(...CODE_SANDBOX_GLOBALS, `return (async () => { ${code} })();`)
       } catch (err) {
         errors.push(`update_code: code có lỗi cú pháp JS — ${err instanceof Error ? err.message : String(err)}`)
       }

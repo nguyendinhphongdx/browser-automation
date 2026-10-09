@@ -5,6 +5,7 @@ import {
   getResourceById, getAllResources, resourceFilePath, createResourceFromBuffer,
   mimeTypeForExtension, defaultExtensionForKind
 } from '../services/library-service'
+import { CODE_SANDBOX_GLOBALS } from '../../shared/agent/validate-workflow-patch'
 
 export type { ExecutionContext } from './nodes/base-node'
 
@@ -485,7 +486,7 @@ export async function executeCodeWorkflow(
 
   try {
     const fn = new Function('api', `
-      const { page, context, variables, log, delay, resources } = api;
+      const { ${CODE_SANDBOX_GLOBALS.join(', ')} } = api;
       return (async () => { ${code} })();
     `)
     await fn(api)

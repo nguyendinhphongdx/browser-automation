@@ -7,7 +7,7 @@ import { useLibraryStore, type LibraryKindFilter } from '@/stores/library-store'
 import type { LibraryResource } from '@shared/types'
 import { CreateFolderDialog } from './CreateFolderDialog'
 import { CreatePromptDialog } from './CreatePromptDialog'
-import { LibraryGridCard } from './LibraryGridCard'
+import { LibraryGridCard } from '@/components/library/LibraryGridCard'
 import { ResourceDetailModal } from './ResourceDetailModal'
 
 const KIND_TABS: { value: LibraryKindFilter; label: string }[] = [
