@@ -5,6 +5,7 @@ import {
   Play,
   Rocket,
   Database,
+  FolderOpen,
   ShoppingBag,
   Settings,
   Globe,
@@ -23,6 +24,7 @@ const navItems = [
   { to: '/automation', labelKey: 'nav.automation', icon: Play },
   { to: '/campaigns', labelKey: 'nav.campaigns', icon: Rocket },
   { to: '/resources', labelKey: 'nav.resources', icon: Database },
+  { to: '/library', labelKey: 'nav.library', icon: FolderOpen },
   { to: '/marketplace', labelKey: 'nav.marketplace', icon: ShoppingBag },
   { to: '/settings', labelKey: 'nav.settings', icon: Settings }
 ]

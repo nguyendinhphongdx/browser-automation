@@ -6,7 +6,8 @@ import type {
   CookieEntry, CreateCookieInput, UpdateCookieInput,
   Workflow, CreateWorkflowInput, UpdateWorkflowInput, WorkflowLog, LogEntry,
   Campaign, CreateCampaignInput, UpdateCampaignInput, CampaignRun,
-  WorkflowNode, WorkflowEdge, WorkflowMode
+  WorkflowNode, WorkflowEdge, WorkflowMode,
+  LibraryResource, LibraryResourceKind
 } from '@shared/types'
 import type { ModelMessage } from 'ai'
 
@@ -107,6 +108,31 @@ declare global {
       // Browser live preview
       startBrowserPreview: (profileId: string) => Promise<{ success: boolean; reason?: 'no-such-profile' | 'launch-failed' | 'unsupported'; message?: string; profileId?: string }>
       stopBrowserPreview: (profileId: string) => Promise<{ success: boolean }>
+      // Resource Library
+      getLibraryResources: () => Promise<LibraryResource[]>
+      getLibraryResourcesByKind: (kind: LibraryResourceKind) => Promise<LibraryResource[]>
+      getLibraryResource: (id: string) => Promise<LibraryResource | null>
+      getLibraryChildren: (parentId: string | null) => Promise<LibraryResource[]>
+      searchLibraryResources: (query: string) => Promise<LibraryResource[]>
+      createLibraryFolder: (name: string, parentId?: string | null) => Promise<LibraryResource>
+      uploadLibraryResource: (opts?: {
+        kind?: LibraryResourceKind
+        parentId?: string | null
+      }) => Promise<LibraryResource | null>
+      createPromptTemplate: (
+        name: string,
+        text: string,
+        opts?: { tags?: string[]; parentId?: string | null }
+      ) => Promise<LibraryResource>
+      updateLibraryResourceMetadata: (
+        id: string,
+        data: { name?: string; tags?: string[]; category?: string; notes?: string }
+      ) => Promise<LibraryResource | null>
+      moveLibraryResource: (id: string, newParentId: string | null) => Promise<LibraryResource | null>
+      deleteLibraryResource: (id: string) => Promise<boolean>
+      getLibraryResourceText: (id: string) => Promise<string | null>
+      getLibraryResourceDataUrl: (id: string) => Promise<string | null>
+      exportLibraryResource: (id: string) => Promise<boolean>
       // App info
       getDbPath: () => Promise<string>
       // Events
