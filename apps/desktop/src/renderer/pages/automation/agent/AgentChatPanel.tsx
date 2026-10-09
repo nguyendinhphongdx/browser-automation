@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Sparkles, RotateCcw, X } from 'lucide-react'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { Drawer } from '../Drawer'
@@ -11,6 +11,7 @@ import { PromptInput } from '@/components/ai-elements/PromptInput'
 import { BrowserPreview } from '@/components/ai-elements/BrowserPreview'
 import { useAgentRun } from './use-agent-run'
 import { useBrowserPreview } from './use-browser-preview'
+import { applyWorkflowPatch, type WorkflowChangePatch } from './apply-workflow-patch'
 
 interface Props {
   open: boolean
@@ -25,22 +26,42 @@ const SUGGESTIONS = [
 ]
 
 export function AgentChatPanel({ open, onClose, profileId }: Props) {
-  const { activeWorkflow } = useWorkflowStore()
+  const { activeWorkflow, nodeDefinitions, updateNodes, updateEdges } = useWorkflowStore()
   const [input, setInput] = useState('')
+  const [patchError, setPatchError] = useState<string | null>(null)
   const browserPreview = useBrowserPreview(open ? profileId : undefined)
+
+  // Re-validates against the LIVE canvas (not the stale snapshot the run
+  // started with) right before actually mutating it — the authoritative
+  // second gate of the two-gate validation design (main process's tool
+  // already did the fast first check against a start-of-run snapshot).
+  const handleWorkflowPatch = useCallback(
+    (patch: WorkflowChangePatch) => {
+      const current = useWorkflowStore.getState().activeWorkflow
+      if (!current) return
+      const result = applyWorkflowPatch(patch, nodeDefinitions, { nodes: current.nodes, edges: current.edges })
+      if (!result.ok) {
+        setPatchError(result.errors?.join('; ') ?? 'Không thể áp dụng thay đổi do AI đề xuất')
+        return
+      }
+      setPatchError(null)
+      updateNodes(result.nodes!)
+      updateEdges(result.edges!)
+    },
+    [nodeDefinitions, updateNodes, updateEdges]
+  )
+
   const { items, loading, error, send, respondApproval, cancel, reset } = useAgentRun({
     profileId,
     workflowId: activeWorkflow?.id,
     getWorkflowSnapshot: () => ({
       nodes: activeWorkflow?.nodes ?? [],
       edges: activeWorkflow?.edges ?? []
-    })
+    }),
+    onWorkflowPatch: handleWorkflowPatch
   })
 
-  const noProfile = !profileId
-
   const handleSend = () => {
-    if (noProfile) return
     const text = input
     setInput('')
     send(text)
@@ -156,6 +177,11 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
             <strong>Lỗi:</strong> {error}
           </div>
         )}
+        {patchError && (
+          <div className="max-w-[85%] rounded-xl bg-destructive/10 px-3 py-2 text-xs leading-relaxed text-destructive">
+            <strong>Không áp dụng được thay đổi AI đề xuất:</strong> {patchError}
+          </div>
+        )}
       </Conversation>
 
       {/* Input */}
@@ -166,8 +192,7 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
           onSubmit={handleSend}
           onStop={cancel}
           loading={loading}
-          disabled={noProfile}
-          placeholder={noProfile ? 'Chọn 1 profile trước khi dùng AI Agent' : 'Hỏi hoặc yêu cầu agent kiểm tra trang, đề xuất workflow...'}
+          placeholder="Hỏi hoặc yêu cầu agent kiểm tra trang, đề xuất workflow..."
         />
         <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
           Enter để gửi · Shift+Enter xuống dòng

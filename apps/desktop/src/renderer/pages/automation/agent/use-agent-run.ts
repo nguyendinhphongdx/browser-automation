@@ -7,6 +7,9 @@ import {
   type AgentApprovalRequest,
   type AgentEventEnvelope
 } from '@shared/agent/ag-ui-events'
+import type { WorkflowChangePatch } from './apply-workflow-patch'
+
+const WORKFLOW_PATCH_TOOLS = new Set(['propose_workflow_change', 'propose_destructive_workflow_change'])
 
 export type AgentUIItem =
   | { kind: 'user-message'; id: string; text: string }
@@ -36,6 +39,10 @@ interface UseAgentRunOptions {
   profileId: string
   workflowId?: string
   getWorkflowSnapshot: () => { nodes: WorkflowNode[]; edges: WorkflowEdge[] }
+  // Called whenever propose_workflow_change/propose_destructive_workflow_change
+  // comes back with `ok: true` — the caller owns re-validating against the
+  // LIVE canvas and actually applying it (see apply-workflow-patch.ts).
+  onWorkflowPatch: (patch: WorkflowChangePatch) => void
 }
 
 /**
@@ -44,17 +51,32 @@ interface UseAgentRunOptions {
  * of ag-ui-adapter.ts's translation (main process AI SDK part -> AG-UI
  * event -> here, AG-UI event -> UI item).
  */
-export function useAgentRun({ profileId, workflowId, getWorkflowSnapshot }: UseAgentRunOptions) {
+export function useAgentRun({ profileId, workflowId, getWorkflowSnapshot, onWorkflowPatch }: UseAgentRunOptions) {
   const [items, setItems] = useState<AgentUIItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const runIdRef = useRef<string | null>(null)
   const historyRef = useRef<ModelMessage[]>([])
+  // toolCallId -> toolName, so a later TOOL_CALL_RESULT (which only carries
+  // the id) can tell whether it belongs to one of the workflow-patch tools.
+  const toolNameByIdRef = useRef<Map<string, string>>(new Map())
+  const onWorkflowPatchRef = useRef(onWorkflowPatch)
+  onWorkflowPatchRef.current = onWorkflowPatch
 
   useEffect(() => {
     const handler = (envelope: AgentEventEnvelope) => {
       if (envelope.runId !== runIdRef.current) return
       const event = envelope.event
+
+      if (event.type === EventType.TOOL_CALL_START) {
+        toolNameByIdRef.current.set(event.toolCallId, event.toolCallName)
+      }
+      if (event.type === EventType.TOOL_CALL_RESULT) {
+        const toolName = toolNameByIdRef.current.get(event.toolCallId)
+        if (toolName && WORKFLOW_PATCH_TOOLS.has(toolName)) {
+          tryApplyPatchFromResult(event.content, onWorkflowPatchRef.current)
+        }
+      }
 
       setItems((prev) => reduceEvent(prev, event))
 
@@ -195,6 +217,18 @@ function reduceEvent(items: AgentUIItem[], event: AGUIEvent): AgentUIItem[] {
 
     default:
       return items
+  }
+}
+
+function tryApplyPatchFromResult(content: unknown, onWorkflowPatch: (patch: WorkflowChangePatch) => void) {
+  const contentText = typeof content === 'string' ? content : JSON.stringify(content)
+  try {
+    const parsed = JSON.parse(contentText) as { ok?: unknown; patch?: unknown }
+    if (parsed.ok === true && parsed.patch && typeof parsed.patch === 'object') {
+      onWorkflowPatch(parsed.patch as WorkflowChangePatch)
+    }
+  } catch {
+    // Not JSON, or didn't match the expected {ok, patch} shape — nothing to apply.
   }
 }
 
