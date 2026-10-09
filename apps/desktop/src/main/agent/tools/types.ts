@@ -1,5 +1,5 @@
 import type { Page } from 'playwright-core'
-import type { WorkflowNode, WorkflowEdge } from '../../../shared/types'
+import type { WorkflowNode, WorkflowEdge, WorkflowMode } from '../../../shared/types'
 import type { NodeDefinition } from '../../automation/node-definitions'
 
 /**
@@ -12,8 +12,8 @@ export interface AgentToolContext {
   page: Page | null
   profileId: string
   workflowId?: string
-  /** Nodes/edges as they were when the run started, sent by the renderer. May go stale mid-run — see propose-workflow-change.ts's two-gate validation note. */
-  workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[] }
+  /** Nodes/edges/code/mode as they were when the run started, sent by the renderer. May go stale mid-run — see propose-workflow-change.ts's two-gate validation note. */
+  workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
   nodeDefinitions: NodeDefinition[]
   /**
    * Called with a `data:image/...;base64,...` URL right after a screenshot is

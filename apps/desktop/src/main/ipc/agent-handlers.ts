@@ -7,7 +7,7 @@ import { DEFAULT_PROFILE_ID } from '../database/init'
 import { NODE_DEFINITIONS } from '../automation/node-definitions'
 import { agentService } from '../agent/agent-service'
 import type { AgentToolContext } from '../agent/tools/types'
-import type { WorkflowNode, WorkflowEdge } from '../../shared/types'
+import type { WorkflowNode, WorkflowEdge, WorkflowMode } from '../../shared/types'
 import { EventType, type AgentEventEnvelope } from '../../shared/agent/ag-ui-events'
 
 interface AgentRunPayload {
@@ -19,7 +19,7 @@ interface AgentRunPayload {
   runId: string
   profileId: string
   workflowId?: string
-  workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[] }
+  workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
   messages: ModelMessage[]
 }
 

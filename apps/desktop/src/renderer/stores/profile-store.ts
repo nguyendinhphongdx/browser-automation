@@ -6,7 +6,7 @@ import type {
   CookieEntry, CreateCookieInput, UpdateCookieInput,
   Workflow, CreateWorkflowInput, UpdateWorkflowInput, WorkflowLog, LogEntry,
   Campaign, CreateCampaignInput, UpdateCampaignInput, CampaignRun,
-  WorkflowNode, WorkflowEdge
+  WorkflowNode, WorkflowEdge, WorkflowMode
 } from '@shared/types'
 import type { ModelMessage } from 'ai'
 
@@ -99,7 +99,7 @@ declare global {
         runId: string
         profileId: string
         workflowId?: string
-        workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[] }
+        workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
         messages: ModelMessage[]
       }) => Promise<{ success: boolean }>
       respondAgentApproval: (payload: { approvalId: string; approved: boolean; reason?: string }) => Promise<{ success: boolean }>

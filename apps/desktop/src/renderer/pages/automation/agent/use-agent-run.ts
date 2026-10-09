@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ModelMessage } from 'ai'
-import type { WorkflowNode, WorkflowEdge } from '@shared/types'
+import type { WorkflowNode, WorkflowEdge, WorkflowMode } from '@shared/types'
 import {
   EventType,
   type AGUIEvent,
@@ -9,7 +9,11 @@ import {
 } from '@shared/agent/ag-ui-events'
 import type { WorkflowChangePatch } from './apply-workflow-patch'
 
-const WORKFLOW_PATCH_TOOLS = new Set(['propose_workflow_change', 'propose_destructive_workflow_change'])
+const WORKFLOW_PATCH_TOOLS = new Set([
+  'propose_workflow_change',
+  'propose_destructive_workflow_change',
+  'propose_code_change'
+])
 
 export type AgentUIItem =
   | { kind: 'user-message'; id: string; text: string }
@@ -38,11 +42,15 @@ export type AgentUIItem =
 interface UseAgentRunOptions {
   profileId: string
   workflowId?: string
-  getWorkflowSnapshot: () => { nodes: WorkflowNode[]; edges: WorkflowEdge[] }
+  getWorkflowSnapshot: () => { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
   // Called whenever propose_workflow_change/propose_destructive_workflow_change
   // comes back with `ok: true` — the caller owns re-validating against the
   // LIVE canvas and actually applying it (see apply-workflow-patch.ts).
   onWorkflowPatch: (patch: WorkflowChangePatch) => void
+  // Called when the agent's start_browser/close_browser tools succeed, so
+  // the caller can reconnect/disconnect the live preview — nothing launches
+  // or stops the browser itself from here, the tool already did that.
+  onBrowserLifecycle: (kind: 'started' | 'closed') => void
 }
 
 /**
@@ -51,7 +59,13 @@ interface UseAgentRunOptions {
  * of ag-ui-adapter.ts's translation (main process AI SDK part -> AG-UI
  * event -> here, AG-UI event -> UI item).
  */
-export function useAgentRun({ profileId, workflowId, getWorkflowSnapshot, onWorkflowPatch }: UseAgentRunOptions) {
+export function useAgentRun({
+  profileId,
+  workflowId,
+  getWorkflowSnapshot,
+  onWorkflowPatch,
+  onBrowserLifecycle
+}: UseAgentRunOptions) {
   const [items, setItems] = useState<AgentUIItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -62,6 +76,8 @@ export function useAgentRun({ profileId, workflowId, getWorkflowSnapshot, onWork
   const toolNameByIdRef = useRef<Map<string, string>>(new Map())
   const onWorkflowPatchRef = useRef(onWorkflowPatch)
   onWorkflowPatchRef.current = onWorkflowPatch
+  const onBrowserLifecycleRef = useRef(onBrowserLifecycle)
+  onBrowserLifecycleRef.current = onBrowserLifecycle
 
   useEffect(() => {
     const handler = (envelope: AgentEventEnvelope) => {
@@ -75,6 +91,12 @@ export function useAgentRun({ profileId, workflowId, getWorkflowSnapshot, onWork
         const toolName = toolNameByIdRef.current.get(event.toolCallId)
         if (toolName && WORKFLOW_PATCH_TOOLS.has(toolName)) {
           tryApplyPatchFromResult(event.content, onWorkflowPatchRef.current)
+        }
+        if (toolName === 'start_browser' && resultOk(event.content)) {
+          onBrowserLifecycleRef.current('started')
+        }
+        if (toolName === 'close_browser' && resultOk(event.content)) {
+          onBrowserLifecycleRef.current('closed')
         }
       }
 
@@ -217,6 +239,16 @@ function reduceEvent(items: AgentUIItem[], event: AGUIEvent): AgentUIItem[] {
 
     default:
       return items
+  }
+}
+
+function resultOk(content: unknown): boolean {
+  const contentText = typeof content === 'string' ? content : JSON.stringify(content)
+  try {
+    const parsed = JSON.parse(contentText) as { ok?: unknown }
+    return parsed.ok === true
+  } catch {
+    return false
   }
 }
 

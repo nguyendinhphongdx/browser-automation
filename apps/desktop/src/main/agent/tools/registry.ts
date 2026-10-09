@@ -11,6 +11,7 @@ import { createGetWorkflowStateTool } from './get-workflow-state'
 import { createGetExecutionLogsTool } from './get-execution-logs'
 import { createProposeWorkflowChangeTool } from './propose-workflow-change'
 import { createProposeDestructiveWorkflowChangeTool } from './propose-destructive-workflow-change'
+import { createProposeCodeChangeTool } from './propose-code-change'
 
 /**
  * Tool names that must pause for human approval before executing — read by
@@ -18,7 +19,11 @@ import { createProposeDestructiveWorkflowChangeTool } from './propose-destructiv
  * in exactly one place so gating can't drift out of sync with the actual
  * tool set.
  */
-export const APPROVAL_GATED_TOOLS = ['run_js', 'propose_destructive_workflow_change'] as const
+export const APPROVAL_GATED_TOOLS = [
+  'run_js',
+  'propose_destructive_workflow_change',
+  'propose_code_change'
+] as const
 
 /**
  * Builds the full toolset for one agent run, closing over that run's
@@ -39,6 +44,7 @@ export function buildToolset(ctx: AgentToolContext): ToolSet {
     get_workflow_state: createGetWorkflowStateTool(ctx),
     get_execution_logs: createGetExecutionLogsTool(ctx),
     propose_workflow_change: createProposeWorkflowChangeTool(ctx),
-    propose_destructive_workflow_change: createProposeDestructiveWorkflowChangeTool(ctx)
+    propose_destructive_workflow_change: createProposeDestructiveWorkflowChangeTool(ctx),
+    propose_code_change: createProposeCodeChangeTool(ctx)
   }
 }

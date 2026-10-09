@@ -26,7 +26,7 @@ const SUGGESTIONS = [
 ]
 
 export function AgentChatPanel({ open, onClose, profileId }: Props) {
-  const { activeWorkflow, nodeDefinitions, updateNodes, updateEdges } = useWorkflowStore()
+  const { activeWorkflow, nodeDefinitions, updateNodes, updateEdges, updateCode } = useWorkflowStore()
   const [input, setInput] = useState('')
   const [patchError, setPatchError] = useState<string | null>(null)
   const browserPreview = useBrowserPreview(open ? profileId : undefined)
@@ -45,10 +45,22 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
         return
       }
       setPatchError(null)
-      updateNodes(result.nodes!)
-      updateEdges(result.edges!)
+      if (result.code !== undefined) {
+        updateCode(result.code)
+      } else {
+        updateNodes(result.nodes!)
+        updateEdges(result.edges!)
+      }
     },
-    [nodeDefinitions, updateNodes, updateEdges]
+    [nodeDefinitions, updateNodes, updateEdges, updateCode]
+  )
+
+  const handleBrowserLifecycle = useCallback(
+    (kind: 'started' | 'closed') => {
+      if (kind === 'started') browserPreview.reconnect()
+      else browserPreview.disconnect()
+    },
+    [browserPreview.reconnect, browserPreview.disconnect]
   )
 
   const { items, loading, error, send, respondApproval, cancel, reset } = useAgentRun({
@@ -56,9 +68,12 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
     workflowId: activeWorkflow?.id,
     getWorkflowSnapshot: () => ({
       nodes: activeWorkflow?.nodes ?? [],
-      edges: activeWorkflow?.edges ?? []
+      edges: activeWorkflow?.edges ?? [],
+      mode: activeWorkflow?.mode,
+      code: activeWorkflow?.code
     }),
-    onWorkflowPatch: handleWorkflowPatch
+    onWorkflowPatch: handleWorkflowPatch,
+    onBrowserLifecycle: handleBrowserLifecycle
   })
 
   const handleSend = () => {

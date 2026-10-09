@@ -146,5 +146,24 @@ export function validateWorkflowPatch(
     }
   }
 
+  if (act.type === 'update_code') {
+    const code = typeof act.code === 'string' ? act.code : ''
+    if (!code.trim()) {
+      errors.push('update_code: code không được để trống')
+    } else {
+      // Same wrapping main/automation/engine.ts's executeCodeWorkflow() uses
+      // at real-run time — constructing (not calling) the Function only
+      // parses the body, so this is a pure syntax check. Must match that
+      // wrapping exactly, otherwise ordinary top-level `await` in valid code
+      // would wrongly fail here (await is only legal inside an async
+      // function, which this wrapping provides).
+      try {
+        new Function('page', 'context', 'variables', 'log', 'delay', `return (async () => { ${code} })();`)
+      } catch (err) {
+        errors.push(`update_code: code có lỗi cú pháp JS — ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
+  }
+
   return { errors }
 }

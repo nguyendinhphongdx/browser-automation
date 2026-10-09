@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { ModelMessage } from 'ai'
-import type { WorkflowNode, WorkflowEdge } from '../shared/types'
+import type { WorkflowNode, WorkflowEdge, WorkflowMode } from '../shared/types'
 
 const ALLOWED_CHANNELS = new Set([
   'auth:deeplink-success',
@@ -163,7 +163,7 @@ const api = {
     runId: string
     profileId: string
     workflowId?: string
-    workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[] }
+    workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
     messages: ModelMessage[]
   }) => ipcRenderer.invoke('agent:run', payload),
   respondAgentApproval: (payload: { approvalId: string; approved: boolean; reason?: string }) =>

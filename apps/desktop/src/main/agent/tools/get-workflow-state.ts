@@ -10,9 +10,13 @@ import type { AgentToolContext } from './types'
 export function createGetWorkflowStateTool(ctx: AgentToolContext) {
   return tool({
     description:
-      'Đọc danh sách node và edge hiện tại của workflow đang mở. Gọi tool này trước khi đề xuất thay đổi để biết chính xác cấu trúc hiện tại (id node thật, loại node, config).',
+      'Đọc trạng thái hiện tại của workflow đang mở — chế độ (Kéo thả hay Viết code), và tương ứng: danh sách node/edge, hoặc toàn bộ code hiện có. Gọi tool này trước khi đề xuất thay đổi để biết chính xác đang ở chế độ nào và cấu trúc/code hiện tại.',
     inputSchema: z.object({}),
     execute: async () => {
+      const mode = ctx.workflowSnapshot.mode ?? 'visual'
+      if (mode === 'code') {
+        return { ok: true, mode, code: ctx.workflowSnapshot.code ?? '' }
+      }
       const nodes = ctx.workflowSnapshot.nodes.map((n) => ({
         id: n.id,
         nodeType: n.data.nodeType,
@@ -25,7 +29,7 @@ export function createGetWorkflowStateTool(ctx: AgentToolContext) {
         sourceHandle: e.sourceHandle,
         edgeType: e.edgeType
       }))
-      return { ok: true, nodes, edges }
+      return { ok: true, mode, nodes, edges }
     }
   })
 }
