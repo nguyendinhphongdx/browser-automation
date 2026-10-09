@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { ModelMessage } from 'ai'
-import type { WorkflowNode, WorkflowEdge, WorkflowMode } from '../shared/types'
+import type { WorkflowNode, WorkflowEdge, WorkflowMode, LibraryResourceKind } from '../shared/types'
 
 const ALLOWED_CHANNELS = new Set([
   'auth:deeplink-success',
@@ -173,6 +173,29 @@ const api = {
   // Browser live preview — frames stream over 'browserPreview:frame'
   startBrowserPreview: (profileId: string) => ipcRenderer.invoke('browserPreview:start', profileId),
   stopBrowserPreview: (profileId: string) => ipcRenderer.invoke('browserPreview:stop', profileId),
+
+  // Resource Library — Drive-like file/prompt-template storage, browsable as
+  // a folder tree (see shared/types.ts's LibraryResource)
+  getLibraryResources: () => ipcRenderer.invoke('library:getAll'),
+  getLibraryResourcesByKind: (kind: LibraryResourceKind) => ipcRenderer.invoke('library:getByKind', kind),
+  getLibraryResource: (id: string) => ipcRenderer.invoke('library:get', id),
+  getLibraryChildren: (parentId: string | null) => ipcRenderer.invoke('library:getChildren', parentId),
+  searchLibraryResources: (query: string) => ipcRenderer.invoke('library:search', query),
+  createLibraryFolder: (name: string, parentId?: string | null) =>
+    ipcRenderer.invoke('library:createFolder', name, parentId),
+  uploadLibraryResource: (opts?: { kind?: LibraryResourceKind; parentId?: string | null }) =>
+    ipcRenderer.invoke('library:uploadFromDialog', opts),
+  createPromptTemplate: (name: string, text: string, opts?: { tags?: string[]; parentId?: string | null }) =>
+    ipcRenderer.invoke('library:createPromptTemplate', name, text, opts),
+  updateLibraryResourceMetadata: (
+    id: string,
+    data: { name?: string; tags?: string[]; category?: string; notes?: string }
+  ) => ipcRenderer.invoke('library:updateMetadata', id, data),
+  moveLibraryResource: (id: string, newParentId: string | null) => ipcRenderer.invoke('library:move', id, newParentId),
+  deleteLibraryResource: (id: string) => ipcRenderer.invoke('library:delete', id),
+  getLibraryResourceText: (id: string) => ipcRenderer.invoke('library:getTextContent', id),
+  getLibraryResourceDataUrl: (id: string) => ipcRenderer.invoke('library:getDataUrl', id),
+  exportLibraryResource: (id: string) => ipcRenderer.invoke('library:exportToDisk', id),
 
   // Events (restricted to allowed channels). Returns an unsubscribe
   // function — callers should not try to pair calls via `off()` by passing

@@ -11,6 +11,8 @@ import { registerMetricsHandlers } from './ipc/metrics-handlers'
 import { registerScheduleHandlers } from './ipc/schedule-handlers'
 import { registerAgentHandlers } from './ipc/agent-handlers'
 import { registerBrowserPreviewHandlers } from './ipc/browser-preview-handlers'
+import { registerLibraryHandlers } from './ipc/library-handlers'
+import { registerLibrarySchemeAsPrivileged, registerLibraryProtocol } from './ipc/library-protocol'
 import { startScheduler, stopScheduler } from './automation/scheduler'
 import { startWebhookServer, stopWebhookServer } from './automation/webhook-server'
 import { closeAllBrowsers } from './browser/launcher'
@@ -28,6 +30,10 @@ const PROTOCOL = 'browserauto'
 // "Application Support/BrowserAuto/"). Must run before anything reads
 // app.getPath('userData') (initDatabase() et al, right below).
 app.setName('BrowserAuto')
+
+// Must run before app.whenReady() — Electron only honors a privileged-scheme
+// registration made at this point in startup (see library-protocol.ts).
+registerLibrarySchemeAsPrivileged()
 
 let mainWindow: BrowserWindow | null = null
 
@@ -143,6 +149,8 @@ app.whenReady().then(() => {
   registerScheduleHandlers(ipcMain)
   registerAgentHandlers(ipcMain)
   registerBrowserPreviewHandlers(ipcMain)
+  registerLibraryHandlers(ipcMain)
+  registerLibraryProtocol()
 
   // IPC: mở browser để đăng nhập
   ipcMain.handle('auth:openBrowser', async () => {
