@@ -7,9 +7,8 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { useWorkflowStore } from '@/stores/workflow-store'
-import { NodeDrawer, AddNodeButton, AIButton, ICON_MAP, CATEGORY_COLORS } from './NodePalette'
+import { NodeDrawer, AddNodeButton, ICON_MAP, CATEGORY_COLORS } from './NodePalette'
 import { NodePropertiesPanel } from './NodePropertiesPanel'
-import { AgentChatPanel } from './agent/AgentChatPanel'
 import { LayoutGrid, Zap, Loader2, CheckCircle2, XCircle, Plus } from 'lucide-react'
 
 // Lấy subtitle hiển thị trên node
@@ -210,12 +209,11 @@ const defaultEdgeOptions = {
   markerEnd: { type: MarkerType.ArrowClosed, width: 16, height: 16, color: '#b1b1b7' },
 }
 
-function VisualEditorInner({ profileId }: { profileId?: string }) {
+function VisualEditorInner() {
   const { activeWorkflow, updateNodes, updateEdges, selectedNodeId, setSelectedNode, nodeDefinitions } = useWorkflowStore()
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
   const [showNodePanel, setShowNodePanel] = useState(false)
-  const [showAIPanel, setShowAIPanel] = useState(false)
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
   const [addAfterNodeId, setAddAfterNodeId] = useState<string | null>(null)
 
@@ -598,19 +596,8 @@ function VisualEditorInner({ profileId }: { profileId?: string }) {
         {/* Add Node Button */}
         <AddNodeButton onClick={() => {
           setShowNodePanel(prev => !prev)
-          setShowAIPanel(false)
           setSelectedNode(null)
         }} />
-
-        {/* AI Button */}
-        <AIButton
-          disabled={!profileId}
-          onClick={() => {
-            setShowAIPanel(prev => !prev)
-            setShowNodePanel(false)
-            setSelectedNode(null)
-          }}
-        />
 
         {/* Node Drawer */}
         <NodeDrawer
@@ -621,23 +608,15 @@ function VisualEditorInner({ profileId }: { profileId?: string }) {
 
         {/* Properties Drawer */}
         <NodePropertiesPanel />
-
-        {/* AI Agent Drawer */}
-        <AgentChatPanel open={showAIPanel} onClose={() => setShowAIPanel(false)} profileId={profileId || ''} />
       </div>
     </div>
   )
 }
 
-interface VisualEditorProps {
-  /** Profile the AI agent should inspect the live browser of, if any is running — see AutomationPage.tsx's profile picker. */
-  profileId?: string
-}
-
-export function VisualEditor({ profileId }: VisualEditorProps) {
+export function VisualEditor() {
   return (
     <ReactFlowProvider>
-      <VisualEditorInner profileId={profileId} />
+      <VisualEditorInner />
     </ReactFlowProvider>
   )
 }

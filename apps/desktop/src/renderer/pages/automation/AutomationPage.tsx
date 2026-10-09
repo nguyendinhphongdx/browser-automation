@@ -10,6 +10,8 @@ import { VersionHistory } from './VersionHistory'
 import { ExecutionHistory } from './ExecutionHistory'
 import { SchedulePanel } from './SchedulePanel'
 import { RecorderPanel } from './RecorderPanel'
+import { AIButton } from './NodePalette'
+import { AgentChatPanel } from './agent/AgentChatPanel'
 import type { WorkflowMode } from '@shared/types'
 
 function CreateWorkflowDialog({ onClose }: { onClose: () => void }) {
@@ -85,6 +87,7 @@ export function AutomationPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [selectedProfileId, setSelectedProfileId] = useState<string>('')
   const [showLogs, setShowLogs] = useState(false)
+  const [showAIPanel, setShowAIPanel] = useState(false)
   const [showVersions, setShowVersions] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [showSchedules, setShowSchedules] = useState(false)
@@ -243,10 +246,17 @@ export function AutomationPage() {
           {/* Editor Area */}
           <div className="flex-1 relative overflow-hidden">
             {activeWorkflow.mode === 'visual' ? (
-              <VisualEditor profileId={selectedProfileId} />
+              <VisualEditor />
             ) : (
               <CodeEditor />
             )}
+
+            {/* AI Button — lives here, not inside VisualEditor, so it (and
+                propose_code_change) are reachable from Code mode too */}
+            <AIButton onClick={() => setShowAIPanel(prev => !prev)} />
+
+            {/* AI Agent Drawer */}
+            <AgentChatPanel open={showAIPanel} onClose={() => setShowAIPanel(false)} profileId={selectedProfileId} />
 
             {/* Logs drawer */}
             <ExecutionPanel open={showLogs} onClose={() => setShowLogs(false)} />
