@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Sparkles, RotateCcw, X, Shield, ShieldOff } from 'lucide-react'
+import { Sparkles, RotateCcw, X, Shield, ShieldOff, Library } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { Drawer } from '../Drawer'
@@ -10,9 +10,11 @@ import { ToolCallCard } from '@/components/ai-elements/ToolCallCard'
 import { ApprovalCard } from '@/components/ai-elements/ApprovalCard'
 import { PromptInput } from '@/components/ai-elements/PromptInput'
 import { BrowserPreview } from '@/components/ai-elements/BrowserPreview'
+import { ResourcePicker } from '@/components/library/ResourcePicker'
 import { useAgentRun } from './use-agent-run'
 import { useBrowserPreview } from './use-browser-preview'
 import { applyWorkflowPatch, type WorkflowChangePatch } from './apply-workflow-patch'
+import type { LibraryResource } from '@shared/types'
 
 interface Props {
   open: boolean
@@ -30,6 +32,7 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
   const { activeWorkflow, nodeDefinitions, updateNodes, updateEdges, updateCode } = useWorkflowStore()
   const [input, setInput] = useState('')
   const [patchError, setPatchError] = useState<string | null>(null)
+  const [showResourcePicker, setShowResourcePicker] = useState(false)
   const [bypassApprovals, setBypassApprovals] = useState(() => {
     try {
       return localStorage.getItem('agent-bypass-approvals') === 'true'
@@ -108,6 +111,17 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
     const text = input
     setInput('')
     send(text)
+  }
+
+  // Prompt-template -> insert its actual text (ready to send as-is). Any
+  // other kind -> insert a lightweight reference the model resolves later
+  // via get_resource — the chat doesn't need the file's bytes inline.
+  const handlePickResource = async (resource: LibraryResource) => {
+    const insertion =
+      resource.kind === 'prompt-template'
+        ? (await window.api.getLibraryResourceText(resource.id)) ?? ''
+        : `[resource:${resource.id} "${resource.name}"]`
+    setInput((prev) => (prev ? `${prev}\n${insertion}` : insertion))
   }
 
   return (
@@ -236,19 +250,28 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
 
       {/* Input */}
       <div className="shrink-0 border-t p-3">
-        <button
-          onClick={() => setBypassApprovals((v) => !v)}
-          className={cn(
-            'mb-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors',
-            bypassApprovals
-              ? 'border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400'
-              : 'border-dashed text-muted-foreground hover:bg-accent'
-          )}
-          title="Khi bật, AI sẽ tự động duyệt mọi hành động cần xác nhận (chạy JS, sửa code, xoá node...) mà không hỏi lại bạn — chỉ bật khi bạn tin tưởng hoàn toàn yêu cầu đang đưa ra."
-        >
-          {bypassApprovals ? <ShieldOff className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
-          {bypassApprovals ? 'Đang tự động duyệt mọi hành động' : 'Tự động duyệt (bỏ qua xác nhận)'}
-        </button>
+        <div className="mb-2 flex items-center gap-1.5">
+          <button
+            onClick={() => setShowResourcePicker(true)}
+            className="shrink-0 cursor-pointer rounded-lg border px-2 py-1.5 text-muted-foreground transition-colors hover:bg-accent"
+            title="Chèn prompt mẫu hoặc tham chiếu 1 tài nguyên từ Thư viện"
+          >
+            <Library className="h-3 w-3" />
+          </button>
+          <button
+            onClick={() => setBypassApprovals((v) => !v)}
+            className={cn(
+              'flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors',
+              bypassApprovals
+                ? 'border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                : 'border-dashed text-muted-foreground hover:bg-accent'
+            )}
+            title="Khi bật, AI sẽ tự động duyệt mọi hành động cần xác nhận (chạy JS, sửa code, xoá node...) mà không hỏi lại bạn — chỉ bật khi bạn tin tưởng hoàn toàn yêu cầu đang đưa ra."
+          >
+            {bypassApprovals ? <ShieldOff className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
+            {bypassApprovals ? 'Đang tự động duyệt mọi hành động' : 'Tự động duyệt (bỏ qua xác nhận)'}
+          </button>
+        </div>
         <PromptInput
           value={input}
           onChange={setInput}
@@ -261,6 +284,12 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
           Enter để gửi · Shift+Enter xuống dòng
         </p>
       </div>
+
+      <ResourcePicker
+        open={showResourcePicker}
+        onClose={() => setShowResourcePicker(false)}
+        onSelect={handlePickResource}
+      />
     </Drawer>
   )
 }
