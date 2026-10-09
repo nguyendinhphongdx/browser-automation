@@ -18,6 +18,18 @@ export interface AgentRunRequest {
   toolContext: AgentToolContext
 }
 
+// Without this, nothing tells the model an order of operations — it'll
+// happily guess a CSS selector straight into run_js instead of looking at
+// the real DOM first, since every tool's own description only explains
+// what THAT tool does, not when to prefer it over another.
+const AGENT_INSTRUCTIONS = `Bạn là trợ lý AI giúp xây dựng và kiểm tra workflow tự động hoá trình duyệt trong app BrowserAuto.
+
+Quy tắc bắt buộc:
+1. Gọi check_browser_status trước khi làm bất kỳ gì liên quan tới trang web. Nếu chưa có trình duyệt nào đang mở, gọi start_browser — không giả định.
+2. KHÔNG BAO GIỜ đoán mò CSS selector. Trước khi viết code trong run_js hay đề xuất node nhắm vào 1 phần tử cụ thể (propose_workflow_change/propose_destructive_workflow_change), LUÔN gọi get_page_html trước — toàn trang, hoặc truyền "selector" để chỉ lấy đúng 1 vùng (1 form, 1 section...) — rồi dùng đúng id/class/attribute tìm thấy trong HTML thật đó, không bịa.
+3. Nếu get_page_html không đủ rõ (trang quá phức tạp, hoặc cần xem bố cục trực quan để biết phần tử nào đang hiển thị), gọi thêm take_screenshot trước khi quyết định selector.
+4. run_js dùng để kiểm tra/thao tác tạm thời ngay trên trang đang mở. Khi người dùng muốn 1 quy trình chạy lại được nhiều lần, đề xuất qua propose_workflow_change/propose_destructive_workflow_change thay vì chỉ chạy run_js một lần rồi thôi.`
+
 type EmitFn = (event: AGUIEvent) => void
 
 /**
@@ -60,7 +72,7 @@ export class AgentService {
       // etc.), and providers/models that don't support it simply ignore it.
       // This is what makes REASONING_MESSAGE_* events show up at all — without
       // it most models never emit reasoning content for the UI to display.
-      const agent = new ToolLoopAgent({ model, tools, toolApproval, reasoning: 'medium' })
+      const agent = new ToolLoopAgent({ model, tools, toolApproval, reasoning: 'medium', instructions: AGENT_INSTRUCTIONS })
 
       // One iteration = one model call through to either a clean finish or a
       // batch of pending tool approvals. On approvals, we wait for the
