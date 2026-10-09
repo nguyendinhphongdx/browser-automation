@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react'
-import { Sparkles, RotateCcw, X } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { Sparkles, RotateCcw, X, Shield, ShieldOff } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { Drawer } from '../Drawer'
 import { Conversation } from '@/components/ai-elements/Conversation'
@@ -29,6 +30,13 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
   const { activeWorkflow, nodeDefinitions, updateNodes, updateEdges, updateCode } = useWorkflowStore()
   const [input, setInput] = useState('')
   const [patchError, setPatchError] = useState<string | null>(null)
+  const [bypassApprovals, setBypassApprovals] = useState(() => {
+    try {
+      return localStorage.getItem('agent-bypass-approvals') === 'true'
+    } catch {
+      return false
+    }
+  })
   const browserPreview = useBrowserPreview(open ? profileId : undefined)
 
   // Re-validates against the LIVE canvas (not the stale snapshot the run
@@ -75,6 +83,26 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
     onWorkflowPatch: handleWorkflowPatch,
     onBrowserLifecycle: handleBrowserLifecycle
   })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('agent-bypass-approvals', String(bypassApprovals))
+    } catch {
+      // Private window / blocked storage — bypass just won't persist across reopens.
+    }
+  }, [bypassApprovals])
+
+  // Auto-respond to every pending approval the instant it shows up while
+  // bypass is on — respondApproval flips the item's status away from
+  // 'pending' synchronously, so each one only ever fires once.
+  useEffect(() => {
+    if (!bypassApprovals) return
+    for (const item of items) {
+      if (item.kind === 'approval' && item.status === 'pending') {
+        respondApproval(item.approvalId, true)
+      }
+    }
+  }, [items, bypassApprovals, respondApproval])
 
   const handleSend = () => {
     const text = input
@@ -201,6 +229,19 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
 
       {/* Input */}
       <div className="shrink-0 border-t p-3">
+        <button
+          onClick={() => setBypassApprovals((v) => !v)}
+          className={cn(
+            'mb-2 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition-colors',
+            bypassApprovals
+              ? 'border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+              : 'border-dashed text-muted-foreground hover:bg-accent'
+          )}
+          title="Khi bật, AI sẽ tự động duyệt mọi hành động cần xác nhận (chạy JS, sửa code, xoá node...) mà không hỏi lại bạn — chỉ bật khi bạn tin tưởng hoàn toàn yêu cầu đang đưa ra."
+        >
+          {bypassApprovals ? <ShieldOff className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
+          {bypassApprovals ? 'Đang tự động duyệt mọi hành động' : 'Tự động duyệt (bỏ qua xác nhận)'}
+        </button>
         <PromptInput
           value={input}
           onChange={setInput}
