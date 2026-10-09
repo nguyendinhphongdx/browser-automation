@@ -199,6 +199,20 @@ export function updateResourceMetadata(id: string, input: UpdateResourceMetadata
   return getResourceById(id)
 }
 
+/** Overwrites a non-folder resource's file bytes in place (e.g. editing a prompt-template's text) — metadata (name/tags/...) untouched. */
+export function updateResourceContent(id: string, text: string): LibraryResource | null {
+  const db = getDatabase()
+  const existing = getResourceById(id)
+  if (!existing || existing.kind === 'folder') return null
+
+  const buffer = Buffer.from(text, 'utf-8')
+  fs.writeFileSync(resourceFilePath(existing.id, existing.extension), buffer)
+
+  const now = new Date().toISOString()
+  db.prepare('UPDATE resources SET size_bytes = ?, updated_at = ? WHERE id = ?').run(buffer.byteLength, now, id)
+  return getResourceById(id)
+}
+
 export function moveResource(id: string, newParentId: string | null): LibraryResource | null {
   const db = getDatabase()
   const existing = getResourceById(id)

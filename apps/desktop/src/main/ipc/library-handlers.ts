@@ -5,8 +5,8 @@ import * as path from 'path'
 import {
   getAllResources, getResourceById, getResourcesByKind, getChildren, searchResources,
   createFolder, createResourceFromBuffer, createResourceFromText, updateResourceMetadata,
-  moveResource, deleteResource, getResourceFileBuffer, getResourceTextContent, getResourceDataUrl,
-  mimeTypeForExtension
+  updateResourceContent, moveResource, deleteResource, getResourceFileBuffer, getResourceTextContent,
+  getResourceDataUrl, mimeTypeForExtension
 } from '../services/library-service'
 import type { LibraryResourceKind } from '../../shared/types'
 
@@ -67,6 +67,8 @@ export function registerLibraryHandlers(ipcMain: IpcMain) {
     (_e, id: string, data: { name?: string; tags?: string[]; category?: string; notes?: string }) =>
       updateResourceMetadata(id, data)
   )
+
+  ipcMain.handle('library:updateContent', (_e, id: string, text: string) => updateResourceContent(id, text))
 
   ipcMain.handle('library:move', (_e, id: string, newParentId: string | null) => moveResource(id, newParentId))
   ipcMain.handle('library:delete', (_e, id: string) => deleteResource(id))

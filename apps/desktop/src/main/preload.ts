@@ -191,6 +191,7 @@ const api = {
     id: string,
     data: { name?: string; tags?: string[]; category?: string; notes?: string }
   ) => ipcRenderer.invoke('library:updateMetadata', id, data),
+  updateLibraryResourceContent: (id: string, text: string) => ipcRenderer.invoke('library:updateContent', id, text),
   moveLibraryResource: (id: string, newParentId: string | null) => ipcRenderer.invoke('library:move', id, newParentId),
   deleteLibraryResource: (id: string) => ipcRenderer.invoke('library:delete', id),
   getLibraryResourceText: (id: string) => ipcRenderer.invoke('library:getTextContent', id),

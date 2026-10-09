@@ -20,6 +20,7 @@ interface LibraryStore {
   uploadResource: (kind?: LibraryResourceKind) => Promise<LibraryResource | null>
   createPromptTemplate: (name: string, text: string, tags?: string[]) => Promise<LibraryResource>
   updateMetadata: (id: string, data: { name?: string; tags?: string[]; category?: string; notes?: string }) => Promise<void>
+  updateContent: (id: string, text: string) => Promise<void>
   moveResource: (id: string, newParentId: string | null) => Promise<void>
   deleteResource: (id: string) => Promise<void>
   getTextContent: (id: string) => Promise<string | null>
@@ -73,6 +74,11 @@ export const useLibraryStore = create<LibraryStore>((set, get) => ({
 
   updateMetadata: async (id, data) => {
     await window.api.updateLibraryResourceMetadata(id, data)
+    await get().fetchCurrentFolder()
+  },
+
+  updateContent: async (id, text) => {
+    await window.api.updateLibraryResourceContent(id, text)
     await get().fetchCurrentFolder()
   },
 

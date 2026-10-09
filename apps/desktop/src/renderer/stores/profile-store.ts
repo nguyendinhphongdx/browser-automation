@@ -128,6 +128,7 @@ declare global {
         id: string,
         data: { name?: string; tags?: string[]; category?: string; notes?: string }
       ) => Promise<LibraryResource | null>
+      updateLibraryResourceContent: (id: string, text: string) => Promise<LibraryResource | null>
       moveLibraryResource: (id: string, newParentId: string | null) => Promise<LibraryResource | null>
       deleteLibraryResource: (id: string) => Promise<boolean>
       getLibraryResourceText: (id: string) => Promise<string | null>

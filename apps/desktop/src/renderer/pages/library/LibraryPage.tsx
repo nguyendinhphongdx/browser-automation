@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import {
   FolderOpen, FolderPlus, Upload, FileText, Image as ImageIcon, Database, File as FileIcon,
-  Plus, Trash2, Download, ChevronRight, Home
+  Plus, Trash2, Download, ChevronRight, Home, LayoutList, LayoutGrid
 } from 'lucide-react'
 import { useLibraryStore, type LibraryKindFilter } from '@/stores/library-store'
 import type { LibraryResource } from '@shared/types'
 import { CreateFolderDialog } from './CreateFolderDialog'
 import { CreatePromptDialog } from './CreatePromptDialog'
+import { LibraryGridCard } from './LibraryGridCard'
+import { ResourceDetailModal } from './ResourceDetailModal'
 
 const KIND_TABS: { value: LibraryKindFilter; label: string }[] = [
   { value: 'all', label: 'Tất cả' },
@@ -40,13 +42,14 @@ function formatSize(bytes: number): string {
 
 export function LibraryPage() {
   const {
-    resources, loading, kindFilter,
-    setKindFilter, setCurrentFolderId, fetchCurrentFolder,
+    resources, loading, kindFilter, viewMode,
+    setKindFilter, setViewMode, setCurrentFolderId, fetchCurrentFolder,
     uploadResource, deleteResource, updateMetadata, exportResource
   } = useLibraryStore()
   const [breadcrumb, setBreadcrumb] = useState<{ id: string; name: string }[]>([])
   const [showCreateFolder, setShowCreateFolder] = useState(false)
   const [showCreatePrompt, setShowCreatePrompt] = useState(false)
+  const [detailResource, setDetailResource] = useState<LibraryResource | null>(null)
 
   useEffect(() => {
     fetchCurrentFolder()
@@ -141,21 +144,41 @@ export function LibraryPage() {
         ))}
       </div>
 
-      {/* Kind tabs */}
-      <div className="flex items-center gap-1 mb-4 border-b">
-        {KIND_TABS.map((tab) => (
+      {/* Kind tabs + view toggle */}
+      <div className="flex items-center justify-between mb-4 border-b">
+        <div className="flex items-center gap-1">
+          {KIND_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setKindFilter(tab.value)}
+              className={`px-3 pb-2.5 text-sm font-medium border-b-2 transition-colors ${
+                kindFilter === tab.value
+                  ? 'border-primary text-foreground'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center border rounded-lg mb-2">
           <button
-            key={tab.value}
-            onClick={() => setKindFilter(tab.value)}
-            className={`px-3 pb-2.5 text-sm font-medium border-b-2 transition-colors ${
-              kindFilter === tab.value
-                ? 'border-primary text-foreground'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
+            onClick={() => setViewMode('table')}
+            className={`p-2 transition-colors ${
+              viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            {tab.label}
+            <LayoutList className="h-4 w-4" />
           </button>
-        ))}
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 transition-colors ${
+              viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -166,6 +189,12 @@ export function LibraryPage() {
           <FolderOpen className="h-12 w-12 mb-3 opacity-40" />
           <p className="text-lg font-medium">Thư mục trống</p>
           <p className="text-sm mt-1">Upload file hoặc tạo prompt mẫu để bắt đầu</p>
+        </div>
+      ) : viewMode === 'grid' ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {filtered.map((r) => (
+            <LibraryGridCard key={r.id} resource={r} onOpenFolder={enterFolder} onSelect={setDetailResource} />
+          ))}
         </div>
       ) : (
         <div className="border rounded-xl overflow-hidden">
@@ -196,15 +225,12 @@ export function LibraryPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       {kindIcon(r.kind)}
-                      <span className={r.kind === 'folder' ? 'font-medium cursor-pointer' : ''}>
-                        {r.kind === 'folder' ? (
-                          <button onClick={() => enterFolder(r)} className="hover:underline">
-                            {r.name}
-                          </button>
-                        ) : (
-                          r.name
-                        )}
-                      </span>
+                      <button
+                        onClick={() => (r.kind === 'folder' ? enterFolder(r) : setDetailResource(r))}
+                        className="font-medium hover:underline text-left"
+                      >
+                        {r.name}
+                      </button>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
@@ -248,6 +274,7 @@ export function LibraryPage() {
 
       {showCreateFolder && <CreateFolderDialog onClose={() => setShowCreateFolder(false)} />}
       {showCreatePrompt && <CreatePromptDialog onClose={() => setShowCreatePrompt(false)} />}
+      {detailResource && <ResourceDetailModal resource={detailResource} onClose={() => setDetailResource(null)} />}
     </div>
   )
 }
