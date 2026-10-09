@@ -1,14 +1,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
-import { createResourceFromBuffer, mimeTypeForExtension } from '../../services/library-service'
+import { createResourceFromBuffer, mimeTypeForExtension, defaultExtensionForKind } from '../../services/library-service'
 import type { AgentToolContext } from './types'
-
-const EXTENSION_BY_KIND: Record<string, string> = {
-  image: 'png',
-  'prompt-template': 'txt',
-  'data-export': 'json',
-  file: 'bin'
-}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- ctx unused: library is global, not scoped to this run
 export function createSaveResourceTool(ctx: AgentToolContext) {
@@ -27,7 +20,7 @@ export function createSaveResourceTool(ctx: AgentToolContext) {
     execute: async ({ name, kind, content, encoding, mimeType, tags, parentId }) => {
       try {
         const buffer = encoding === 'base64' ? Buffer.from(content, 'base64') : Buffer.from(content, 'utf-8')
-        const extension = EXTENSION_BY_KIND[kind] || 'bin'
+        const extension = defaultExtensionForKind(kind)
         const resource = createResourceFromBuffer({
           name,
           kind,

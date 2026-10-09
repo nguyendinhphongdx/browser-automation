@@ -154,4 +154,23 @@ describe('validateWorkflowPatch', () => {
     ])
     expect(errors).toEqual([])
   })
+
+  it('rejects update_code with empty code', () => {
+    const { errors } = validateWorkflowPatch({ type: 'update_code', code: '   ' }, NODE_DEFS, [])
+    expect(errors.some((e) => e.includes('không được để trống'))).toBe(true)
+  })
+
+  it('rejects update_code with a JS syntax error', () => {
+    const { errors } = validateWorkflowPatch({ type: 'update_code', code: 'const x = ;' }, NODE_DEFS, [])
+    expect(errors.some((e) => e.includes('lỗi cú pháp'))).toBe(true)
+  })
+
+  it('accepts update_code using the `resources` sandbox global (must stay in sync with engine.ts)', () => {
+    const { errors } = validateWorkflowPatch(
+      { type: 'update_code', code: "await page.setInputFiles('input', resources.get('invoice-template'))" },
+      NODE_DEFS,
+      []
+    )
+    expect(errors).toEqual([])
+  })
 })

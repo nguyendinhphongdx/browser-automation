@@ -22,6 +22,18 @@ export function mimeTypeForExtension(extension: string): string {
   return EXTENSION_TO_MIME[extension.toLowerCase().replace(/^\./, '')] || 'application/octet-stream'
 }
 
+const DEFAULT_EXTENSION_BY_KIND: Record<LibraryResourceKind, string> = {
+  folder: '',
+  image: 'png',
+  'prompt-template': 'txt',
+  'data-export': 'json',
+  file: 'bin'
+}
+
+export function defaultExtensionForKind(kind: LibraryResourceKind): string {
+  return DEFAULT_EXTENSION_BY_KIND[kind] || 'bin'
+}
+
 function rowToResource(row: any): LibraryResource {
   let tags: string[] = []
   try {

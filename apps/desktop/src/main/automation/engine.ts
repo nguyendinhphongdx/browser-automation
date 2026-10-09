@@ -1,6 +1,10 @@
-import type { Workflow, WorkflowNode, WorkflowEdge, LogEntry } from '../../shared/types'
+import type { Workflow, WorkflowNode, WorkflowEdge, LogEntry, LibraryResourceKind } from '../../shared/types'
 import { createNode } from './nodes/registry'
 import type { ExecutionContext } from './nodes/base-node'
+import {
+  getResourceById, getAllResources, resourceFilePath, createResourceFromBuffer,
+  mimeTypeForExtension, defaultExtensionForKind
+} from '../services/library-service'
 
 export type { ExecutionContext } from './nodes/base-node'
 
@@ -447,12 +451,41 @@ export async function executeCodeWorkflow(
     context: ctx.context,
     variables: ctx.variables,
     log: (msg: string) => addLog(ctx, 'info', msg),
-    delay: (ms: number) => new Promise(r => setTimeout(r, ms))
+    delay: (ms: number) => new Promise(r => setTimeout(r, ms)),
+    resources: {
+      // Resolve a resource by id or exact name to its real local file path —
+      // e.g. page.setInputFiles(resources.get('invoice-template')).
+      get: (idOrName: string): string => {
+        const resource = getResourceById(idOrName) ?? getAllResources().find(r => r.name === idOrName)
+        if (!resource) throw new Error(`Resource not found: ${idOrName}`)
+        return resourceFilePath(resource.id, resource.extension)
+      },
+      // Save text or a Buffer as a new library resource; returns its id.
+      save: (
+        name: string,
+        content: string | Buffer,
+        opts?: { kind?: LibraryResourceKind; mimeType?: string; parentId?: string }
+      ): string => {
+        const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content, 'utf-8')
+        const kind = opts?.kind ?? 'file'
+        const extension = defaultExtensionForKind(kind)
+        return createResourceFromBuffer({
+          name,
+          kind,
+          mimeType: opts?.mimeType ?? mimeTypeForExtension(extension),
+          extension,
+          buffer,
+          parentId: opts?.parentId,
+          objectType: 'workflow',
+          objectId: ctx.workflowId ?? null
+        }).id
+      }
+    }
   }
 
   try {
     const fn = new Function('api', `
-      const { page, context, variables, log, delay } = api;
+      const { page, context, variables, log, delay, resources } = api;
       return (async () => { ${code} })();
     `)
     await fn(api)

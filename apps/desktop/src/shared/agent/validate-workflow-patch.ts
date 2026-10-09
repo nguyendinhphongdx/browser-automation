@@ -156,9 +156,12 @@ export function validateWorkflowPatch(
       // parses the body, so this is a pure syntax check. Must match that
       // wrapping exactly, otherwise ordinary top-level `await` in valid code
       // would wrongly fail here (await is only legal inside an async
-      // function, which this wrapping provides).
+      // function, which this wrapping provides). This includes keeping the
+      // parameter list in sync with engine.ts's sandbox globals — e.g.
+      // `resources` (the Resource Library helper) must be listed here too,
+      // or valid code using it gets wrongly rejected as a syntax error.
       try {
-        new Function('page', 'context', 'variables', 'log', 'delay', `return (async () => { ${code} })();`)
+        new Function('page', 'context', 'variables', 'log', 'delay', 'resources', `return (async () => { ${code} })();`)
       } catch (err) {
         errors.push(`update_code: code có lỗi cú pháp JS — ${err instanceof Error ? err.message : String(err)}`)
       }
