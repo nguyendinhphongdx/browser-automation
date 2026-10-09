@@ -257,7 +257,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
     outputs: 1,
     configSchema: [
       { key: 'selector', label: 'Selector', type: 'selector', required: true },
-      { key: 'filePath', label: 'Đường dẫn file', type: 'text', placeholder: '/path/to/file.png', required: true }
+      { key: 'filePath', label: 'File', type: 'resource-select', required: true }
     ]
   },
   {

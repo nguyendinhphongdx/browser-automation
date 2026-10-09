@@ -1,4 +1,5 @@
 import { BaseNode } from './base-node'
+import { getResourceById, resourceFilePath } from '../../services/library-service'
 
 export class ClickNode extends BaseNode {
   protected async init() {
@@ -107,7 +108,12 @@ export class CheckUncheckNode extends BaseNode {
 export class UploadFileNode extends BaseNode {
   protected async execute() {
     const selector = this.resolve(this.config.selector)
-    const filePath = this.resolve(this.config.filePath)
+    const rawValue = this.resolve(this.config.filePath)
+    // filePath now stores a Resource Library id (picked via resource-select)
+    // — resolve it to a real path; fall back to treating the value as a
+    // literal path for workflows saved before this field existed.
+    const resource = getResourceById(rawValue)
+    const filePath = resource ? resourceFilePath(resource.id, resource.extension) : rawValue
     await this.page.setInputFiles(selector, filePath)
     this.log('info', `Uploaded: ${filePath}`)
   }

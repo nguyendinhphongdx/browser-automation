@@ -212,11 +212,15 @@ export interface NodeDefinition {
 export interface ConfigField {
   key: string
   label: string
-  type: 'text' | 'number' | 'select' | 'boolean' | 'code' | 'selector' | 'keyrecorder' | 'workflow-select' | 'variable-mapping'
+  type:
+    | 'text' | 'number' | 'select' | 'boolean' | 'code' | 'selector' | 'keyrecorder'
+    | 'workflow-select' | 'variable-mapping' | 'resource-select'
   placeholder?: string
   options?: { label: string; value: string }[]
   defaultValue?: unknown
   required?: boolean
+  /** resource-select only: gợi ý lọc trước theo loại resource; bỏ trống = cho chọn mọi loại. */
+  resourceKind?: LibraryResourceKind
 }
 
 export interface WorkflowNodeData {

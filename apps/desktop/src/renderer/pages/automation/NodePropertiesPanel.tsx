@@ -1,15 +1,18 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Trash2, ChevronDown, ChevronRight, BarChart3 } from 'lucide-react'
+import { Trash2, ChevronDown, ChevronRight, BarChart3, FolderOpen } from 'lucide-react'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { Drawer } from './Drawer'
 import { ICON_MAP, CATEGORY_COLORS } from './NodePalette'
 import { KeyRecorderInput } from '@/components/KeyRecorderInput'
 import { Zap } from 'lucide-react'
-import type { NodeRetryConfig, Workflow } from '@shared/types'
+import { ResourcePicker } from '@/components/library/ResourcePicker'
+import type { NodeRetryConfig, Workflow, LibraryResource, ConfigField } from '@shared/types'
 
 export function NodePropertiesPanel() {
   const { activeWorkflow, selectedNodeId, setSelectedNode, updateNodes, nodeDefinitions } = useWorkflowStore()
   const [workflows, setWorkflows] = useState<Workflow[]>([])
+  const [resources, setResources] = useState<LibraryResource[]>([])
+  const [pickerOpenFor, setPickerOpenFor] = useState<string | null>(null)
   const [retryOpen, setRetryOpen] = useState(false)
   const [statsOpen, setStatsOpen] = useState(false)
   const [nodeStats, setNodeStats] = useState<any>(null)
@@ -17,6 +20,11 @@ export function NodePropertiesPanel() {
   // Load workflows for workflow-select field
   useEffect(() => {
     window.api.getWorkflows?.()?.then?.((wfs: Workflow[]) => setWorkflows(wfs || []))?.catch?.(() => {})
+  }, [selectedNodeId])
+
+  // Load library resources for resource-select field
+  useEffect(() => {
+    window.api.getLibraryResources?.()?.then?.((rs: LibraryResource[]) => setResources(rs || []))?.catch?.(() => {})
   }, [selectedNodeId])
 
   // Load node performance stats
@@ -98,6 +106,7 @@ export function NodePropertiesPanel() {
   ) : null
 
   return (
+    <>
     <Drawer open={open} onClose={() => setSelectedNode(null)} width={380}>
       {/* Custom header */}
       {headerContent}
@@ -182,6 +191,29 @@ export function NodePropertiesPanel() {
                       <option key={w.id} value={w.id}>{w.name}</option>
                     ))}
                 </select>
+              ) : field.type === 'resource-select' ? (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={config[field.key] || ''}
+                    onChange={e => updateConfig(field.key, e.target.value)}
+                    className="flex-1 px-3 py-2 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring transition-shadow"
+                  >
+                    <option value="">-- Chọn tài nguyên --</option>
+                    {resources
+                      .filter(r => r.kind !== 'folder' && (!field.resourceKind || r.kind === field.resourceKind))
+                      .map(r => (
+                        <option key={r.id} value={r.id}>{r.name}</option>
+                      ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setPickerOpenFor(field.key)}
+                    className="shrink-0 p-2 border rounded-lg hover:bg-accent transition-colors"
+                    title="Mở thư viện"
+                  >
+                    <FolderOpen className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               ) : field.type === 'variable-mapping' ? (
                 <textarea
                   value={
@@ -333,5 +365,18 @@ export function NodePropertiesPanel() {
         </div>
       )}
     </Drawer>
+    <ResourcePicker
+      open={pickerOpenFor !== null}
+      onClose={() => setPickerOpenFor(null)}
+      onSelect={(resource) => {
+        if (pickerOpenFor) updateConfig(pickerOpenFor, resource.id)
+      }}
+      filterKind={
+        pickerOpenFor
+          ? definition?.configSchema.find((f: ConfigField) => f.key === pickerOpenFor)?.resourceKind
+          : undefined
+      }
+    />
+    </>
   )
 }
