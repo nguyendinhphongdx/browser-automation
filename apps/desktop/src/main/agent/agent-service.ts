@@ -75,7 +75,19 @@ export class AgentService {
       // etc.), and providers/models that don't support it simply ignore it.
       // This is what makes REASONING_MESSAGE_* events show up at all — without
       // it most models never emit reasoning content for the UI to display.
-      const agent = new ToolLoopAgent({ model, tools, toolApproval, reasoning: 'medium', instructions: AGENT_INSTRUCTIONS })
+      //
+      // For Gemini specifically, `reasoning` alone only sets thinkingBudget —
+      // @ai-sdk/google's resolveGemini25ThinkingConfig() never sets
+      // includeThoughts, so the model keeps "thinking" internally but the
+      // stream never carries any reasoning text unless we ask for it here too.
+      const agent = new ToolLoopAgent({
+        model,
+        tools,
+        toolApproval,
+        reasoning: 'medium',
+        instructions: AGENT_INSTRUCTIONS,
+        providerOptions: { google: { thinkingConfig: { includeThoughts: true } } }
+      })
 
       // One iteration = one model call through to either a clean finish or a
       // batch of pending tool approvals. On approvals, we wait for the
