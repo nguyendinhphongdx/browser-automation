@@ -1,5 +1,8 @@
 import type { ToolSet } from 'ai'
 import type { AgentToolContext } from './types'
+import { createStartBrowserTool } from './start-browser'
+import { createCheckBrowserStatusTool } from './check-browser-status'
+import { createCloseBrowserTool } from './close-browser'
 import { createGetPageUrlTool } from './get-page-url'
 import { createGetPageHtmlTool } from './get-page-html'
 import { createTakeScreenshotTool } from './take-screenshot'
@@ -26,6 +29,9 @@ export const APPROVAL_GATED_TOOLS = ['run_js', 'propose_destructive_workflow_cha
  */
 export function buildToolset(ctx: AgentToolContext): ToolSet {
   return {
+    start_browser: createStartBrowserTool(ctx),
+    check_browser_status: createCheckBrowserStatusTool(ctx),
+    close_browser: createCloseBrowserTool(ctx),
     get_page_url: createGetPageUrlTool(ctx),
     get_page_html: createGetPageHtmlTool(ctx),
     take_screenshot: createTakeScreenshotTool(ctx),
