@@ -1,8 +1,9 @@
 import type { IpcMain, IpcMainInvokeEvent } from 'electron'
 import type { ModelMessage } from 'ai'
 import type { Page } from 'playwright-core'
-import { acquireBrowserPage } from '../browser/launcher'
+import { getActiveBrowserContext } from '../browser/launcher'
 import { getProfileById } from '../services/profile-service'
+import { DEFAULT_PROFILE_ID } from '../database/init'
 import { NODE_DEFINITIONS } from '../automation/node-definitions'
 import { agentService } from '../agent/agent-service'
 import type { AgentToolContext } from '../agent/tools/types'
@@ -31,35 +32,34 @@ interface AgentRespondApprovalPayload {
 export function registerAgentHandlers(ipcMain: IpcMain) {
   ipcMain.handle('agent:run', async (event: IpcMainInvokeEvent, payload: AgentRunPayload) => {
     const { runId } = payload
+    // '' from the profile dropdown means "Default browser" (same convention
+    // automation-handlers.ts's workflow:run already follows) — not "no
+    // profile selected". Resolve it here so every downstream use (thread id,
+    // tool context, browser launch) agrees on the same real profile id.
+    const profileId = payload.profileId || DEFAULT_PROFILE_ID
     // One thread per profile is a reasonable default for now — nothing in
     // this app supports multiple concurrent conversations per profile yet.
-    const threadId = payload.profileId
+    const threadId = profileId
 
     const emit = (envelope: AgentEventEnvelope) => event.sender.send('agent:event', envelope)
 
-    // The agent needs a live page to be useful at all, so launch one for
-    // this profile if none is running yet — same `acquireBrowserPage` helper
-    // the scheduler and campaign engine already use, so the browser ends up
-    // configured identically (fingerprint, persistent profile dir, etc.)
-    // regardless of who launched it.
-    let page: Page | null = null
-    const profile = getProfileById(payload.profileId)
-    if (!profile) {
-      throw new Error(`Profile "${payload.profileId}" không tồn tại`)
+    // Read-only — never launch a browser just because the agent is running.
+    // The model decides that explicitly via the start_browser tool (see
+    // tools/start-browser.ts); opening the chat panel or sending a message
+    // should not have the side effect of popping a real browser window.
+    if (!getProfileById(profileId)) {
+      throw new Error(`Profile "${profileId}" không tồn tại`)
     }
-    try {
-      const acquired = await acquireBrowserPage(profile)
-      page = acquired.page
-    } catch (err) {
-      console.error('[agent:run] acquireBrowserPage failed', err)
-      throw new Error(
-        `Không thể khởi chạy trình duyệt cho agent: ${err instanceof Error ? err.message : String(err)}`
-      )
+    const active = getActiveBrowserContext(profileId)
+    let page: Page | null = null
+    if (active) {
+      const pages = active.context.pages().filter((p) => !p.isClosed())
+      page = pages[pages.length - 1] ?? null
     }
 
     const toolContext: AgentToolContext = {
       page,
-      profileId: payload.profileId,
+      profileId,
       workflowId: payload.workflowId,
       workflowSnapshot: payload.workflowSnapshot,
       nodeDefinitions: NODE_DEFINITIONS,
