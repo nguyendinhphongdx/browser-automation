@@ -4,6 +4,8 @@ import type { VideoNode, VideoEdge } from '../../shared/types'
 import type { VideoExecutionContext } from './nodes/base-node'
 
 const executionLog: string[] = []
+let concurrentCount = 0
+let maxConcurrentObserved = 0
 
 vi.mock('./nodes/registry', () => ({
   createVideoNode: (nodeType: string, nodeId: string, config: Record<string, unknown>) => ({
@@ -12,6 +14,16 @@ vi.mock('./nodes/registry', () => ({
       if (nodeType === 'fail') throw new Error('nổ giả lập')
       if (nodeType === 'source') return { out: config.value }
       if (nodeType === 'concat') return { out: `${inputs.a ?? ''}+${inputs.b ?? ''}` }
+      if (nodeType === 'slow') {
+        // Mô phỏng 1 lệnh gọi API có độ trễ thật — dùng để phát hiện engine
+        // có thật sự chạy node không phụ thuộc nhau CÙNG LÚC hay chỉ tuần
+        // tự: nếu tuần tự, concurrentCount không bao giờ vượt quá 1.
+        concurrentCount++
+        maxConcurrentObserved = Math.max(maxConcurrentObserved, concurrentCount)
+        await new Promise((r) => setTimeout(r, 20))
+        concurrentCount--
+        return { out: nodeId }
+      }
       return {}
     }
   })
@@ -102,5 +114,27 @@ describe('executeVideoPipeline', () => {
 
     expect(errors).toEqual(['nổ giả lập'])
     expect(executionLog).not.toContain('d')
+  })
+
+  it('runs 2 independent nodes in the same level CONCURRENTLY, not one at a time', async () => {
+    concurrentCount = 0
+    maxConcurrentObserved = 0
+    const nodes: VideoNode[] = [node('x', 'slow'), node('y', 'slow')]
+    const edges: VideoEdge[] = [] // không nối nhau -> cùng 1 tầng
+
+    await executeVideoPipeline(nodes, edges, makeCtx())
+
+    expect(maxConcurrentObserved).toBe(2)
+  })
+
+  it('still waits a full level out before moving on, and only fails sequentially-dependent downstream work', async () => {
+    // 1 node độc lập lỗi trong cùng tầng với 1 node độc lập khác đang chạy —
+    // node kia vẫn phải chạy xong (allSettled), không bị huỷ ngang.
+    const nodes: VideoNode[] = [node('ok', 'slow'), node('bad', 'fail')]
+    const edges: VideoEdge[] = []
+
+    executionLog.length = 0
+    await expect(executeVideoPipeline(nodes, edges, makeCtx())).rejects.toThrow('nổ giả lập')
+    expect(executionLog).toContain('ok')
   })
 })
