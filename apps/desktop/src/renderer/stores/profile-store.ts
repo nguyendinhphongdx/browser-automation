@@ -7,7 +7,8 @@ import type {
   Workflow, CreateWorkflowInput, UpdateWorkflowInput, WorkflowLog, LogEntry,
   Campaign, CreateCampaignInput, UpdateCampaignInput, CampaignRun,
   WorkflowNode, WorkflowEdge, WorkflowMode,
-  LibraryResource, LibraryResourceKind
+  LibraryResource, LibraryResourceKind,
+  VideoNodeDefinition, VideoPipeline, VideoNode, VideoEdge
 } from '@shared/types'
 import type { ModelMessage } from 'ai'
 
@@ -129,6 +130,17 @@ declare global {
         data: { name?: string; tags?: string[]; category?: string; notes?: string }
       ) => Promise<LibraryResource | null>
       updateLibraryResourceContent: (id: string, text: string) => Promise<LibraryResource | null>
+      // Video Studio
+      getVideoNodeDefinitions: () => Promise<VideoNodeDefinition[]>
+      getVideoPipelines: () => Promise<VideoPipeline[]>
+      getVideoPipeline: (id: string) => Promise<VideoPipeline | null>
+      createVideoPipeline: (data: { name: string; description?: string }) => Promise<VideoPipeline>
+      updateVideoPipeline: (
+        id: string,
+        data: { name?: string; description?: string; nodes?: VideoNode[]; edges?: VideoEdge[]; status?: VideoPipeline['status'] }
+      ) => Promise<VideoPipeline | null>
+      deleteVideoPipeline: (id: string) => Promise<boolean>
+      runVideoPipeline: (pipelineId: string) => Promise<{ runId: string; status: string; error?: string }>
       moveLibraryResource: (id: string, newParentId: string | null) => Promise<LibraryResource | null>
       deleteLibraryResource: (id: string) => Promise<boolean>
       getLibraryResourceText: (id: string) => Promise<string | null>

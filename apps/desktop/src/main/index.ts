@@ -13,6 +13,7 @@ import { registerAgentHandlers } from './ipc/agent-handlers'
 import { registerBrowserPreviewHandlers } from './ipc/browser-preview-handlers'
 import { registerLibraryHandlers } from './ipc/library-handlers'
 import { registerLibrarySchemeAsPrivileged, registerLibraryProtocol } from './ipc/library-protocol'
+import { registerVideoStudioHandlers } from './ipc/video-studio-handlers'
 import { startScheduler, stopScheduler } from './automation/scheduler'
 import { startWebhookServer, stopWebhookServer } from './automation/webhook-server'
 import { closeAllBrowsers } from './browser/launcher'
@@ -151,6 +152,7 @@ app.whenReady().then(() => {
   registerBrowserPreviewHandlers(ipcMain)
   registerLibraryHandlers(ipcMain)
   registerLibraryProtocol()
+  registerVideoStudioHandlers(ipcMain)
 
   // IPC: mở browser để đăng nhập
   ipcMain.handle('auth:openBrowser', async () => {

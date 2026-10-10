@@ -15,6 +15,9 @@ const ALLOWED_CHANNELS = new Set([
   'updater:progress',
   'agent:event',
   'browserPreview:frame',
+  'video-studio:status',
+  'video-studio:node-progress',
+  'video-studio:job-progress',
 ])
 
 const api = {
@@ -192,6 +195,15 @@ const api = {
     data: { name?: string; tags?: string[]; category?: string; notes?: string }
   ) => ipcRenderer.invoke('library:updateMetadata', id, data),
   updateLibraryResourceContent: (id: string, text: string) => ipcRenderer.invoke('library:updateContent', id, text),
+
+  // Video Studio
+  getVideoNodeDefinitions: () => ipcRenderer.invoke('video-studio:getNodeDefinitions'),
+  getVideoPipelines: () => ipcRenderer.invoke('video-studio:getAll'),
+  getVideoPipeline: (id: string) => ipcRenderer.invoke('video-studio:get', id),
+  createVideoPipeline: (data: { name: string; description?: string }) => ipcRenderer.invoke('video-studio:create', data),
+  updateVideoPipeline: (id: string, data: any) => ipcRenderer.invoke('video-studio:update', id, data),
+  deleteVideoPipeline: (id: string) => ipcRenderer.invoke('video-studio:delete', id),
+  runVideoPipeline: (pipelineId: string) => ipcRenderer.invoke('video-studio:run', pipelineId),
   moveLibraryResource: (id: string, newParentId: string | null) => ipcRenderer.invoke('library:move', id, newParentId),
   deleteLibraryResource: (id: string) => ipcRenderer.invoke('library:delete', id),
   getLibraryResourceText: (id: string) => ipcRenderer.invoke('library:getTextContent', id),
