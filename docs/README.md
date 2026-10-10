@@ -1,6 +1,16 @@
 # Tài liệu BrowserAuto
 
-Tài liệu được chia làm 3 nhóm, tuỳ theo bạn đang muốn **dùng** app, **đóng góp code**, hay **hiểu kiến trúc** bên trong.
+Tài liệu chia làm 5 nhóm. 3 nhóm đầu trả lời 3 câu hỏi KHÁC NHAU — dễ nhầm nếu đọc lướt:
+
+| Nhóm | Trả lời câu hỏi | Vai trò |
+|---|---|---|
+| [architecture/](architecture/) | "Code hiện làm thế nào" | **Hiện trạng** — ghi lại CÁI ĐANG CÓ |
+| [conventions/](conventions/) | "Nên đặt/viết thế nào" | **Đích** — kiến trúc NÊN THEO (SOLID + pattern có chủ đích); code hiện tại chưa chắc khớp 100%, refactor sang đây là việc làm sau |
+| [adr/](adr/) | "Vì sao chọn vậy" | Quyết định đã chốt + alternative đã cân nhắc (có thể là alternative đã THỬ VÀ THẤT BẠI) |
+
+Nếu `architecture/` và `conventions/` nói khác nhau về cùng 1 vùng code — đó là lệch ĐÃ BIẾT, không phải lỗi docs. Xem [AGENTS.md](../AGENTS.md) ở gốc repo cho quy tắc tổng thể, [.claude/skills/docs-read](../.claude/skills/docs-read/SKILL.md) để định vị nhanh.
+
+2 nhóm còn lại tuỳ theo bạn đang muốn **dùng** app hay **đóng góp code**.
 
 ## [user-guide/](user-guide/) — Dùng ứng dụng
 
@@ -74,6 +84,26 @@ Tài liệu kỹ thuật, dành cho người đọc/sửa code trong repo này.
 | 37 | [Campaign Editor UI](architecture/37-campaign-editor-ui.md) | Field nào đã nối, field nào quota/rule chưa nối |
 | 38 | [Định dạng import Email/Cookie](architecture/38-email-cookie-formats.md) | CSV có/không header, JSON cookie — cookie đã lưu chưa được áp dụng |
 | 39 | [⚠️ electron-builder đóng gói sai thư mục](architecture/39-electron-builder-files-mismatch.md) | `dist/` vs `out/` — khả năng cao installer hiện tại không chạy được |
+
+## [conventions/](conventions/) — Kiến trúc đích
+
+Kiến trúc NÊN THEO cho code mới (SOLID + design pattern có chủ đích) — không phải hiện trạng. Xem bảng phân vai trò ở đầu file này.
+
+| # | Tài liệu | Nội dung |
+|---|---|---|
+| 00 | [Tổng quan](conventions/00-tong-quan.md) | Bảng pattern → reference template, SOLID áp dụng cụ thể, decision ladder chống over-engineer |
+| 01 | [Main process layering](conventions/01-main-process-layering.md) | Cây thư mục `main/` đích, IPC→service→domain engine→provider |
+| 02 | [Renderer layering](conventions/02-renderer-layering.md) | Cây thư mục `renderer/` đích, rule `components/` vs `pages/` |
+| 03 | [Domain boundaries](conventions/03-domain-boundaries.md) | Domain chỉ lộ ra qua service file của nó |
+| 04 | [Window.api contract](conventions/04-window-api-contract.md) | Đích cho preload bridge, liên quan ADR-0001 |
+
+## [adr/](adr/) — Vì sao chọn vậy
+
+Architecture Decision Record — quyết định kiến trúc đã chốt + alternative đã cân nhắc (kể cả đã thử-và-fail).
+
+| # | Tài liệu | Nội dung |
+|---|---|---|
+| 0001 | [Window.api composition](adr/0001-window-api-composition.md) | Vì sao tách theo domain + 1 aggregator, không phải nhiều `declare global` block riêng |
 
 ## [development/](development/) — Đóng góp code
 
