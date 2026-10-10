@@ -8,7 +8,7 @@ import {
 import { EventType, type AGUIEvent, type AgentApprovalResponse } from '../../shared/agent/ag-ui-events'
 import { resolveAgentModel } from './model-provider'
 import { adaptStreamPart } from './ag-ui-adapter'
-import { buildToolset, APPROVAL_GATED_TOOLS } from './tools/registry'
+import { buildToolset, buildVideoToolset, APPROVAL_GATED_TOOLS } from './tools/registry'
 import type { AgentToolContext } from './tools/types'
 
 export interface AgentRunRequest {
@@ -16,6 +16,8 @@ export interface AgentRunRequest {
   threadId: string
   messages: ModelMessage[]
   toolContext: AgentToolContext
+  /** 'automation' (mặc định) dùng toolset browser/workflow; 'video-studio' dùng toolset pipeline video — xem buildVideoToolset. */
+  domain?: 'automation' | 'video-studio'
 }
 
 // Without this, nothing tells the model an order of operations — it'll
@@ -33,6 +35,34 @@ Quy tắc bắt buộc:
 6. Mặc định, khi đã hoàn thành xong việc người dùng yêu cầu trong lượt này (không còn bước nào cần làm tiếp), hãy gọi close_browser để đóng trình duyệt lại trước khi kết thúc câu trả lời. CHỈ bỏ qua bước này nếu người dùng yêu cầu rõ ràng muốn giữ trình duyệt mở (vd: để họ tự thao tác tiếp, đang xem video/đang đăng nhập dở), hoặc nhiệm vụ còn đang dang dở chưa xong (còn chờ bước kế tiếp trong cùng phiên làm việc).
 7. Workflow có 2 chế độ KHÔNG tương thích nhau: "Kéo thả" (node/edge) và "Viết code" (1 script). Luôn gọi get_workflow_state trước để biết đang ở chế độ nào. Ở chế độ "Kéo thả": dùng propose_workflow_change/propose_destructive_workflow_change, KHÔNG dùng propose_code_change. Ở chế độ "Viết code": dùng propose_code_change, KHÔNG dùng 2 tool kia. Code trong propose_code_change chạy ở tầng Playwright (biến page/context/variables/log/delay/resources) — KHÁC với code của run_js/node "Chạy JavaScript" (chạy trong DOM, biến document/window) — không copy nguyên văn giữa 2 nơi, phải viết lại đúng API tương ứng. KHÔNG tự ý chuyển 1 workflow từ chế độ này sang chế độ kia.
 8. Có 1 Thư viện tài nguyên (resource library) lưu ảnh, prompt mẫu, data export, file — dùng list_resources để xem đang có gì (duyệt theo thư mục qua "parentId", hoặc tìm theo tên/tag qua "query"), get_resource để đọc nội dung/đường dẫn 1 tài nguyên cụ thể, save_resource để lưu lại 1 kết quả cho lần sau. Khi cần 1 file có sẵn (vd để upload qua input[type=file]), LUÔN kiểm tra thư viện trước bằng list_resources/get_resource thay vì hỏi người dùng đường dẫn hay tự bịa 1 đường dẫn không có thật.`
+
+// System prompt riêng cho domain 'video-studio' — hoàn toàn khác AGENT_INSTRUCTIONS
+// ở trên (không có khái niệm browser/trang web). Dạy model quy ước dựng
+// pipeline nhiều cảnh nhất quán: tái dùng 1 Character Reference cho nhiều
+// cảnh (không tạo lại ảnh nhân vật mỗi cảnh), nối continuity giữa các cảnh
+// liên tiếp, tách đúng vai trò 2 track TTS.
+const VIDEO_AGENT_INSTRUCTIONS = `Bạn là trợ lý AI giúp dựng pipeline sản xuất video trong Video Studio của app BrowserAuto. Pipeline là 1 đồ thị node có kiểu (giống ComfyUI): mỗi node có input/output socket kiểu TEXT/IMAGE/VIDEO/AUDIO, chỉ nối đúng kiểu với nhau.
+
+Bộ node có sẵn (dùng đúng "nodeType" sau trong propose_video_pipeline_change):
+- character-reference (input, output: image) — ảnh tham chiếu nhân vật/phụ kiện, config.refImage là id resource ảnh trong Thư viện (dùng get_resource/list_resources để tìm nếu người dùng đã có sẵn ảnh).
+- scene-prompt (input, output: text) — prompt + lời thoại (config.dialogueLine) + thời lượng cho 1 cảnh.
+- generate-image (generate, input: prompt TEXT bắt buộc + referenceImage IMAGE tuỳ chọn, output: image) — config.provider nên ưu tiên 'flux' hoặc 'openai-image' (model tạo ảnh chuyên dụng, chất lượng tốt hơn) thay vì 'kling'/'runway'/'comfyui' (vốn là model video, chỉ hỗ trợ ảnh phụ).
+- generate-video (generate, input: prompt TEXT/image IMAGE/continuityFrame IMAGE đều tuỳ chọn, output: video) — config.mode là 'text-to-video' hoặc 'image-to-video', config.provider là 'kling'/'runway'/'comfyui' (chỉ 3 provider này tạo được video).
+- extract-last-frame (post, input: video, output: image) — lấy khung hình cuối của 1 video.
+- tts-dialogue / tts-narration (generate, input: text, output: audio) — config.provider là elevenlabs/openai-tts/google-tts.
+- subtitle (post, input: text, output: subtitleTrack TEXT).
+- stitch (post, input: video1..video6, output: video) — nối nhiều cảnh theo thứ tự.
+- audio-mix (post, input: track1..track4, output: audio) — mix nhiều track âm thanh.
+- compose (post, input: video + audio tuỳ chọn + subtitleTrack tuỳ chọn, output: video).
+- save-to-library (output, input: media VIDEO) — node cuối cùng, bắt buộc phải có để lưu kết quả.
+
+Quy tắc bắt buộc:
+1. Nếu kịch bản có nhân vật xuất hiện nhiều cảnh, chỉ tạo 1 node character-reference DUY NHẤT rồi nối output "image" của nó vào referenceImage của MỌI node generate-image liên quan — không tạo lại nhiều lần, để giữ nhân vật nhất quán xuyên suốt.
+2. Để chuyển động giữa các cảnh khớp nhau: sau generate-video của cảnh N, thêm 1 node extract-last-frame lấy khung hình cuối, nối output "image" của nó vào input "continuityFrame" của node generate-video cảnh N+1.
+3. Tách rõ vai trò 2 track TTS: lời thoại nhân vật dùng tts-dialogue, giọng kể/narrator dùng tts-narration — không dùng lẫn.
+4. Pipeline PHẢI kết thúc bằng đúng 1 node save-to-library — không được thiếu.
+5. Dùng propose_video_pipeline_change để dựng TOÀN BỘ pipeline nhiều cảnh chỉ trong 1 lần gọi (gửi hết nodes+edges cùng lúc, dùng id tạm như "n1" để nối trong cùng patch) — không hỏi lại người dùng từng bước nếu đã hiểu rõ yêu cầu.
+6. Có thể dùng list_resources/get_resource để tìm ảnh/prompt mẫu có sẵn trong Thư viện trước khi đề xuất pipeline, và save_resource để lưu riêng 1 kết quả nếu người dùng yêu cầu.`
 
 type EmitFn = (event: AGUIEvent) => void
 
@@ -54,7 +84,7 @@ export class AgentService {
    * finished, errored, or cancelled.
    */
   async run(req: AgentRunRequest, emit: EmitFn): Promise<void> {
-    const { runId, threadId, toolContext } = req
+    const { runId, threadId, toolContext, domain = 'automation' } = req
     let messages = req.messages
     let finished = false
 
@@ -65,7 +95,12 @@ export class AgentService {
 
     try {
       const model = resolveAgentModel()
-      const tools = buildToolset(toolContext)
+      const tools = domain === 'video-studio' ? buildVideoToolset(toolContext) : buildToolset(toolContext)
+      const instructions = domain === 'video-studio' ? VIDEO_AGENT_INSTRUCTIONS : AGENT_INSTRUCTIONS
+      // APPROVAL_GATED_TOOLS chỉ liệt kê tool của domain 'automation' —
+      // Object.fromEntries ở đây vô hại cho domain 'video-studio' vì
+      // propose_video_pipeline_change không nằm trong tools (ToolLoopAgent
+      // bỏ qua entry không khớp tool nào thật).
       const toolApproval = Object.fromEntries(
         APPROVAL_GATED_TOOLS.map((name) => [name, 'user-approval' as const])
       )
@@ -86,7 +121,7 @@ export class AgentService {
         tools,
         toolApproval,
         reasoning: 'medium',
-        instructions: AGENT_INSTRUCTIONS,
+        instructions,
         providerOptions: { google: { thinkingConfig: { includeThoughts: true } } }
       })
 

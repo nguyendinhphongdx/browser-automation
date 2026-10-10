@@ -6,13 +6,14 @@ import ReactFlow, {
   MarkerType, BackgroundVariant
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { Plus, Play, Loader2 } from 'lucide-react'
+import { Plus, Play, Loader2, Sparkles } from 'lucide-react'
 import { useVideoStudioStore } from '@/stores/video-studio-store'
 import { validateVideoEdge } from '@shared/video-studio/validate-edge'
 import type { VideoNodeDefinition, VideoSocketDef } from '@shared/types'
 import { VideoStudioNode } from './VideoStudioNode'
 import { VideoNodePalette } from './VideoNodePalette'
 import { VideoNodePropertiesPanel } from './VideoNodePropertiesPanel'
+import { VideoAgentChatPanel } from './agent/VideoAgentChatPanel'
 
 const nodeTypes = { videoStudioNode: VideoStudioNode }
 
@@ -34,6 +35,7 @@ function VideoStudioCanvasInner() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
   const [showPalette, setShowPalette] = useState(false)
+  const [showAgent, setShowAgent] = useState(false)
 
   const nodes: Node[] = (activePipeline?.nodes || []).map((n) => ({
     id: n.id,
@@ -181,6 +183,14 @@ function VideoStudioCanvasInner() {
       </button>
 
       <button
+        onClick={() => setShowAgent((v) => !v)}
+        className="absolute top-16 right-3 z-30 w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center justify-center group"
+        title="AI dựng pipeline"
+      >
+        <Sparkles className="h-5 w-5 text-purple-500 group-hover:text-purple-600 transition-colors" />
+      </button>
+
+      <button
         onClick={runPipeline}
         disabled={isRunning || !activePipeline?.nodes.length}
         className="absolute top-3 left-3 z-30 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 text-white shadow-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -197,6 +207,7 @@ function VideoStudioCanvasInner() {
 
       <VideoNodePalette open={showPalette} onClose={() => setShowPalette(false)} onAddNode={addNodeAtCenter} />
       <VideoNodePropertiesPanel />
+      <VideoAgentChatPanel open={showAgent} onClose={() => setShowAgent(false)} />
     </div>
   )
 }

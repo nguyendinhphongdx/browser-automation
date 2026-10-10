@@ -15,6 +15,7 @@ import { createProposeCodeChangeTool } from './propose-code-change'
 import { createListResourcesTool } from './list-resources'
 import { createGetResourceTool } from './get-resource'
 import { createSaveResourceTool } from './save-resource'
+import { createProposeVideoPipelineChangeTool } from './propose-video-pipeline-change'
 
 /**
  * Tool names that must pause for human approval before executing — read by
@@ -49,6 +50,22 @@ export function buildToolset(ctx: AgentToolContext): ToolSet {
     propose_workflow_change: createProposeWorkflowChangeTool(ctx),
     propose_destructive_workflow_change: createProposeDestructiveWorkflowChangeTool(ctx),
     propose_code_change: createProposeCodeChangeTool(ctx),
+    list_resources: createListResourcesTool(ctx),
+    get_resource: createGetResourceTool(ctx),
+    save_resource: createSaveResourceTool(ctx)
+  }
+}
+
+/**
+ * Toolset riêng cho domain 'video-studio' — KHÔNG gồm các tool điều khiển
+ * browser/automation (không liên quan, Video Studio không có khái niệm
+ * trang web/Playwright), chỉ gồm thứ thật sự dùng được: đề xuất pipeline +
+ * truy cập Thư viện tài nguyên (để AI có thể chọn ảnh tham chiếu nhân vật
+ * có sẵn, hoặc lưu kết quả).
+ */
+export function buildVideoToolset(ctx: AgentToolContext): ToolSet {
+  return {
+    propose_video_pipeline_change: createProposeVideoPipelineChangeTool(ctx),
     list_resources: createListResourcesTool(ctx),
     get_resource: createGetResourceTool(ctx),
     save_resource: createSaveResourceTool(ctx)

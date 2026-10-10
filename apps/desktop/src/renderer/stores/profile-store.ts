@@ -99,9 +99,12 @@ declare global {
       testAIConnection: (provider: string, apiKey: string, baseUrl: string, model: string) => Promise<{ ok: boolean; error?: string }>
       runAgent: (payload: {
         runId: string
-        profileId: string
+        domain?: 'automation' | 'video-studio'
+        profileId?: string
         workflowId?: string
-        workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
+        workflowSnapshot?: { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
+        videoPipelineId?: string
+        videoPipelineSnapshot?: { nodes: VideoNode[]; edges: VideoEdge[] }
         messages: ModelMessage[]
       }) => Promise<{ success: boolean }>
       respondAgentApproval: (payload: { approvalId: string; approved: boolean; reason?: string }) => Promise<{ success: boolean }>

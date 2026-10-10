@@ -7,7 +7,7 @@ import { DEFAULT_PROFILE_ID } from '../database/init'
 import { NODE_DEFINITIONS } from '../automation/node-definitions'
 import { agentService } from '../agent/agent-service'
 import type { AgentToolContext } from '../agent/tools/types'
-import type { WorkflowNode, WorkflowEdge, WorkflowMode } from '../../shared/types'
+import type { WorkflowNode, WorkflowEdge, WorkflowMode, VideoNode, VideoEdge } from '../../shared/types'
 import { EventType, type AgentEventEnvelope } from '../../shared/agent/ag-ui-events'
 
 interface AgentRunPayload {
@@ -17,9 +17,12 @@ interface AgentRunPayload {
   // so it can't learn the id from this call's return value in time to
   // correlate the very first event with the run it belongs to.
   runId: string
-  profileId: string
+  domain?: 'automation' | 'video-studio'
+  profileId?: string
   workflowId?: string
-  workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
+  workflowSnapshot?: { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
+  videoPipelineId?: string
+  videoPipelineSnapshot?: { nodes: VideoNode[]; edges: VideoEdge[] }
   messages: ModelMessage[]
 }
 
@@ -32,6 +35,40 @@ interface AgentRespondApprovalPayload {
 export function registerAgentHandlers(ipcMain: IpcMain) {
   ipcMain.handle('agent:run', async (event: IpcMainInvokeEvent, payload: AgentRunPayload) => {
     const { runId } = payload
+    const domain = payload.domain || 'automation'
+    const emit = (envelope: AgentEventEnvelope) => event.sender.send('agent:event', envelope)
+
+    const onScreenshot = (dataUrl: string) => {
+      emit({ runId, event: { type: EventType.CUSTOM, name: 'screenshot', value: { dataUrl }, timestamp: Date.now() } })
+    }
+    const onResourcePreview = (dataUrl: string, name: string) => {
+      emit({
+        runId,
+        event: { type: EventType.CUSTOM, name: 'resource-preview', value: { dataUrl, name }, timestamp: Date.now() }
+      })
+    }
+
+    // Video Studio không có khái niệm browser/profile — bỏ qua hoàn toàn
+    // bước resolve page/profile ở dưới, chỉ cần snapshot đồ thị pipeline.
+    if (domain === 'video-studio') {
+      const threadId = payload.videoPipelineId || 'video-studio'
+      const toolContext: AgentToolContext = {
+        page: null,
+        profileId: '',
+        workflowSnapshot: { nodes: [], edges: [] },
+        videoPipelineSnapshot: payload.videoPipelineSnapshot || { nodes: [], edges: [] },
+        nodeDefinitions: NODE_DEFINITIONS,
+        onScreenshot,
+        onResourcePreview
+      }
+
+      await agentService.run(
+        { runId, threadId, messages: payload.messages, toolContext, domain },
+        (aguiEvent) => emit({ runId, event: aguiEvent })
+      )
+      return { success: true }
+    }
+
     // '' from the profile dropdown means "Default browser" (same convention
     // automation-handlers.ts's workflow:run already follows) — not "no
     // profile selected". Resolve it here so every downstream use (thread id,
@@ -40,8 +77,6 @@ export function registerAgentHandlers(ipcMain: IpcMain) {
     // One thread per profile is a reasonable default for now — nothing in
     // this app supports multiple concurrent conversations per profile yet.
     const threadId = profileId
-
-    const emit = (envelope: AgentEventEnvelope) => event.sender.send('agent:event', envelope)
 
     // Read-only — never launch a browser just because the agent is running.
     // The model decides that explicitly via the start_browser tool (see
@@ -61,24 +96,14 @@ export function registerAgentHandlers(ipcMain: IpcMain) {
       page,
       profileId,
       workflowId: payload.workflowId,
-      workflowSnapshot: payload.workflowSnapshot,
+      workflowSnapshot: payload.workflowSnapshot || { nodes: [], edges: [] },
       nodeDefinitions: NODE_DEFINITIONS,
-      onScreenshot: (dataUrl) => {
-        emit({
-          runId,
-          event: { type: EventType.CUSTOM, name: 'screenshot', value: { dataUrl }, timestamp: Date.now() }
-        })
-      },
-      onResourcePreview: (dataUrl, name) => {
-        emit({
-          runId,
-          event: { type: EventType.CUSTOM, name: 'resource-preview', value: { dataUrl, name }, timestamp: Date.now() }
-        })
-      }
+      onScreenshot,
+      onResourcePreview
     }
 
     await agentService.run(
-      { runId, threadId, messages: payload.messages, toolContext },
+      { runId, threadId, messages: payload.messages, toolContext, domain },
       (aguiEvent) => emit({ runId, event: aguiEvent })
     )
 
