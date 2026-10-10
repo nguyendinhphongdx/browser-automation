@@ -14,6 +14,18 @@ export function createRunwayProvider(apiKey: string): VideoProvider {
     name: 'runway',
 
     async submit(params: VideoJobParams): Promise<string> {
+      if (params.mode === 'text-to-image') {
+        const res = await fetch(`${BASE_URL}/text_to_image`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ promptText: params.prompt, ratio: params.aspectRatio || '1280:720' })
+        })
+        if (!res.ok) throw new Error(`Runway submit (image) thất bại: ${res.status} ${await res.text()}`)
+        const data = (await res.json()) as { id?: string }
+        if (!data.id) throw new Error('Runway không trả về task id')
+        return data.id
+      }
+
       const image = params.continuityImagePath || params.imagePath
       const endpoint = image ? '/image_to_video' : '/text_to_video'
       const body: Record<string, unknown> = {

@@ -17,7 +17,7 @@ describe('createKlingProvider', () => {
     const provider = createKlingProvider('my-access-key', 'my-secret-key')
     const jobId = await provider.submit({ mode: 'text-to-video', prompt: 'a cat', durationSec: 5 })
 
-    expect(jobId).toBe('task-123')
+    expect(jobId).toBe('video:task-123')
     expect(fetchMock).toHaveBeenCalledTimes(1)
 
     const [url, init] = fetchMock.mock.calls[0]
@@ -27,6 +27,31 @@ describe('createKlingProvider', () => {
     const token = authHeader.replace('Bearer ', '')
     const decoded = jwt.verify(token, 'my-secret-key') as { iss: string }
     expect(decoded.iss).toBe('my-access-key')
+  })
+
+  it('submit() with mode text-to-image calls the image generation endpoint and prefixes the job id', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ data: { task_id: 'img-1' } }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const provider = createKlingProvider('ak', 'sk')
+    const jobId = await provider.submit({ mode: 'text-to-image', prompt: 'a sunset' })
+
+    expect(jobId).toBe('image:img-1')
+    expect(fetchMock.mock.calls[0][0]).toContain('/v1/images/generations')
+  })
+
+  it('poll() on an image job hits the images endpoint and reads task_result.images', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ data: { task_status: 'succeed', task_result: { images: [{ url: 'https://cdn.kling.ai/out.png' }] } } })
+      })
+    )
+    const provider = createKlingProvider('ak', 'sk')
+    const result = await provider.poll('image:img-1')
+    expect(result).toEqual({ status: 'succeeded', outputUrl: 'https://cdn.kling.ai/out.png' })
   })
 
   it('submit() throws with a clear message when the API responds non-ok', async () => {
@@ -50,7 +75,7 @@ describe('createKlingProvider', () => {
       })
     )
     const provider = createKlingProvider('ak', 'sk')
-    const result = await provider.poll('task-123')
+    const result = await provider.poll('video:task-123')
     expect(result).toEqual({ status: 'succeeded', outputUrl: 'https://cdn.kling.ai/out.mp4' })
   })
 
@@ -60,7 +85,7 @@ describe('createKlingProvider', () => {
       vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ data: { task_status: 'failed' } }) })
     )
     const provider = createKlingProvider('ak', 'sk')
-    const result = await provider.poll('task-123')
+    const result = await provider.poll('video:task-123')
     expect(result.status).toBe('failed')
   })
 
@@ -70,7 +95,7 @@ describe('createKlingProvider', () => {
       vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ data: { task_status: 'processing' } }) })
     )
     const provider = createKlingProvider('ak', 'sk')
-    const result = await provider.poll('task-123')
+    const result = await provider.poll('video:task-123')
     expect(result.status).toBe('running')
   })
 })
