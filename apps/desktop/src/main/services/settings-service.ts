@@ -2,7 +2,20 @@ import { getDatabase } from '../database/init'
 import { encrypt, decrypt } from './encryption'
 
 // Keys that contain sensitive data — will be encrypted
-const SENSITIVE_KEYS = ['auth.token', 'auth.refreshToken', 'api.secret', 'ai.apiKey']
+const SENSITIVE_KEYS = [
+  'auth.token',
+  'auth.refreshToken',
+  'api.secret',
+  'ai.apiKey',
+  'videoStudio.kling.accessKey',
+  'videoStudio.kling.secretKey',
+  'videoStudio.runway.apiKey',
+  'videoStudio.elevenlabs.apiKey',
+  'videoStudio.googleTts.apiKey'
+  // videoStudio.comfyui.baseUrl và videoStudio.openaiTts.apiKey (nếu khác
+  // ai.apiKey) không đưa vào đây: baseUrl là địa chỉ local, giống ai.baseUrl
+  // hiện tại cũng không mã hoá.
+]
 
 export interface AppSettings {
   // Server / API
