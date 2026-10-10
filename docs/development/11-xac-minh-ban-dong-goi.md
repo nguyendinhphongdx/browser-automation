@@ -11,6 +11,7 @@ Sau khi sửa [electron-builder đóng gói sai thư mục](../architecture/39-e
 3. **Mở thử file cài đặt sinh ra** (`dist-electron/*.dmg`/`.exe`/`.AppImage`) — cài đặt thật, không chỉ nhìn file có sinh ra hay không (file installer vẫn sinh ra bình thường dù bên trong rỗng, vì `electron-builder` không báo lỗi khi glob `files` không khớp gì — nó chỉ đóng gói rỗng, không crash lúc build)
 4. Mở app vừa cài — kỳ vọng thấy đúng UI app thật (Profiles/Automation/...), không phải màn hình trắng hay cửa sổ trống
 5. Thử 1 thao tác chạm tới main process (tạo 1 profile) — xác nhận IPC + SQLite hoạt động, không chỉ renderer tĩnh load được
+6. (Từ khi có Video Studio) Thử 1 thao tác gọi tới `ffmpeg` thật (vd chạy 1 pipeline có node Stitch/Compose) — `ffmpeg-static`'s binary nằm trong `node_modules`, bị `app.asar` nén lại khi đóng gói; `build.asarUnpack` trong `apps/desktop/package.json` đã cấu hình giải nén riêng cho nó, nhưng đây đúng loại lỗi "chạy `pnpm desktop:dev` thì ổn, bản đóng gói thật mới lộ ra" — `child_process.spawn()` không thể chạy 1 binary nằm bên trong archive asar
 
 ## Vì sao bước 3-5 không thể bỏ qua
 
