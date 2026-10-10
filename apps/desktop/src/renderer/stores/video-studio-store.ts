@@ -3,6 +3,12 @@ import type { VideoPipeline, VideoNode, VideoEdge, VideoNodeDefinition } from '@
 
 type NodeStatus = 'running' | 'done' | 'error'
 
+export interface NodeOutputPreview {
+  kind: 'image' | 'video' | 'audio' | 'text' | 'value'
+  dataUrl?: string
+  text?: string
+}
+
 interface VideoStudioStore {
   pipelines: VideoPipeline[]
   activePipeline: VideoPipeline | null
@@ -13,6 +19,7 @@ interface VideoStudioStore {
   selectedNodeId: string | null
   nodeProgress: Record<string, NodeStatus>
   nodeProgressPercent: Record<string, number>
+  nodePreview: Record<string, NodeOutputPreview>
   runError: string | null
 
   fetchPipelines: () => Promise<void>
@@ -39,6 +46,7 @@ export const useVideoStudioStore = create<VideoStudioStore>((set, get) => ({
   selectedNodeId: null,
   nodeProgress: {},
   nodeProgressPercent: {},
+  nodePreview: {},
   runError: null,
 
   fetchPipelines: async () => {
@@ -115,9 +123,16 @@ export const useVideoStudioStore = create<VideoStudioStore>((set, get) => ({
 
     set({ isRunning: true, nodeProgress: {}, nodeProgressPercent: {}, runError: null })
 
-    const onNodeProgress = (data: { runId: string; nodeId: string; status: NodeStatus; error?: string }) => {
+    const onNodeProgress = (data: {
+      runId: string
+      nodeId: string
+      status: NodeStatus
+      error?: string
+      preview?: NodeOutputPreview | null
+    }) => {
       set({ nodeProgress: { ...get().nodeProgress, [data.nodeId]: data.status } })
       if (data.error) set({ runError: data.error })
+      if (data.preview) set({ nodePreview: { ...get().nodePreview, [data.nodeId]: data.preview } })
     }
     const onJobProgress = (data: { runId: string; nodeId: string; percent: number }) => {
       set({ nodeProgressPercent: { ...get().nodeProgressPercent, [data.nodeId]: data.percent } })

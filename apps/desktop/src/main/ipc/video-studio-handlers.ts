@@ -5,6 +5,7 @@ import {
 import { createVideoPipelineRun, updateVideoPipelineRun } from '../services/video-job-service'
 import { VIDEO_NODE_DEFINITIONS } from '../video-studio/node-definitions'
 import { executeVideoPipeline } from '../video-studio/engine'
+import { buildNodeOutputPreview } from '../video-studio/build-node-preview'
 import type { VideoExecutionContext } from '../video-studio/nodes/base-node'
 import type { LogEntry } from '../../shared/types'
 
@@ -39,7 +40,11 @@ export function registerVideoStudioHandlers(ipcMain: IpcMain) {
       onNodeStart: (nodeId) => sender.send('video-studio:node-progress', { runId: run.id, nodeId, status: 'running' }),
       onNodeProgress: (nodeId, percent) =>
         sender.send('video-studio:job-progress', { runId: run.id, nodeId, percent }),
-      onNodeDone: (nodeId) => sender.send('video-studio:node-progress', { runId: run.id, nodeId, status: 'done' }),
+      onNodeDone: (nodeId, outputs) => {
+        const node = pipeline.nodes.find((n) => n.id === nodeId)
+        const preview = node ? buildNodeOutputPreview(node.data.nodeType, outputs) : null
+        sender.send('video-studio:node-progress', { runId: run.id, nodeId, status: 'done', preview })
+      },
       onNodeError: (nodeId, error) =>
         sender.send('video-studio:node-progress', { runId: run.id, nodeId, status: 'error', error })
     }

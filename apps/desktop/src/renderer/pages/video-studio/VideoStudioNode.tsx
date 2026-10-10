@@ -1,6 +1,6 @@
 import { Handle, Position } from 'reactflow'
 import type { VideoNodeData, VideoNodeDefinition, VideoSocketType } from '@shared/types'
-import { useVideoStudioStore } from '@/stores/video-studio-store'
+import { useVideoStudioStore, type NodeOutputPreview } from '@/stores/video-studio-store'
 import {
   UserSquare, FileText, ImagePlus, Film, Crop, MessageSquare, Mic, Captions, Link,
   AudioLines, Clapperboard, Save, Zap
@@ -30,8 +30,9 @@ const CATEGORY_COLORS: Record<string, string> = {
 const HANDLE_SPACING = 22
 const HANDLE_START = 36
 
-export function VideoStudioNode({ data, selected }: { data: VideoNodeData; selected: boolean }) {
+export function VideoStudioNode({ id, data, selected }: { id: string; data: VideoNodeData; selected: boolean }) {
   const nodeDefinitions = useVideoStudioStore((s) => s.nodeDefinitions)
+  const preview = useVideoStudioStore((s) => s.nodePreview[id])
   const def: VideoNodeDefinition | undefined = nodeDefinitions.find((d) => d.type === data.nodeType)
   const Icon = ICON_MAP[data.icon || ''] || Zap
   const color = CATEGORY_COLORS[def?.category || ''] || '#6B7280'
@@ -49,6 +50,8 @@ export function VideoStudioNode({ data, selected }: { data: VideoNodeData; selec
         <Icon className="h-3.5 w-3.5 shrink-0" style={{ color }} />
         <span className="text-xs font-medium truncate">{data.label}</span>
       </div>
+
+      {preview && <NodePreview preview={preview} />}
 
       <div className="relative py-2" style={{ minHeight: bodyHeight - 32 }}>
         {inputs.map((socket, i) => (
@@ -90,6 +93,44 @@ export function VideoStudioNode({ data, selected }: { data: VideoNodeData; selec
       </div>
     </div>
   )
+}
+
+/** Kết quả thật của lần chạy gần nhất, hiện ngay trên node — kiểu ComfyUI. */
+function NodePreview({ preview }: { preview: NodeOutputPreview }) {
+  switch (preview.kind) {
+    case 'image':
+      return (
+        <div className="border-b bg-black/5">
+          <img src={preview.dataUrl} alt="" className="w-full h-24 object-cover" />
+        </div>
+      )
+    case 'video':
+      return (
+        <div className="border-b bg-black/5">
+          <video src={preview.dataUrl} controls muted className="w-full h-24 object-cover" />
+        </div>
+      )
+    case 'audio':
+      return (
+        <div className="border-b bg-muted/30 px-2 py-1.5">
+          <audio src={preview.dataUrl} controls className="w-full h-7" />
+        </div>
+      )
+    case 'text':
+      return (
+        <div className="border-b bg-muted/30 px-2.5 py-1.5 text-[10px] leading-relaxed text-muted-foreground line-clamp-3">
+          {preview.text}
+        </div>
+      )
+    case 'value':
+      return (
+        <div className="border-b bg-muted/30 px-2.5 py-1 text-[10px] font-mono text-muted-foreground">
+          {preview.text}
+        </div>
+      )
+    default:
+      return null
+  }
 }
 
 export { ICON_MAP as VIDEO_NODE_ICON_MAP }
