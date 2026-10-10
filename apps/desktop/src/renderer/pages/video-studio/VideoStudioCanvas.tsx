@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import ReactFlow, {
   addEdge, applyNodeChanges, applyEdgeChanges,
   Background, Controls, ReactFlowProvider, useReactFlow,
@@ -6,7 +6,7 @@ import ReactFlow, {
   MarkerType, BackgroundVariant
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { Plus, Play, Loader2, Sparkles } from 'lucide-react'
+import { Plus, Play, Loader2, Sparkles, Save, Check } from 'lucide-react'
 import { useVideoStudioStore } from '@/stores/video-studio-store'
 import { validateVideoEdge } from '@shared/video-studio/validate-edge'
 import type { VideoNodeDefinition, VideoSocketDef } from '@shared/types'
@@ -30,12 +30,40 @@ function findSocket(defs: VideoNodeDefinition[], nodeType: string | undefined, n
 }
 
 function VideoStudioCanvasInner() {
-  const { activePipeline, nodeDefinitions, updateNodes, updateEdges, selectedNodeId, setSelectedNode, isRunning, runPipeline, runError, nodeProgress } =
-    useVideoStudioStore()
+  const {
+    activePipeline, nodeDefinitions, updateNodes, updateEdges, selectedNodeId, setSelectedNode,
+    isRunning, runPipeline, runError, nodeProgress, savePipeline
+  } = useVideoStudioStore()
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
   const [showPalette, setShowPalette] = useState(false)
   const [showAgent, setShowAgent] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [justSaved, setJustSaved] = useState(false)
+
+  const handleSave = useCallback(async () => {
+    const current = useVideoStudioStore.getState().activePipeline
+    if (!current) return
+    setSaving(true)
+    try {
+      await savePipeline({ nodes: current.nodes, edges: current.edges })
+      setJustSaved(true)
+      setTimeout(() => setJustSaved(false), 1500)
+    } finally {
+      setSaving(false)
+    }
+  }, [savePipeline])
+
+  // Trước patch này, cách DUY NHẤT lưu node/edge xuống DB là bấm "Chạy
+  // pipeline" (savePipeline() nằm trong runPipeline()) — kéo thả tay hay để
+  // AI dựng xong rồi đóng app/back ra danh sách là mất sạch, chưa từng chạy
+  // thử lần nào. Nút "Lưu" dưới đây + Ctrl/Cmd+S (useKeyboardShortcuts.ts đã
+  // dispatch event này từ lâu cho Automation, Video Studio chưa từng lắng
+  // nghe) giải quyết đúng việc đó.
+  useEffect(() => {
+    window.addEventListener('shortcut:save', handleSave)
+    return () => window.removeEventListener('shortcut:save', handleSave)
+  }, [handleSave])
 
   const nodes: Node[] = (activePipeline?.nodes || []).map((n) => ({
     id: n.id,
@@ -197,6 +225,22 @@ function VideoStudioCanvasInner() {
       >
         {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
         {isRunning ? 'Đang chạy...' : 'Chạy pipeline'}
+      </button>
+
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        title="Lưu (Ctrl/Cmd+S)"
+        className="absolute top-3 left-[168px] z-30 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+      >
+        {saving ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : justSaved ? (
+          <Check className="h-4 w-4 text-emerald-500" />
+        ) : (
+          <Save className="h-4 w-4" />
+        )}
+        {justSaved ? 'Đã lưu' : 'Lưu'}
       </button>
 
       {runError && (

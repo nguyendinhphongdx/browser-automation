@@ -72,6 +72,13 @@ export const useVideoStudioStore = create<VideoStudioStore>((set, get) => ({
   },
 
   setActivePipeline: async (id) => {
+    // Lưu lại pipeline đang mở TRƯỚC khi rời đi (back ra danh sách hoặc mở
+    // pipeline khác) — updateNodes/updateEdges chỉ đổi state Zustand cục bộ,
+    // không tự ghi DB; nút "Lưu"/Ctrl+S (VideoStudioCanvas.tsx) là lưu chủ
+    // động, đây là lưới an toàn cho lúc quên bấm.
+    const prev = get().activePipeline
+    if (prev) await window.api.updateVideoPipeline(prev.id, { nodes: prev.nodes, edges: prev.edges })
+
     if (!id) {
       set({ activePipeline: null, selectedNodeId: null })
       return

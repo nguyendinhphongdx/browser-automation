@@ -1,4 +1,4 @@
-import { useCallback, useRef, useMemo, useState } from 'react'
+import { useCallback, useEffect, useRef, useMemo, useState } from 'react'
 import ReactFlow, {
   addEdge, applyNodeChanges, applyEdgeChanges,
   Background, Controls, MiniMap, ReactFlowProvider, useReactFlow,
@@ -210,7 +210,7 @@ const defaultEdgeOptions = {
 }
 
 function VisualEditorInner() {
-  const { activeWorkflow, updateNodes, updateEdges, selectedNodeId, setSelectedNode, nodeDefinitions } = useWorkflowStore()
+  const { activeWorkflow, updateNodes, updateEdges, selectedNodeId, setSelectedNode, nodeDefinitions, saveWorkflow } = useWorkflowStore()
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const reactFlowInstance = useReactFlow()
   const [showNodePanel, setShowNodePanel] = useState(false)
@@ -226,6 +226,21 @@ function VisualEditorInner() {
     })
     return () => setOnAddAfterNode(null)
   }, [])
+
+  // useKeyboardShortcuts.ts đã dispatch 'shortcut:save' từ lâu (Ctrl/Cmd+S,
+  // đúng như docs/user-guide/10-phim-tat.md ghi) nhưng chưa từng có nơi nào
+  // lắng nghe nó — đây là nơi đó. updateNodes/updateEdges (kéo thả, AI patch)
+  // chỉ đổi state Zustand cục bộ, KHÔNG tự ghi xuống DB; trước patch này cách
+  // DUY NHẤT để không mất việc đang làm là bấm Chạy (saveWorkflow() bên
+  // trong runWorkflow()) — đóng app/back ra danh sách giữa chừng mất sạch.
+  useEffect(() => {
+    const handler = () => {
+      const current = useWorkflowStore.getState().activeWorkflow
+      if (current) saveWorkflow({ nodes: current.nodes, edges: current.edges, code: current.code })
+    }
+    window.addEventListener('shortcut:save', handler)
+    return () => window.removeEventListener('shortcut:save', handler)
+  }, [saveWorkflow])
 
   const nodes: Node[] = useMemo(() =>
     (activeWorkflow?.nodes || []).map(n => ({
