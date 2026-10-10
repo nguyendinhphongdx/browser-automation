@@ -6,6 +6,7 @@ import {
   Rocket,
   Database,
   FolderOpen,
+  Clapperboard,
   ShoppingBag,
   Settings,
   Globe,
@@ -25,6 +26,7 @@ const navItems = [
   { to: '/campaigns', labelKey: 'nav.campaigns', icon: Rocket },
   { to: '/resources', labelKey: 'nav.resources', icon: Database },
   { to: '/library', labelKey: 'nav.library', icon: FolderOpen },
+  { to: '/video-studio', labelKey: 'nav.videoStudio', icon: Clapperboard },
   { to: '/marketplace', labelKey: 'nav.marketplace', icon: ShoppingBag },
   { to: '/settings', labelKey: 'nav.settings', icon: Settings }
 ]
@@ -43,7 +45,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   // Auto collapse khi vào trang automation, expand khi rời
   useEffect(() => {
-    setCollapsed(location.pathname.startsWith('/automation') || location.pathname.startsWith('/campaigns'))
+    setCollapsed(
+      location.pathname.startsWith('/automation') ||
+      location.pathname.startsWith('/campaigns') ||
+      location.pathname.startsWith('/video-studio')
+    )
   }, [location.pathname])
 
   return (

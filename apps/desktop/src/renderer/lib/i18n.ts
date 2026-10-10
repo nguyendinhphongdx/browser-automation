@@ -10,6 +10,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.campaigns': 'Chiến dịch',
     'nav.resources': 'Tài nguyên',
     'nav.library': 'Thư viện',
+    'nav.videoStudio': 'Studio Video',
     'nav.marketplace': 'Chợ kịch bản',
     'nav.settings': 'Cài đặt',
 
@@ -84,6 +85,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.campaigns': 'Campaigns',
     'nav.resources': 'Resources',
     'nav.library': 'Library',
+    'nav.videoStudio': 'Video Studio',
     'nav.marketplace': 'Marketplace',
     'nav.settings': 'Settings',
 
