@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Sun, Moon, Monitor, Globe, Info, Keyboard, Shield, Database, Copy, Check, Brain, Eye, EyeOff, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { Sun, Moon, Monitor, Globe, Info, Keyboard, Shield, Database, Copy, Check, Brain, Eye, EyeOff, CheckCircle, XCircle, Loader2, Clapperboard } from 'lucide-react'
 import { useThemeStore } from '@/stores/theme-store'
 import { useI18n, type Locale } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -354,6 +354,136 @@ function AIProviderSection() {
   )
 }
 
+function MaskedKeyField({
+  label, value, onChange, placeholder
+}: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [show, setShow] = useState(false)
+  const masked = value ? value.slice(0, 4) + '•'.repeat(Math.max(0, value.length - 8)) + value.slice(-4) : ''
+
+  return (
+    <div>
+      <label className="block text-xs font-medium mb-1.5">{label}</label>
+      <div className="relative">
+        <input
+          type={show ? 'text' : 'password'}
+          value={show ? value : masked}
+          onChange={e => onChange(e.target.value)}
+          onFocus={() => setShow(true)}
+          placeholder={placeholder}
+          className="w-full px-3 py-2 pr-10 border rounded-lg bg-background text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        <button
+          type="button"
+          onClick={() => setShow(v => !v)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+const VIDEO_STUDIO_KEYS = {
+  klingAccessKey: 'videoStudio.kling.accessKey',
+  klingSecretKey: 'videoStudio.kling.secretKey',
+  runwayApiKey: 'videoStudio.runway.apiKey',
+  comfyuiBaseUrl: 'videoStudio.comfyui.baseUrl',
+  elevenlabsApiKey: 'videoStudio.elevenlabs.apiKey',
+  googleTtsApiKey: 'videoStudio.googleTts.apiKey',
+  openaiTtsApiKey: 'videoStudio.openaiTts.apiKey'
+} as const
+
+function VideoStudioProvidersSection() {
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    const keys = Object.values(VIDEO_STUDIO_KEYS)
+    Promise.all(keys.map(k => window.api.getSetting(k))).then(results => {
+      const next: Record<string, string> = {}
+      keys.forEach((k, i) => { next[k] = results[i] || '' })
+      setValues(next)
+    }).catch(() => {})
+  }, [])
+
+  const set = (key: string, value: string) => setValues(v => ({ ...v, [key]: value }))
+
+  const handleSave = async () => {
+    await window.api.setSettingsBatch(values)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tạo video</h4>
+        <div className="space-y-3">
+          <MaskedKeyField
+            label="Kling — Access Key"
+            value={values[VIDEO_STUDIO_KEYS.klingAccessKey] || ''}
+            onChange={v => set(VIDEO_STUDIO_KEYS.klingAccessKey, v)}
+          />
+          <MaskedKeyField
+            label="Kling — Secret Key"
+            value={values[VIDEO_STUDIO_KEYS.klingSecretKey] || ''}
+            onChange={v => set(VIDEO_STUDIO_KEYS.klingSecretKey, v)}
+          />
+          <MaskedKeyField
+            label="Runway — API Key"
+            value={values[VIDEO_STUDIO_KEYS.runwayApiKey] || ''}
+            onChange={v => set(VIDEO_STUDIO_KEYS.runwayApiKey, v)}
+          />
+          <div>
+            <label className="block text-xs font-medium mb-1.5">ComfyUI — Địa chỉ (local)</label>
+            <input
+              type="text"
+              value={values[VIDEO_STUDIO_KEYS.comfyuiBaseUrl] || ''}
+              onChange={e => set(VIDEO_STUDIO_KEYS.comfyuiBaseUrl, e.target.value)}
+              placeholder="http://127.0.0.1:8188"
+              className="w-full px-3 py-2 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Giọng nói (TTS)</h4>
+        <div className="space-y-3">
+          <MaskedKeyField
+            label="ElevenLabs — API Key"
+            value={values[VIDEO_STUDIO_KEYS.elevenlabsApiKey] || ''}
+            onChange={v => set(VIDEO_STUDIO_KEYS.elevenlabsApiKey, v)}
+          />
+          <MaskedKeyField
+            label="Google TTS — API Key"
+            value={values[VIDEO_STUDIO_KEYS.googleTtsApiKey] || ''}
+            onChange={v => set(VIDEO_STUDIO_KEYS.googleTtsApiKey, v)}
+          />
+          <MaskedKeyField
+            label="OpenAI TTS — API Key (để trống nếu dùng chung key AI Provider ở trên)"
+            value={values[VIDEO_STUDIO_KEYS.openaiTtsApiKey] || ''}
+            onChange={v => set(VIDEO_STUDIO_KEYS.openaiTtsApiKey, v)}
+          />
+        </div>
+      </div>
+
+      <button
+        onClick={handleSave}
+        className="flex items-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors"
+      >
+        {saved ? <Check className="h-3 w-3" /> : null}
+        {saved ? 'Đã lưu!' : 'Lưu cài đặt'}
+      </button>
+
+      <div className="text-[10px] text-muted-foreground bg-secondary/50 rounded-lg px-3 py-2 leading-relaxed">
+        Các key (trừ địa chỉ ComfyUI) được mã hoá và lưu cục bộ, dùng cho các node Generate Image/Video/TTS trong Video Studio.
+      </div>
+    </div>
+  )
+}
+
 export function SettingsPage() {
   const { theme, setTheme } = useThemeStore()
   const { locale, setLocale } = useI18n()
@@ -403,6 +533,11 @@ export function SettingsPage() {
         {/* AI Provider */}
         <SettingSection title="AI Provider" icon={Brain}>
           <AIProviderSection />
+        </SettingSection>
+
+        {/* Video Studio providers */}
+        <SettingSection title="Video Studio" icon={Clapperboard}>
+          <VideoStudioProvidersSection />
         </SettingSection>
 
         {/* Keyboard shortcuts */}
