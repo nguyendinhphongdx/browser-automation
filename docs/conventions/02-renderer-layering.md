@@ -21,6 +21,9 @@ renderer/
 ├── stores/                 1 file = 1 domain, state + action gọi window.api — KHÔNG chứa JSX
 │   └── <domain>-store.ts
 │
+├── hooks/, lib/             utility DÙNG CHUNG, không phải JSX component (`useKeyboardShortcuts.ts`,
+│                            `i18n.ts`, `utils.ts`) — cùng rule với `components/`: không import từ `pages/`
+│
 └── (preload bridge)        window.api — xem 04-window-api-contract.md
 ```
 

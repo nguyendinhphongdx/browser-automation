@@ -32,6 +32,11 @@ main/
 │       ├── registry.ts       getXProvider(name) → chọn implementation theo setting
 │       └── <vendor>-provider.ts
 │
+├── browser/             platform utility DÙNG CHUNG — không thuộc domain nào, không có CRUD/registry
+│   └── detect.ts, fingerprint.ts, launcher.ts   — bất kỳ domain nào cũng được import trực tiếp (agent/,
+│       automation/, ipc/, services/ đều đang dùng) — khác `services/*-service.ts` (1 file = 1 domain
+│       business rule) vì đây không có domain sở hữu, chỉ là logic thuần (phát hiện/launch browser thật)
+│
 └── database/init.ts
 ```
 
