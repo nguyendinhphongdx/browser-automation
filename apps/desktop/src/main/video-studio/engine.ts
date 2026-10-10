@@ -1,50 +1,7 @@
 import type { VideoNode, VideoEdge } from '../../shared/types'
+import { topologicalLevels } from '../../shared/video-studio/topological-levels'
 import { createVideoNode } from './nodes/registry'
 import type { VideoExecutionContext, VideoSocketValue } from './nodes/base-node'
-
-/**
- * Kahn's algorithm theo TẦNG (level), không chỉ 1 thứ tự phẳng — mỗi tầng là
- * tập node đã đủ input (mọi upstream của nó nằm ở tầng trước), không phụ
- * thuộc NHAU trong cùng tầng. executeVideoPipeline chạy song song mọi node
- * trong cùng 1 tầng (Promise.allSettled), tuần tự giữa các tầng — 2 node độc
- * lập (vd 2 nhánh "Vẽ Nhân Vật" không nối nhau) rơi vào CÙNG 1 tầng nên chạy
- * đồng thời thật, không chỉ "thứ tự đúng" như bản cũ (vốn luôn chạy từng
- * node một kể cả khi không phụ thuộc gì nhau).
- */
-function topologicalLevels(nodes: VideoNode[], edges: VideoEdge[]): VideoNode[][] {
-  const inDegree = new Map<string, number>(nodes.map((n) => [n.id, 0]))
-  const dependents = new Map<string, string[]>(nodes.map((n) => [n.id, []]))
-
-  for (const edge of edges) {
-    if (!inDegree.has(edge.source) || !inDegree.has(edge.target)) continue
-    inDegree.set(edge.target, (inDegree.get(edge.target) || 0) + 1)
-    dependents.get(edge.source)!.push(edge.target)
-  }
-
-  const nodeById = new Map(nodes.map((n) => [n.id, n]))
-  const levels: VideoNode[][] = []
-  let frontier = nodes.filter((n) => inDegree.get(n.id) === 0)
-  let visitedCount = 0
-
-  while (frontier.length > 0) {
-    levels.push(frontier)
-    visitedCount += frontier.length
-    const next: VideoNode[] = []
-    for (const node of frontier) {
-      for (const depId of dependents.get(node.id) || []) {
-        const remaining = (inDegree.get(depId) || 0) - 1
-        inDegree.set(depId, remaining)
-        if (remaining === 0) next.push(nodeById.get(depId)!)
-      }
-    }
-    frontier = next
-  }
-
-  if (visitedCount !== nodes.length) {
-    throw new Error('Đồ thị pipeline có vòng lặp (cycle) — không thể xác định thứ tự chạy')
-  }
-  return levels
-}
 
 async function executeNode(
   node: VideoNode,
