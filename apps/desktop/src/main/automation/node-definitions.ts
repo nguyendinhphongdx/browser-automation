@@ -737,6 +737,29 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         { label: 'Error', value: 'error' }
       ], defaultValue: 'info' }
     ]
+  },
+  {
+    type: 'download-file',
+    label: 'Tải file vào Thư viện',
+    category: 'integration',
+    icon: 'Download',
+    description: 'Tải 1 file/ảnh/video từ URL (vd src ảnh lấy được từ get-attribute) và lưu vào Thư viện tài nguyên — khác http-request (chỉ lưu response vào biến workflow, mất khi run kết thúc)',
+    inputs: 1,
+    outputs: 1,
+    configSchema: [
+      { key: 'url', label: 'URL', type: 'text', placeholder: '{{imageSrc}} hoặc https://...', required: true },
+      { key: 'kind', label: 'Loại', type: 'select', options: [
+        { label: 'File', value: 'file' },
+        { label: 'Ảnh', value: 'image' },
+        { label: 'Video', value: 'video' },
+        { label: 'Âm thanh', value: 'audio' },
+        { label: 'Data export', value: 'data-export' }
+      ], defaultValue: 'file' },
+      { key: 'name', label: 'Tên hiển thị', type: 'text', placeholder: 'Bỏ trống = lấy từ tên file trong URL' },
+      { key: 'parentId', label: 'Thư mục đích (tuỳ chọn)', type: 'text', placeholder: 'id thư mục trong Thư viện' },
+      { key: 'tags', label: 'Tags (phân cách bởi dấu phẩy)', type: 'text' },
+      { key: 'variable', label: 'Lưu id resource vào biến', type: 'text', placeholder: 'downloadedResourceId' }
+    ]
   }
 ]
 

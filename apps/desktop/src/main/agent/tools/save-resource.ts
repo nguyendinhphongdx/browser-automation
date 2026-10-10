@@ -1,6 +1,7 @@
 import { tool } from 'ai'
 import { z } from 'zod'
 import { createResourceFromBuffer, mimeTypeForExtension, defaultExtensionForKind } from '../../services/library-service'
+import { downloadToBuffer, extensionFromUrl } from '../../download'
 import type { AgentToolContext } from './types'
 
 // Tải về trước khi lưu thay vì bắt model tự nhồi base64 vào tool call — model
@@ -8,34 +9,7 @@ import type { AgentToolContext } from './types'
 // run_js chỉ thao tác DOM), nên trước patch này "content" base64 chỉ dùng
 // được cho đúng trường hợp model TỰ TAY tạo ra nội dung (text/JSON), không
 // dùng được cho ảnh/file ở 1 URL — vốn là trường hợp phổ biến nhất thực tế
-// (ảnh vừa tạo xong từ provider, ảnh tìm thấy trên trang). Giới hạn kích
-// thước cùng tinh thần MAX_PREVIEW_BYTES ở build-node-preview.ts — tránh
-// model trỏ nhầm vào 1 URL khổng lồ.
-const MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024
-
-async function downloadToBuffer(url: string): Promise<Buffer> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Tải file thất bại: ${res.status} (${url})`)
-  const contentLength = res.headers.get('content-length')
-  if (contentLength && Number(contentLength) > MAX_DOWNLOAD_BYTES) {
-    throw new Error(`File quá lớn (${contentLength} byte, giới hạn ${MAX_DOWNLOAD_BYTES} byte)`)
-  }
-  const buffer = Buffer.from(await res.arrayBuffer())
-  if (buffer.byteLength > MAX_DOWNLOAD_BYTES) {
-    throw new Error(`File quá lớn (${buffer.byteLength} byte, giới hạn ${MAX_DOWNLOAD_BYTES} byte)`)
-  }
-  return buffer
-}
-
-function extensionFromUrl(url: string): string | null {
-  try {
-    const pathname = new URL(url).pathname
-    const ext = pathname.split('.').pop()
-    return ext && /^[a-zA-Z0-9]{1,5}$/.test(ext) ? ext.toLowerCase() : null
-  } catch {
-    return null
-  }
-}
+// (ảnh vừa tạo xong từ provider, ảnh tìm thấy trên trang).
 
 export const saveResourceInputSchema = z
   .object({

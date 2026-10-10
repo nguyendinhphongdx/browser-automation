@@ -1,4 +1,7 @@
 import { BaseNode } from './base-node'
+import { downloadToBuffer, extensionFromUrl } from '../../download'
+import { createResourceFromBuffer, mimeTypeForExtension, defaultExtensionForKind } from '../../services/library-service'
+import type { LibraryResourceKind } from '../../../shared/types'
 
 export class HttpRequestNode extends BaseNode {
   protected async execute() {
@@ -75,5 +78,44 @@ export class LogNode extends BaseNode {
   protected async execute() {
     const message = this.resolve(this.config.message)
     this.log(this.config.level || 'info', message)
+  }
+}
+
+/**
+ * Tải 1 file/ảnh từ URL (thường là "{{variable}}" lấy từ 1 get-attribute
+ * trước đó, vd src của <img>) và lưu vào Thư viện — phần còn thiếu khiến
+ * workflow không thể TỰ hoàn chỉnh việc "crawl ảnh rồi lưu lại": http-request
+ * chỉ lưu response vào biến workflow (mất khi run kết thúc, không phải file
+ * nhị phân), và không node nào khác ghi vào Thư viện cả (upload-file chỉ đọc
+ * từ đó). Dùng chung downloadToBuffer/extensionFromUrl với
+ * agent/tools/save-resource.ts qua main/download.ts (platform utility dùng
+ * chung) — không duplicate logic tải file lần thứ 3.
+ */
+export class DownloadFileNode extends BaseNode {
+  protected async execute() {
+    const url = this.resolve(this.config.url)
+    const kind = (this.config.kind || 'file') as LibraryResourceKind
+    const name = this.config.name ? this.resolve(this.config.name) : url.split('/').pop() || `download-${Date.now()}`
+
+    const buffer = await downloadToBuffer(url)
+    const extension = extensionFromUrl(url) || defaultExtensionForKind(kind)
+    const tags = this.config.tags
+      ? this.resolve(this.config.tags).split(',').map((t: string) => t.trim()).filter(Boolean)
+      : []
+
+    const resource = createResourceFromBuffer({
+      name,
+      kind,
+      mimeType: mimeTypeForExtension(extension),
+      extension,
+      buffer,
+      parentId: this.config.parentId ? this.resolve(this.config.parentId) : null,
+      tags,
+      objectType: 'workflow',
+      objectId: this.ctx.workflowId ?? null
+    })
+
+    if (this.config.variable) this.setVar(this.config.variable, resource.id)
+    this.log('info', `Đã tải và lưu "${resource.name}" (${resource.id}) vào Thư viện`)
   }
 }

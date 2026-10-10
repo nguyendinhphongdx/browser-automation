@@ -8,6 +8,7 @@ import { createGetPageHtmlTool } from './get-page-html'
 import { createTakeScreenshotTool } from './take-screenshot'
 import { createRunJsTool } from './run-js'
 import { createGetWorkflowStateTool } from './get-workflow-state'
+import { createGetNodeCatalogTool } from './get-node-catalog'
 import { createGetExecutionLogsTool } from './get-execution-logs'
 import { createProposeWorkflowChangeTool } from './propose-workflow-change'
 import { createProposeDestructiveWorkflowChangeTool } from './propose-destructive-workflow-change'
@@ -51,6 +52,7 @@ export function buildToolset(ctx: AgentToolContext): ToolSet {
     take_screenshot: createTakeScreenshotTool(ctx),
     run_js: createRunJsTool(ctx),
     get_workflow_state: createGetWorkflowStateTool(ctx),
+    get_node_catalog: createGetNodeCatalogTool(ctx),
     get_execution_logs: createGetExecutionLogsTool(ctx),
     propose_workflow_change: createProposeWorkflowChangeTool(ctx),
     propose_destructive_workflow_change: createProposeDestructiveWorkflowChangeTool(ctx),

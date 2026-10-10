@@ -7,7 +7,7 @@ import type { AgentToolContext } from './types'
 // the renderer assigns the real node id only once the patch is applied.
 export const nodeInputSchema = z.object({
   id: z.string().optional().describe('id tạm để nối edge trong cùng patch này, vd "n1" — không phải id thật'),
-  nodeType: z.string().describe('loại node — xem catalog trong system prompt để biết type hợp lệ'),
+  nodeType: z.string().describe('loại node — gọi get_node_catalog trước nếu chưa chắc type nào hợp lệ và cần config gì'),
   label: z.string(),
   category: z.enum(['browser', 'interaction', 'data', 'flow', 'integration']).optional(),
   icon: z.string().optional(),

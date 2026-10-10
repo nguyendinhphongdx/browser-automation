@@ -9,7 +9,7 @@ import { GetTextNode, GetAttributeNode, GetUrlNode, GetTitleNode, CountElementsN
 // Flow
 import { DelayNode, WaitNode, ElementExistsNode } from './flow'
 // Integration
-import { HttpRequestNode, SetCookieNode, GetCookieNode, LocalStorageNode, NotificationNode, LogNode } from './integration'
+import { HttpRequestNode, SetCookieNode, GetCookieNode, LocalStorageNode, NotificationNode, LogNode, DownloadFileNode } from './integration'
 // Sub-workflow
 import { RunWorkflowNode } from './sub-workflow'
 // Data pipeline
@@ -68,6 +68,7 @@ const NODE_REGISTRY: Record<string, NodeClass> = {
   'local-storage': LocalStorageNode,
   'notification': NotificationNode,
   'log': LogNode,
+  'download-file': DownloadFileNode,
 
   // Sub-workflow
   'run-workflow': RunWorkflowNode,
