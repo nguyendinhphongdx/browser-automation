@@ -2,6 +2,8 @@ import { getSetting } from '../../services/settings-service'
 import { createKlingProvider } from './kling-provider'
 import { createRunwayProvider } from './runway-provider'
 import { createComfyUIProvider } from './comfyui-provider'
+import { createOpenAIImageProvider } from './openai-image-provider'
+import { createFluxProvider } from './flux-provider'
 import { createElevenLabsProvider } from './elevenlabs-provider'
 import { createOpenAITTSProvider } from './openai-tts-provider'
 import { createGoogleTTSProvider } from './google-tts-provider'
@@ -23,6 +25,19 @@ export function getVideoProvider(name: string): VideoProvider {
     case 'comfyui': {
       const baseUrl = getSetting('videoStudio.comfyui.baseUrl') || 'http://127.0.0.1:8188'
       return createComfyUIProvider(baseUrl)
+    }
+    case 'openai-image': {
+      const dedicated = getSetting('videoStudio.openaiImage.apiKey')
+      const aiProvider = getSetting('ai.provider')
+      const fallback = aiProvider === 'openai' ? getSetting('ai.apiKey') : null
+      const apiKey = dedicated || fallback
+      if (!apiKey) throw new Error('Chưa cấu hình OpenAI API Key cho tạo ảnh trong Cài đặt')
+      return createOpenAIImageProvider(apiKey)
+    }
+    case 'flux': {
+      const apiKey = getSetting('videoStudio.flux.apiKey')
+      if (!apiKey) throw new Error('Chưa cấu hình FLUX API Key trong Cài đặt')
+      return createFluxProvider(apiKey)
     }
     default:
       throw new Error(`Video provider không hợp lệ: "${name}"`)

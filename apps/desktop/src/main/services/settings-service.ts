@@ -10,6 +10,8 @@ const SENSITIVE_KEYS = [
   'videoStudio.kling.accessKey',
   'videoStudio.kling.secretKey',
   'videoStudio.runway.apiKey',
+  'videoStudio.openaiImage.apiKey',
+  'videoStudio.flux.apiKey',
   'videoStudio.elevenlabs.apiKey',
   'videoStudio.googleTts.apiKey'
   // videoStudio.comfyui.baseUrl và videoStudio.openaiTts.apiKey (nếu khác

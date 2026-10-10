@@ -1,6 +1,17 @@
 import type { VideoNodeDefinition } from '../../shared/types'
 
-const PROVIDER_OPTIONS = [
+const VIDEO_PROVIDER_OPTIONS = [
+  { label: 'Kling', value: 'kling' },
+  { label: 'Runway', value: 'runway' },
+  { label: 'ComfyUI (local)', value: 'comfyui' }
+]
+
+// Tách riêng khỏi VIDEO_PROVIDER_OPTIONS — FLUX/OpenAI Image là model tạo
+// ảnh chuyên dụng (không tạo video), phổ biến hơn hẳn so với chỉ mượn tạm
+// endpoint ảnh phụ của Kling/Runway.
+const IMAGE_PROVIDER_OPTIONS = [
+  { label: 'FLUX', value: 'flux' },
+  { label: 'OpenAI (gpt-image-1)', value: 'openai-image' },
   { label: 'Kling', value: 'kling' },
   { label: 'Runway', value: 'runway' },
   { label: 'ComfyUI (local)', value: 'comfyui' }
@@ -65,7 +76,7 @@ export const VIDEO_NODE_DEFINITIONS: VideoNodeDefinition[] = [
     ],
     outputs: [{ name: 'image', type: 'IMAGE', required: true }],
     configSchema: [
-      { key: 'provider', label: 'Provider', type: 'select', options: PROVIDER_OPTIONS, defaultValue: 'kling', required: true },
+      { key: 'provider', label: 'Provider', type: 'select', options: IMAGE_PROVIDER_OPTIONS, defaultValue: 'flux', required: true },
       { key: 'aspectRatio', label: 'Tỉ lệ khung hình', type: 'select', options: ASPECT_RATIO_OPTIONS, defaultValue: '16:9' },
       { key: 'negativePrompt', label: 'Negative prompt', type: 'text' }
     ]
@@ -83,7 +94,7 @@ export const VIDEO_NODE_DEFINITIONS: VideoNodeDefinition[] = [
     ],
     outputs: [{ name: 'video', type: 'VIDEO', required: true }],
     configSchema: [
-      { key: 'provider', label: 'Provider', type: 'select', options: PROVIDER_OPTIONS, defaultValue: 'kling', required: true },
+      { key: 'provider', label: 'Provider', type: 'select', options: VIDEO_PROVIDER_OPTIONS, defaultValue: 'kling', required: true },
       {
         key: 'mode',
         label: 'Chế độ',

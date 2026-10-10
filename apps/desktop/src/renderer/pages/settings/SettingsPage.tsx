@@ -389,6 +389,8 @@ const VIDEO_STUDIO_KEYS = {
   klingSecretKey: 'videoStudio.kling.secretKey',
   runwayApiKey: 'videoStudio.runway.apiKey',
   comfyuiBaseUrl: 'videoStudio.comfyui.baseUrl',
+  openaiImageApiKey: 'videoStudio.openaiImage.apiKey',
+  fluxApiKey: 'videoStudio.flux.apiKey',
   elevenlabsApiKey: 'videoStudio.elevenlabs.apiKey',
   googleTtsApiKey: 'videoStudio.googleTts.apiKey',
   openaiTtsApiKey: 'videoStudio.openaiTts.apiKey'
@@ -417,6 +419,22 @@ function VideoStudioProvidersSection() {
 
   return (
     <div className="space-y-5">
+      <div>
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tạo ảnh</h4>
+        <div className="space-y-3">
+          <MaskedKeyField
+            label="FLUX — API Key"
+            value={values[VIDEO_STUDIO_KEYS.fluxApiKey] || ''}
+            onChange={v => set(VIDEO_STUDIO_KEYS.fluxApiKey, v)}
+          />
+          <MaskedKeyField
+            label="OpenAI Image — API Key (để trống nếu dùng chung key AI Provider ở trên)"
+            value={values[VIDEO_STUDIO_KEYS.openaiImageApiKey] || ''}
+            onChange={v => set(VIDEO_STUDIO_KEYS.openaiImageApiKey, v)}
+          />
+        </div>
+      </div>
+
       <div>
         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tạo video</h4>
         <div className="space-y-3">
