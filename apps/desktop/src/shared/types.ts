@@ -154,8 +154,8 @@ export interface CookieEntry {
   updatedAt: string
 }
 
-export type LibraryResourceKind = 'folder' | 'file' | 'image' | 'prompt-template' | 'data-export'
-export type LibraryResourceObjectType = 'manual' | 'workflow' | 'agent'
+export type LibraryResourceKind = 'folder' | 'file' | 'image' | 'prompt-template' | 'data-export' | 'video' | 'audio'
+export type LibraryResourceObjectType = 'manual' | 'workflow' | 'agent' | 'video-pipeline'
 
 export interface LibraryResource {
   id: string
@@ -478,4 +478,90 @@ export interface BackupStatusItem {
   latestBackupAt: string
   checksum: string
   size: number
+}
+
+// ── Video Studio ─────────────────────────────
+// Đồ thị dataflow có kiểu (typed socket), riêng biệt hoàn toàn với
+// WorkflowNode/WorkflowEdge (đồ thị control-flow không kiểu của Automation).
+// Xem plan: không mở rộng ConfigField/WorkflowNode cho phù hợp 2 domain khác
+// nhau, mà tách type riêng — chỉ ConfigField (widget tĩnh) được tái dùng.
+
+export type VideoSocketType = 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'NUMBER' | 'BOOLEAN'
+
+export interface VideoSocketDef {
+  name: string
+  type: VideoSocketType
+  required: boolean
+}
+
+export interface VideoNodeDefinition {
+  type: string
+  label: string
+  category: 'input' | 'generate' | 'post' | 'output'
+  icon: string
+  description: string
+  inputs: VideoSocketDef[]
+  outputs: VideoSocketDef[]
+  configSchema: ConfigField[]
+}
+
+export interface VideoNodeData {
+  label: string
+  nodeType: string
+  config: Record<string, any>
+  icon?: string
+}
+
+export interface VideoNode {
+  id: string
+  type: 'videoStudioNode'
+  position: { x: number; y: number }
+  data: VideoNodeData
+}
+
+export interface VideoEdge {
+  id: string
+  source: string
+  sourceHandle: string
+  target: string
+  targetHandle: string
+}
+
+export interface VideoPipeline {
+  id: string
+  name: string
+  description: string
+  nodes: VideoNode[]
+  edges: VideoEdge[]
+  status: 'draft' | 'ready' | 'running' | 'completed' | 'error'
+  createdAt: string
+  updatedAt: string
+}
+
+export interface VideoPipelineRun {
+  id: string
+  pipelineId: string
+  status: 'running' | 'completed' | 'error'
+  logs: string // JSON array of log entries
+  startedAt: string
+  finishedAt?: string
+}
+
+export type VideoJobKind = 'video' | 'tts' | 'render'
+export type VideoJobStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+
+export interface VideoJob {
+  id: string
+  runId: string
+  nodeId: string
+  jobKind: VideoJobKind
+  provider: string
+  providerJobId: string | null
+  status: VideoJobStatus
+  params: string // JSON
+  outputResourceId: string | null
+  errorMessage: string | null
+  costEstimate: number | null
+  createdAt: string
+  updatedAt: string
 }

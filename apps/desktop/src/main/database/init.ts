@@ -203,6 +203,47 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_resources_parent ON resources(parent_id);
     CREATE INDEX IF NOT EXISTS idx_resources_kind ON resources(kind);
     CREATE INDEX IF NOT EXISTS idx_resources_object ON resources(object_type, object_id);
+
+    CREATE TABLE IF NOT EXISTS video_pipelines (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      nodes TEXT DEFAULT '[]',
+      edges TEXT DEFAULT '[]',
+      status TEXT DEFAULT 'draft',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS video_pipeline_runs (
+      id TEXT PRIMARY KEY,
+      pipeline_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'running',
+      logs TEXT DEFAULT '[]',
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finished_at TEXT,
+      FOREIGN KEY (pipeline_id) REFERENCES video_pipelines(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS video_jobs (
+      id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL,
+      node_id TEXT NOT NULL,
+      job_kind TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      provider_job_id TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      params TEXT DEFAULT '{}',
+      output_resource_id TEXT,
+      error_message TEXT,
+      cost_estimate REAL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (run_id) REFERENCES video_pipeline_runs(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_video_jobs_run ON video_jobs(run_id);
+    CREATE INDEX IF NOT EXISTS idx_video_jobs_status ON video_jobs(status);
   `)
 
   // Tạo Default Browser profile nếu chưa có

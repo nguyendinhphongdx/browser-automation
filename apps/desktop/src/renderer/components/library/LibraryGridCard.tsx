@@ -1,4 +1,4 @@
-import { FolderOpen, FileText, Database, File as FileIcon } from 'lucide-react'
+import { FolderOpen, FileText, Database, File as FileIcon, Music } from 'lucide-react'
 import type { LibraryResource } from '@shared/types'
 
 interface Props {
@@ -29,6 +29,16 @@ export function LibraryGridCard({ resource, onOpenFolder, onSelect, selected }: 
             loading="lazy"
             className="h-full w-full object-cover"
           />
+        ) : resource.kind === 'video' ? (
+          <video
+            src={`app-resource://${resource.id}`}
+            preload="metadata"
+            muted
+            playsInline
+            className="h-full w-full object-cover"
+          />
+        ) : resource.kind === 'audio' ? (
+          <Music className="h-8 w-8 text-pink-500" />
         ) : resource.kind === 'folder' ? (
           <FolderOpen className="h-8 w-8 text-amber-500" />
         ) : resource.kind === 'prompt-template' ? (

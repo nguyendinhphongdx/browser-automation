@@ -15,7 +15,11 @@ const EXTENSION_TO_MIME: Record<string, string> = {
   json: 'application/json',
   csv: 'text/csv',
   txt: 'text/plain',
-  md: 'text/plain'
+  md: 'text/plain',
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav'
 }
 
 export function mimeTypeForExtension(extension: string): string {
@@ -27,7 +31,9 @@ const DEFAULT_EXTENSION_BY_KIND: Record<LibraryResourceKind, string> = {
   image: 'png',
   'prompt-template': 'txt',
   'data-export': 'json',
-  file: 'bin'
+  file: 'bin',
+  video: 'mp4',
+  audio: 'mp3'
 }
 
 export function defaultExtensionForKind(kind: LibraryResourceKind): string {

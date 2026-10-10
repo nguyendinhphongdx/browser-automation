@@ -71,6 +71,18 @@ export function ResourceDetailModal({ resource, onClose }: Props) {
             />
           )}
 
+          {resource.kind === 'video' && (
+            <video
+              src={`app-resource://${resource.id}`}
+              controls
+              className="w-full max-h-64 rounded-lg border bg-black"
+            />
+          )}
+
+          {resource.kind === 'audio' && (
+            <audio src={`app-resource://${resource.id}`} controls className="w-full" />
+          )}
+
           {isTextKind && (
             <div>
               <label className="block text-sm font-medium mb-1.5">Nội dung</label>

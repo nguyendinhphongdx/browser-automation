@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   FolderOpen, FolderPlus, Upload, FileText, Image as ImageIcon, Database, File as FileIcon,
-  Plus, Trash2, Download, ChevronRight, Home, LayoutList, LayoutGrid
+  Plus, Trash2, Download, ChevronRight, Home, LayoutList, LayoutGrid, Video as VideoIcon, Music
 } from 'lucide-react'
 import { useLibraryStore, type LibraryKindFilter } from '@/stores/library-store'
 import type { LibraryResource } from '@shared/types'
@@ -13,6 +13,8 @@ import { ResourceDetailModal } from './ResourceDetailModal'
 const KIND_TABS: { value: LibraryKindFilter; label: string }[] = [
   { value: 'all', label: 'Tất cả' },
   { value: 'image', label: 'Ảnh' },
+  { value: 'video', label: 'Video' },
+  { value: 'audio', label: 'Âm thanh' },
   { value: 'prompt-template', label: 'Prompt' },
   { value: 'data-export', label: 'Data' },
   { value: 'file', label: 'File' }
@@ -24,6 +26,10 @@ function kindIcon(kind: LibraryResource['kind']) {
       return <FolderOpen className="h-4 w-4 text-amber-500" />
     case 'image':
       return <ImageIcon className="h-4 w-4 text-blue-500" />
+    case 'video':
+      return <VideoIcon className="h-4 w-4 text-indigo-500" />
+    case 'audio':
+      return <Music className="h-4 w-4 text-pink-500" />
     case 'prompt-template':
       return <FileText className="h-4 w-4 text-purple-500" />
     case 'data-export':
