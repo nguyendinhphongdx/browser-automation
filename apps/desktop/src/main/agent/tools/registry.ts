@@ -15,6 +15,10 @@ import { createProposeCodeChangeTool } from './propose-code-change'
 import { createListResourcesTool } from './list-resources'
 import { createGetResourceTool } from './get-resource'
 import { createSaveResourceTool } from './save-resource'
+import { createCreateLibraryFolderTool } from './create-library-folder'
+import { createMoveResourceTool } from './move-resource'
+import { createUpdateResourceMetadataTool } from './update-resource-metadata'
+import { createDeleteResourceTool } from './delete-resource'
 import { createProposeVideoPipelineChangeTool } from './propose-video-pipeline-change'
 
 /**
@@ -26,7 +30,8 @@ import { createProposeVideoPipelineChangeTool } from './propose-video-pipeline-c
 export const APPROVAL_GATED_TOOLS = [
   'run_js',
   'propose_destructive_workflow_change',
-  'propose_code_change'
+  'propose_code_change',
+  'delete_resource'
 ] as const
 
 /**
@@ -52,7 +57,11 @@ export function buildToolset(ctx: AgentToolContext): ToolSet {
     propose_code_change: createProposeCodeChangeTool(ctx),
     list_resources: createListResourcesTool(ctx),
     get_resource: createGetResourceTool(ctx),
-    save_resource: createSaveResourceTool(ctx)
+    save_resource: createSaveResourceTool(ctx),
+    create_library_folder: createCreateLibraryFolderTool(ctx),
+    move_resource: createMoveResourceTool(ctx),
+    update_resource_metadata: createUpdateResourceMetadataTool(ctx),
+    delete_resource: createDeleteResourceTool(ctx)
   }
 }
 
@@ -68,6 +77,10 @@ export function buildVideoToolset(ctx: AgentToolContext): ToolSet {
     propose_video_pipeline_change: createProposeVideoPipelineChangeTool(ctx),
     list_resources: createListResourcesTool(ctx),
     get_resource: createGetResourceTool(ctx),
-    save_resource: createSaveResourceTool(ctx)
+    save_resource: createSaveResourceTool(ctx),
+    create_library_folder: createCreateLibraryFolderTool(ctx),
+    move_resource: createMoveResourceTool(ctx),
+    update_resource_metadata: createUpdateResourceMetadataTool(ctx),
+    delete_resource: createDeleteResourceTool(ctx)
   }
 }

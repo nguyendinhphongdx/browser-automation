@@ -108,14 +108,18 @@ export function searchResources(query: string): LibraryResource[] {
   return rows.map(rowToResource)
 }
 
-export function createFolder(name: string, parentId: string | null = null): LibraryResource {
+export function createFolder(
+  name: string,
+  parentId: string | null = null,
+  objectType: LibraryResourceObjectType = 'manual'
+): LibraryResource {
   const db = getDatabase()
   const id = uuid()
   const now = new Date().toISOString()
   db.prepare(`
     INSERT INTO resources (id, parent_id, name, kind, mime_type, extension, object_type, created_at, updated_at)
-    VALUES (?, ?, ?, 'folder', 'inode/directory', '', 'manual', ?, ?)
-  `).run(id, parentId, name, now, now)
+    VALUES (?, ?, ?, 'folder', 'inode/directory', '', ?, ?, ?)
+  `).run(id, parentId, name, objectType, now, now)
   return getResourceById(id)!
 }
 
@@ -219,10 +223,41 @@ export function updateResourceContent(id: string, text: string): LibraryResource
   return getResourceById(id)
 }
 
+/**
+ * True nếu `candidateAncestorId` nằm trên đường đi từ `id` lên gốc (tức là
+ * `id` là con/cháu của nó) — dùng để chặn moveResource tạo cycle. Nhận
+ * `lookup` làm tham số thay vì gọi thẳng getResourceById/getDatabase() để
+ * test được bằng 1 Map thuần, không cần giả lập DB.
+ */
+export function isDescendantOf(
+  id: string,
+  candidateAncestorId: string,
+  lookup: (id: string) => { parentId: string | null } | null
+): boolean {
+  let cursor: string | null = candidateAncestorId
+  while (cursor) {
+    if (cursor === id) return true
+    cursor = lookup(cursor)?.parentId ?? null
+  }
+  return false
+}
+
+/**
+ * Di chuyển 1 resource sang thư mục cha mới. Chặn tạo cycle (đưa 1 thư mục
+ * vào chính con/cháu của nó) — trước patch này không có guard nào, 1 lệnh
+ * move như vậy sẽ phá cây dữ liệu (parent_id trỏ vòng, mọi code duyệt cây
+ * đệ quy — breadcrumb, xoá, render — có thể lặp vô hạn hoặc không bao giờ
+ * thấy lại được subtree đó từ gốc).
+ */
 export function moveResource(id: string, newParentId: string | null): LibraryResource | null {
   const db = getDatabase()
   const existing = getResourceById(id)
   if (!existing) return null
+
+  if (newParentId && isDescendantOf(id, newParentId, getResourceById)) {
+    throw new Error('Không thể di chuyển 1 thư mục vào chính con/cháu của nó')
+  }
+
   const now = new Date().toISOString()
   db.prepare('UPDATE resources SET parent_id = ?, updated_at = ? WHERE id = ?').run(newParentId, now, id)
   return getResourceById(id)
