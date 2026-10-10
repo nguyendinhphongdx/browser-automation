@@ -410,11 +410,12 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
     label: 'Lặp danh sách',
     category: 'flow',
     icon: 'ListOrdered',
-    description: 'Lặp qua từng phần tử khớp selector',
+    description: 'Lặp qua từng phần tử khớp selector — vd lấy src của N ảnh để tải từng cái (node "download-file" trong "body"), không cần tạo tay N cặp node lặp lại',
     inputs: 1,
     outputs: 2,
     configSchema: [
-      { key: 'selector', label: 'Selector các phần tử', type: 'selector', placeholder: '.item, tr', required: true },
+      { key: 'selector', label: 'Selector các phần tử', type: 'selector', placeholder: '.item, tr, img', required: true },
+      { key: 'attribute', label: 'Attribute (tuỳ chọn)', type: 'text', placeholder: 'vd: src, href — bỏ trống = lấy text' },
       { key: 'variable', label: 'Biến phần tử', type: 'text', defaultValue: 'element' },
       { key: 'indexVar', label: 'Biến index', type: 'text', defaultValue: 'index' }
     ]

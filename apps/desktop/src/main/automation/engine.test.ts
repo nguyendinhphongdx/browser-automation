@@ -154,3 +154,50 @@ describe('executeVisualWorkflow — parallel fork/join', () => {
     expect(ctx.logs.some((l) => l.level === 'warn' && l.message.includes('timed out'))).toBe(true)
   })
 })
+
+/** Fake Playwright locator backing N elements, each with its own text + attributes. */
+function makeFakeLocator(items: Array<{ text: string; attrs?: Record<string, string> }>) {
+  return {
+    count: async () => items.length,
+    nth: (i: number) => ({
+      textContent: async () => items[i].text,
+      getAttribute: async (name: string) => items[i].attrs?.[name] ?? null
+    })
+  }
+}
+
+describe('executeVisualWorkflow — loop-each', () => {
+  it('extracts the given attribute per element instead of textContent when "attribute" is set', async () => {
+    const page = {
+      locator: () => makeFakeLocator([{ text: 'ignored', attrs: { src: '/a.png' } }, { text: 'ignored', attrs: { src: '/b.png' } }])
+    }
+    const nodes: WorkflowNode[] = [
+      node('loop1', 'loop-each', { selector: 'img', attribute: 'src', variable: 'imgUrl' }),
+      node('log1', 'log', { message: '{{imgUrl}}' })
+    ]
+    const edges: WorkflowEdge[] = [edge('e1', 'loop1', 'log1', 'body')]
+    const ctx = makeCtx({ page: page as unknown as ExecutionContext['page'] })
+
+    await executeVisualWorkflow(makeWorkflow(nodes, edges), ctx)
+
+    // After the loop, ctx.variables.imgUrl holds the LAST iteration's value —
+    // the real signal is in the logs, which captured each iteration's resolved message.
+    const urls = ctx.logs.filter((l) => l.nodeId === 'log1' && !l.message.startsWith('Executing')).map((l) => l.message)
+    expect(urls).toEqual(['/a.png', '/b.png'])
+  })
+
+  it('still runs the body once per element using textContent, confirmed via logs', async () => {
+    const page = { locator: () => makeFakeLocator([{ text: 'Mèo' }, { text: 'Chó' }]) }
+    const nodes: WorkflowNode[] = [
+      node('loop1', 'loop-each', { selector: '.item', variable: 'name' }),
+      node('log1', 'log', { message: '{{name}}' })
+    ]
+    const edges: WorkflowEdge[] = [edge('e1', 'loop1', 'log1', 'body')]
+    const ctx = makeCtx({ page: page as unknown as ExecutionContext['page'] })
+
+    await executeVisualWorkflow(makeWorkflow(nodes, edges), ctx)
+
+    const names = ctx.logs.filter((l) => l.nodeId === 'log1' && !l.message.startsWith('Executing')).map((l) => l.message)
+    expect(names).toEqual(['Mèo', 'Chó'])
+  })
+})

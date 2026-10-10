@@ -10,6 +10,7 @@ import { ToolCallCard } from '@/components/ai-elements/ToolCallCard'
 import { ApprovalCard } from '@/components/ai-elements/ApprovalCard'
 import { PromptInput } from '@/components/ai-elements/PromptInput'
 import { BrowserPreview } from '@/components/ai-elements/BrowserPreview'
+import { AttachmentChip } from '@/components/ai-elements/AttachmentChip'
 import { ResourcePicker } from '@/components/library/ResourcePicker'
 import { useAgentRun } from './use-agent-run'
 import { useBrowserPreview } from './use-browser-preview'
@@ -31,6 +32,7 @@ const SUGGESTIONS = [
 export function AgentChatPanel({ open, onClose, profileId }: Props) {
   const { activeWorkflow, nodeDefinitions, updateNodes, updateEdges, updateCode } = useWorkflowStore()
   const [input, setInput] = useState('')
+  const [attachments, setAttachments] = useState<LibraryResource[]>([])
   const [patchError, setPatchError] = useState<string | null>(null)
   const [showResourcePicker, setShowResourcePicker] = useState(false)
   const [bypassApprovals, setBypassApprovals] = useState(() => {
@@ -107,21 +109,31 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
     }
   }, [items, bypassApprovals, respondApproval])
 
+  // Tag thật gửi cho model vẫn là "[resource:id "name"]" như cũ (AGENT_INSTRUCTIONS
+  // giờ dạy model nhận ra cú pháp này — xem rule 8), chỉ khác là người dùng
+  // không còn phải nhìn/sửa chung với văn bản họ gõ trong lúc soạn — mỗi
+  // attachment hiện thành badge riêng (AttachmentChip), ghép vào cuối tin
+  // nhắn CHỈ lúc gửi.
   const handleSend = () => {
-    const text = input
+    const text = attachments.length
+      ? `${input}\n${attachments.map((r) => `[resource:${r.id} "${r.name}"]`).join('\n')}`.trim()
+      : input
     setInput('')
+    setAttachments([])
     send(text)
   }
 
-  // Prompt-template -> insert its actual text (ready to send as-is). Any
-  // other kind -> insert a lightweight reference the model resolves later
-  // via get_resource — the chat doesn't need the file's bytes inline.
+  // Prompt-template -> insert its actual text (ready to send as-is), vẫn
+  // chèn thẳng vào ô nhập vì đây LÀ nội dung tin nhắn, không phải tham chiếu.
+  // Mọi loại khác -> thêm vào danh sách attachment (hiện badge), không đụng
+  // vào text người dùng đang gõ.
   const handlePickResource = async (resource: LibraryResource) => {
-    const insertion =
-      resource.kind === 'prompt-template'
-        ? (await window.api.getLibraryResourceText(resource.id)) ?? ''
-        : `[resource:${resource.id} "${resource.name}"]`
-    setInput((prev) => (prev ? `${prev}\n${insertion}` : insertion))
+    if (resource.kind === 'prompt-template') {
+      const text = (await window.api.getLibraryResourceText(resource.id)) ?? ''
+      setInput((prev) => (prev ? `${prev}\n${text}` : text))
+      return
+    }
+    setAttachments((prev) => (prev.some((r) => r.id === resource.id) ? prev : [...prev, resource]))
   }
 
   return (
@@ -272,6 +284,13 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
             {bypassApprovals ? 'Đang tự động duyệt mọi hành động' : 'Tự động duyệt (bỏ qua xác nhận)'}
           </button>
         </div>
+        {attachments.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {attachments.map((r) => (
+              <AttachmentChip key={r.id} resource={r} onRemove={() => setAttachments((prev) => prev.filter((a) => a.id !== r.id))} />
+            ))}
+          </div>
+        )}
         <PromptInput
           value={input}
           onChange={setInput}

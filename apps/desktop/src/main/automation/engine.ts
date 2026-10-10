@@ -198,6 +198,7 @@ async function handleLoopEach(
 ) {
   ctx.onNodeStart?.(node.id)
   const selector = resolveTemplate(node.data.config.selector, ctx.variables)
+  const attribute = node.data.config.attribute ? resolveTemplate(node.data.config.attribute, ctx.variables) : ''
   const varName = node.data.config.variable || 'element'
   const indexVar = node.data.config.indexVar || 'index'
   const bodyNodes = getNextNodes(node.id, edges, 'body')
@@ -206,7 +207,12 @@ async function handleLoopEach(
 
   for (let i = 0; i < count && !ctx.aborted; i++) {
     ctx.variables[indexVar] = i
-    ctx.variables[varName] = await ctx.page.locator(selector).nth(i).textContent()
+    // Mặc định lấy textContent (hành vi cũ) — nếu khai "attribute" (vd
+    // "src"/"href"), lấy attribute đó thay vào, cho phép body dùng được
+    // ngay (vd download-file với url: {{element}}) mà không cần dựng lại 1
+    // selector chỉ-đúng-phần-tử-thứ-i kiểu nth-of-type dễ lệch index.
+    const locator = ctx.page.locator(selector).nth(i)
+    ctx.variables[varName] = attribute ? await locator.getAttribute(attribute) : await locator.textContent()
     addLog(ctx, 'info', `Loop-each ${i + 1}/${count}`, node.id)
     for (const bodyId of bodyNodes) {
       const bodyNode = nodesMap.get(bodyId)
