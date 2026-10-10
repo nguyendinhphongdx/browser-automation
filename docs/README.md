@@ -105,6 +105,7 @@ Architecture Decision Record — quyết định kiến trúc đã chốt + alte
 |---|---|---|
 | 0001 | [⚪ Window.api composition](adr/0001-window-api-composition.md) | Superseded bởi 0002 — vẫn giữ vì phần lỗi `TS2717` đã thử-và-fail còn đúng |
 | 0002 | [Window.api derive từ preload](adr/0002-window-api-derive-from-preload.md) | `Window.api` lấy type trực tiếp từ `export type API` của `preload.ts`, không khai tay — sửa luôn 17 lỗi baseline do drift |
+| 0003 | [Fan-in Video Studio giả định không có node điều kiện](adr/0003-video-studio-fanin-join-assumes-no-conditional-nodes.md) | Join đếm `inDegree` tĩnh an toàn CHỈ vì catalog node hiện tại không có router — vỡ nếu thêm node điều kiện |
 
 ## [development/](development/) — Đóng góp code
 
