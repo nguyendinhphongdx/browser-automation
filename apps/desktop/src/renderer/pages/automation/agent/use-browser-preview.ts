@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-
-export type BrowserPreviewStatus = 'idle' | 'starting' | 'live' | 'unavailable'
+import type { BrowserPreviewStatus } from '@/components/ai-elements/BrowserPreview'
 
 interface BrowserPreviewFramePayload {
   profileId: string

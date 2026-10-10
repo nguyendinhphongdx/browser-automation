@@ -2,47 +2,31 @@
 
 [← Về mục lục](../README.md) · [← 00-tong-quan](00-tong-quan.md)
 
-Quyết định đầy đủ (kèm alternative đã thử-và-fail) ghi ở [ADR-0001](../adr/0001-window-api-composition.md) — file này chỉ nêu cây đích để code mới theo đúng ngay từ đầu.
+Quyết định đầy đủ (kèm 2 alternative đã thử-và-fail) ghi ở [ADR-0002](../adr/0002-window-api-derive-from-preload.md) (supersede [ADR-0001](../adr/0001-window-api-composition.md)) — file này chỉ nêu đích để code mới theo đúng ngay từ đầu.
 
-## Hiện trạng (chưa đạt đích)
+## Rule bắt buộc: `Window.api` LẤY TYPE từ `preload.ts`, không khai tay
 
-`renderer/stores/profile-store.ts` hiện giữ 1 block `declare global { interface Window { api: {...} } } }` duy nhất, liệt kê 95+ method của MỌI domain (Profile, Workflow, Campaign, AI Agent, Resource Library, Video Studio...). Code mới **không thêm tiếp** vào block này — xem đích dưới đây.
-
-## Đích
-
-Mỗi domain's store file tự export 1 interface `<Domain>API` cho riêng domain đó:
+`main/preload.ts` đã tự export `export type API = typeof api` — đây là nguồn sự thật DUY NHẤT cho shape của `window.api` (chính là implementation thật, không thể drift). `renderer/types/electron-api.ts` chỉ import type đó và `declare global` — không bao giờ tự liệt kê lại method.
 
 ```ts
-// renderer/stores/video-studio-store.ts
-export interface VideoStudioAPI {
-  getVideoPipelines: () => Promise<VideoPipeline[]>
-  runVideoPipeline: (pipelineId: string) => Promise<{ runId: string; status: string; error?: string }>
-  // ... chỉ method của domain này
-}
-```
-
-1 file DUY NHẤT làm aggregator — `renderer/types/electron-api.ts` (file mới, không thuộc store nào cụ thể):
-
-```ts
-// renderer/types/electron-api.ts
-import type { ProfileAPI } from '../stores/profile-store'
-import type { WorkflowAPI } from '../stores/workflow-store'
-import type { VideoStudioAPI } from '../stores/video-studio-store'
-// ... import API interface của mọi domain
-
-export type ElectronAPI = ProfileAPI & WorkflowAPI & VideoStudioAPI /* & ... */ & {
-  on: (channel: string, callback: (...args: any[]) => void) => () => void
-}
+// renderer/types/electron-api.ts — toàn bộ file, không có gì khác
+import type { API } from '../../main/preload'
 
 declare global {
   interface Window {
-    api: ElectronAPI
+    api: API
   }
 }
+
+export type {}
 ```
 
-Chỉ file này có `declare global` — không rải nhiều block `declare global { interface Window {...} } }` ở nhiều file (xem vì sao trong ADR-0001).
+Thêm method mới cho `window.api` → sửa **duy nhất** `main/preload.ts` (thêm vào `api = {...}` + handler IPC tương ứng) — `Window.api` tự động có đúng type ngay, không có "chỗ thứ 2" cần nhớ sửa.
+
+## Vì sao không tách interface theo domain (đã từng định làm — xem ADR-0001)
+
+Mục tiêu "đọc theo domain" đã được giải quyết tại nguồn: `preload.ts`'s `api = {...}` tự chia theo comment từng domain (`// Profile`, `// Workflow`, `// Video Studio`...). Muốn biết domain nào có method gì → đọc trực tiếp ở đó, không cần interface riêng.
 
 ## Đọc tiếp
 
-- [ADR-0001: Window.api composition](../adr/0001-window-api-composition.md)
+- [ADR-0002: Window.api derive từ preload](../adr/0002-window-api-derive-from-preload.md)

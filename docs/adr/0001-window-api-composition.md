@@ -1,9 +1,9 @@
 # ADR-0001: `Window.api` composition theo domain thay vì 1 block khổng lồ
 
-🟢 Accepted
+⚪ Superseded by [ADR-0002](0002-window-api-derive-from-preload.md)
 
 - **Date**: 2026-10-10
-- **Status**: Accepted
+- **Status**: Superseded — lúc viết ADR này chưa kiểm tra `main/preload.ts` có sẵn `export type API = typeof api`, nên chọn hướng phức tạp hơn cần thiết. Giữ lại file này vì phần "Alternatives considered" (lỗi `TS2717` thật) vẫn đúng và đáng không-thử-lại.
 
 ## Context
 

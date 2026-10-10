@@ -1,5 +1,7 @@
 import { Loader2, MonitorOff, Radio } from 'lucide-react'
-import type { BrowserPreviewStatus } from '@/pages/automation/agent/use-browser-preview'
+
+/** Owned here (shared component), not by use-browser-preview.ts — components/ never imports from pages/, see docs/conventions/02-renderer-layering.md. */
+export type BrowserPreviewStatus = 'idle' | 'starting' | 'live' | 'unavailable'
 
 interface Props {
   status: BrowserPreviewStatus

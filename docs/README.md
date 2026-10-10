@@ -95,7 +95,7 @@ Kiến trúc NÊN THEO cho code mới (SOLID + design pattern có chủ đích) 
 | 01 | [Main process layering](conventions/01-main-process-layering.md) | Cây thư mục `main/` đích, IPC→service→domain engine→provider |
 | 02 | [Renderer layering](conventions/02-renderer-layering.md) | Cây thư mục `renderer/` đích, rule `components/` vs `pages/` |
 | 03 | [Domain boundaries](conventions/03-domain-boundaries.md) | Domain chỉ lộ ra qua service file của nó |
-| 04 | [Window.api contract](conventions/04-window-api-contract.md) | Đích cho preload bridge, liên quan ADR-0001 |
+| 04 | [Window.api contract](conventions/04-window-api-contract.md) | Đích cho preload bridge, liên quan ADR-0002 |
 
 ## [adr/](adr/) — Vì sao chọn vậy
 
@@ -103,7 +103,8 @@ Architecture Decision Record — quyết định kiến trúc đã chốt + alte
 
 | # | Tài liệu | Nội dung |
 |---|---|---|
-| 0001 | [Window.api composition](adr/0001-window-api-composition.md) | Vì sao tách theo domain + 1 aggregator, không phải nhiều `declare global` block riêng |
+| 0001 | [⚪ Window.api composition](adr/0001-window-api-composition.md) | Superseded bởi 0002 — vẫn giữ vì phần lỗi `TS2717` đã thử-và-fail còn đúng |
+| 0002 | [Window.api derive từ preload](adr/0002-window-api-derive-from-preload.md) | `Window.api` lấy type trực tiếp từ `export type API` của `preload.ts`, không khai tay — sửa luôn 17 lỗi baseline do drift |
 
 ## [development/](development/) — Đóng góp code
 

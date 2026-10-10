@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { ModelMessage } from 'ai'
-import type { WorkflowNode, WorkflowEdge, WorkflowMode, LibraryResourceKind } from '../shared/types'
+import type { WorkflowNode, WorkflowEdge, WorkflowMode, LibraryResourceKind, VideoNode, VideoEdge } from '../shared/types'
 
 const ALLOWED_CHANNELS = new Set([
   'auth:deeplink-success',
@@ -164,9 +164,12 @@ const api = {
   // one-way 'agent:event' channel (see the `on`/`off` wrapper below)
   runAgent: (payload: {
     runId: string
-    profileId: string
+    domain?: 'automation' | 'video-studio'
+    profileId?: string
     workflowId?: string
-    workflowSnapshot: { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
+    workflowSnapshot?: { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
+    videoPipelineId?: string
+    videoPipelineSnapshot?: { nodes: VideoNode[]; edges: VideoEdge[] }
     messages: ModelMessage[]
   }) => ipcRenderer.invoke('agent:run', payload),
   respondAgentApproval: (payload: { approvalId: string; approved: boolean; reason?: string }) =>
