@@ -129,6 +129,49 @@ describe('AgentService.run', () => {
     ])
   })
 
+  it('does not drop a response that arrives the instant the approval-request event fires (bypass-mode race)', async () => {
+    // Regression test: waitForApproval() used to only register AFTER the
+    // whole stream had drained (reading pendingRequests from `content`).
+    // A responder fast enough to call resolveApproval() synchronously from
+    // inside the `emit` callback — exactly what bypass-mode's auto-approve
+    // effect does, with no human reaction time in between — would call
+    // resolveApproval() before that registration ever happened, find
+    // nothing in pendingApprovals, silently no-op, and the run would hang
+    // forever. Registration now happens in the stream loop itself, before
+    // emit() is ever called for that part.
+    const approvalRequestPart = {
+      type: 'tool-approval-request',
+      approvalId: 'appr-fast',
+      toolCall: { toolCallId: 't1', toolName: 'run_js', input: { code: '1+1' } },
+      isAutomatic: false
+    }
+    streamImpl
+      .mockResolvedValueOnce(
+        fakeStreamResult([approvalRequestPart], [approvalRequestPart], [{ role: 'assistant', content: [] }])
+      )
+      .mockResolvedValueOnce(
+        fakeStreamResult([{ type: 'text-start', id: 'm2' }], [{ type: 'text', text: 'done' }], [])
+      )
+
+    const service = new AgentService()
+    const events: AGUIEvent[] = []
+    const runPromise = service.run(
+      { runId: 'r1', threadId: 't1', messages: [], toolContext: makeCtx() },
+      (e) => {
+        events.push(e)
+        if (e.type === EventType.CUSTOM && e.name === 'tool-approval-request') {
+          service.resolveApproval({ approvalId: 'appr-fast', approved: true })
+        }
+      }
+    )
+
+    await runPromise
+
+    expect(streamImpl).toHaveBeenCalledTimes(2)
+    const finished = events.at(-1) as Extract<AGUIEvent, { type: EventType.RUN_FINISHED }>
+    expect(finished.outcome).toEqual({ type: 'success' })
+  })
+
   it('finishes as cancelled (not an error) when cancelled while waiting on approval', async () => {
     const approvalRequestPart = {
       type: 'tool-approval-request',

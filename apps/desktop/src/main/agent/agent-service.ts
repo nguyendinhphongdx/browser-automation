@@ -1,10 +1,4 @@
-import {
-  ToolLoopAgent,
-  type ModelMessage,
-  type ToolApprovalResponse,
-  type ToolApprovalRequestOutput,
-  type ToolSet
-} from 'ai'
+import { ToolLoopAgent, type ModelMessage, type ToolApprovalResponse } from 'ai'
 import { EventType, type AGUIEvent, type AgentApprovalResponse } from '../../shared/agent/ag-ui-events'
 import { resolveAgentModel } from './model-provider'
 import { adaptStreamPart } from './ag-ui-adapter'
@@ -100,6 +94,8 @@ export class AgentService {
       const model = resolveAgentModel()
       const tools = domain === 'video-studio' ? buildVideoToolset(toolContext) : buildToolset(toolContext)
       const instructions = domain === 'video-studio' ? VIDEO_AGENT_INSTRUCTIONS : AGENT_INSTRUCTIONS
+      const modelLabel = typeof model === 'string' ? model : `${model.provider}/${model.modelId}`
+      this.log(runId, `run bắt đầu — domain=${domain} model=${modelLabel} tools=[${Object.keys(tools).join(', ')}]`)
       // APPROVAL_GATED_TOOLS chỉ liệt kê tool của domain 'automation' —
       // Object.fromEntries ở đây vô hại cho domain 'video-studio' vì
       // propose_video_pipeline_change không nằm trong tools (ToolLoopAgent
@@ -134,39 +130,70 @@ export class AgentService {
       // `tool` message, and call `.stream()` again with the extended
       // history — this is AI SDK's own documented resume pattern for
       // `toolApproval`, just looped instead of done once.
+      let turn = 0
       while (!abortController.signal.aborted) {
+        turn++
+        this.log(runId, `gọi model lần ${turn} — ${messages.length} tin nhắn trong lịch sử`)
         const result = await agent.stream({ messages, abortSignal: abortController.signal })
 
         let aborted = false
+        // Register waitForApproval() the INSTANT the stream yields the
+        // request — i.e. before adaptStreamPart's event even reaches the
+        // renderer, let alone gets answered. Doing this AFTER the loop (via
+        // `content`, as this used to) raced a fast responder (bypass mode
+        // especially — it answers within the same React render, no human
+        // reaction time to lose the race) against this very registration:
+        // resolveApproval() would run, find nothing yet in pendingApprovals
+        // (the Map entry didn't exist until the content-based pass below
+        // got to it), silently no-op, and the run would hang forever
+        // waiting on a response that already arrived and was dropped.
+        const pendingApprovalPromises: Promise<AgentApprovalResponse>[] = []
         for await (const part of result.stream) {
           if (part.type === 'abort') aborted = true
+          if (part.type === 'tool-input-start') {
+            this.log(runId, `gọi tool "${part.toolName}"`)
+          }
+          if (part.type === 'tool-approval-request') {
+            const toolName = (part.toolCall as { toolName?: string })?.toolName ?? '?'
+            this.log(runId, `tool "${toolName}" cần duyệt — approvalId=${part.approvalId} isAutomatic=${!!part.isAutomatic}`)
+            if (!part.isAutomatic) {
+              pendingApprovalPromises.push(this.waitForApproval(part.approvalId, abortController.signal))
+            }
+          }
+          if (part.type === 'tool-result') {
+            this.log(runId, `tool "${part.toolName}" xong`)
+          }
+          if (part.type === 'tool-error') {
+            this.log(runId, `tool "${part.toolName}" lỗi: ${part.error instanceof Error ? part.error.message : String(part.error)}`)
+          }
           for (const event of adaptStreamPart(part)) emit(event)
         }
 
         if (aborted) {
+          this.log(runId, 'run bị huỷ (abort)')
           emit({ type: EventType.RUN_FINISHED, threadId, runId, outcome: { type: 'cancelled' }, timestamp: Date.now() })
           finished = true
           break
         }
 
-        const content = await result.content
+        // Still awaited for whatever internal settling AI SDK does between
+        // stream-drained and responseMessages being ready — just no longer
+        // read directly; pendingRequests used to be filtered from this, now
+        // sourced from the stream loop above instead (see comment there).
+        await result.content
         const responseMessages = await result.responseMessages
         messages = [...messages, ...responseMessages]
 
-        const pendingRequests = content.filter(
-          (part): part is ToolApprovalRequestOutput<ToolSet> =>
-            part.type === 'tool-approval-request' && !part.isAutomatic
-        )
-
-        if (pendingRequests.length === 0) {
+        if (pendingApprovalPromises.length === 0) {
+          this.log(runId, 'run hoàn tất')
           emit({ type: EventType.RUN_FINISHED, threadId, runId, outcome: { type: 'success' }, timestamp: Date.now() })
           finished = true
           break
         }
 
-        const responses = await Promise.all(
-          pendingRequests.map((part) => this.waitForApproval(part.approvalId, abortController.signal))
-        )
+        this.log(runId, `đang chờ ${pendingApprovalPromises.length} approval...`)
+        const responses = await Promise.all(pendingApprovalPromises)
+        this.log(runId, `đã nhận đủ ${responses.length} approval — ${responses.map((r) => (r.approved ? 'cho phép' : 'từ chối')).join(', ')}`)
 
         const toolApprovalMessage: ModelMessage = {
           role: 'tool',
@@ -184,13 +211,12 @@ export class AgentService {
     } catch (err) {
       if (!finished) {
         if (err instanceof RunCancelledWhileWaitingError) {
+          this.log(runId, 'run bị huỷ trong lúc đang chờ approval')
           emit({ type: EventType.RUN_FINISHED, threadId, runId, outcome: { type: 'cancelled' }, timestamp: Date.now() })
         } else {
-          emit({
-            type: EventType.RUN_ERROR,
-            message: err instanceof Error ? err.message : String(err),
-            timestamp: Date.now()
-          })
+          const message = err instanceof Error ? err.message : String(err)
+          this.log(runId, `run lỗi: ${message}`)
+          emit({ type: EventType.RUN_ERROR, message, timestamp: Date.now() })
         }
       }
     } finally {
@@ -202,14 +228,34 @@ export class AgentService {
   resolveApproval(response: AgentApprovalResponse): void {
     const resolve = this.pendingApprovals.get(response.approvalId)
     if (resolve) {
+      console.log(`[AgentService] resolveApproval: approvalId=${response.approvalId} approved=${response.approved}`)
       resolve(response)
       this.pendingApprovals.delete(response.approvalId)
+    } else {
+      // Should only happen for a genuinely stale approvalId (run already
+      // finished/cancelled) — a response for one still in flight must always
+      // find its entry now that waitForApproval() registers from the stream
+      // loop itself (see run()). Logging instead of staying silent is what
+      // would have made the race this fixed obvious immediately, instead of
+      // surfacing only as "it's been stuck a long time" in the UI.
+      console.warn(`[AgentService] resolveApproval: không tìm thấy approvalId "${response.approvalId}" đang chờ`)
     }
   }
 
   /** Called from agent-handlers.ts's `agent:cancel` handler. */
   cancel(runId: string): void {
     this.abortControllers.get(runId)?.abort()
+  }
+
+  /**
+   * Terminal log of the agent loop's lifecycle — model calls, tool calls,
+   * approval wait/resolve — visible in the `pnpm desktop:dev` main-process
+   * console, independent of the renderer UI (added to debug a run that
+   * silently hangs: the terminal trace shows exactly which step it never
+   * got past, instead of just "it's been stuck a long time").
+   */
+  private log(runId: string, message: string): void {
+    console.log(`[AgentService][${runId}] ${message}`)
   }
 
   /**
