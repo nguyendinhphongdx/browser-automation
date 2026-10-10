@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Trash2, X, Link as LinkIcon } from 'lucide-react'
+import { Trash2, X, Link as LinkIcon, FolderOpen } from 'lucide-react'
 import { useVideoStudioStore } from '@/stores/video-studio-store'
+import { ResourcePicker } from '@/components/library/ResourcePicker'
 import type { LibraryResource, ConfigField } from '@shared/types'
 
 export function VideoNodePropertiesPanel() {
   const { activePipeline, selectedNodeId, setSelectedNode, updateNodes, nodeDefinitions } = useVideoStudioStore()
   const [resources, setResources] = useState<LibraryResource[]>([])
+  const [pickerOpenFor, setPickerOpenFor] = useState<string | null>(null)
 
   useEffect(() => {
     window.api.getLibraryResources?.()?.then?.((rs: LibraryResource[]) => setResources(rs || []))?.catch?.(() => {})
@@ -97,20 +99,34 @@ export function VideoNodePropertiesPanel() {
                   ))}
                 </select>
               ) : field.type === 'resource-select' ? (
-                <select
-                  value={config[field.key] || ''}
-                  onChange={(e) => updateConfig(field.key, e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">-- Chọn tài nguyên --</option>
-                  {resources
-                    .filter((r) => r.kind !== 'folder' && (!field.resourceKind || r.kind === field.resourceKind))
-                    .map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                </select>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={config[field.key] || ''}
+                    onChange={(e) => updateConfig(field.key, e.target.value)}
+                    className="flex-1 px-3 py-2 border rounded-lg bg-background text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">-- Chọn tài nguyên --</option>
+                    {resources
+                      .filter((r) =>
+                      field.resourceKind === 'folder'
+                        ? r.kind === 'folder'
+                        : r.kind !== 'folder' && (!field.resourceKind || r.kind === field.resourceKind)
+                    )
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setPickerOpenFor(field.key)}
+                    className="shrink-0 p-2 border rounded-lg hover:bg-accent transition-colors"
+                    title="Mở thư viện"
+                  >
+                    <FolderOpen className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               ) : null}
             </div>
           )
@@ -126,6 +142,19 @@ export function VideoNodePropertiesPanel() {
           Xoá node này
         </button>
       </div>
+
+      <ResourcePicker
+        open={pickerOpenFor !== null}
+        onClose={() => setPickerOpenFor(null)}
+        onSelect={(resource) => {
+          if (pickerOpenFor) updateConfig(pickerOpenFor, resource.id)
+        }}
+        filterKind={
+          pickerOpenFor
+            ? definition?.configSchema.find((f: ConfigField) => f.key === pickerOpenFor)?.resourceKind
+            : undefined
+        }
+      />
     </div>
   )
 }

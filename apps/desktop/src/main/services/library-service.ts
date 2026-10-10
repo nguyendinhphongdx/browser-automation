@@ -26,6 +26,18 @@ export function mimeTypeForExtension(extension: string): string {
   return EXTENSION_TO_MIME[extension.toLowerCase().replace(/^\./, '')] || 'application/octet-stream'
 }
 
+/**
+ * "HH:mm:ss DD/MM/YYYY" — gắn vào tên tự sinh (không phải do người dùng tự
+ * đặt) để phân biệt những lần lưu trùng tên hiển thị (vd tải cùng 1 file
+ * "image.png" nhiều lần — id trong DB luôn khác nhau nhưng tên nhìn thấy thì
+ * không, gây nhầm lẫn khi duyệt Thư viện bằng mắt). Đọc được ngay (giờ/ngày
+ * thật), không phải epoch number vô nghĩa như `Date.now()`.
+ */
+export function timestampSuffix(date: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`
+}
+
 const DEFAULT_EXTENSION_BY_KIND: Record<LibraryResourceKind, string> = {
   folder: '',
   image: 'png',

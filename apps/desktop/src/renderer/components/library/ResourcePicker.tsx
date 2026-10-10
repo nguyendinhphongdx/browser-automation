@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, Search, ChevronRight, Home } from 'lucide-react'
+import { X, Search, ChevronRight, Home, Check } from 'lucide-react'
 import { LibraryGridCard } from './LibraryGridCard'
 import type { LibraryResource, LibraryResourceKind } from '@shared/types'
 
@@ -84,6 +84,14 @@ export function ResourcePicker({ open, onClose, onSelect, filterKind }: Props) {
   if (!open) return null
 
   const filtered = resources.filter((r) => r.kind === 'folder' || !kinds || kinds.includes(r.kind))
+  // Chế độ "chỉ chọn thư mục" (vd parentId của download-file/save_resource) —
+  // click vào 1 thư mục trong lưới vẫn MỞ nó ra như bình thường (để đi sâu
+  // hơn), nút riêng này mới là "chọn đúng chỗ đang đứng" làm giá trị —
+  // không có nó thì thư mục GỐC (không có resource đại diện) không có cách
+  // nào chọn được, và muốn chọn 1 thư mục rỗng/không có gì bên trong cũng
+  // phải click đại vào chính nó trong lưới cha, dễ nhầm với "mở ra".
+  const folderSelectOnly = kinds?.length === 1 && kinds[0] === 'folder'
+  const currentFolderName = breadcrumb.length > 0 ? breadcrumb[breadcrumb.length - 1].name : 'Gốc thư viện'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -108,22 +116,36 @@ export function ResourcePicker({ open, onClose, onSelect, filterKind }: Props) {
           </div>
 
           {!query && (
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <button onClick={() => goToBreadcrumb(-1)} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                <Home className="h-3.5 w-3.5" />
-                Gốc
-              </button>
-              {breadcrumb.map((b, i) => (
-                <span key={b.id} className="flex items-center gap-1">
-                  <ChevronRight className="h-3.5 w-3.5" />
-                  <button
-                    onClick={() => goToBreadcrumb(i)}
-                    className={i === breadcrumb.length - 1 ? 'text-foreground font-medium' : 'hover:text-foreground transition-colors'}
-                  >
-                    {b.name}
-                  </button>
-                </span>
-              ))}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1 text-sm text-muted-foreground min-w-0">
+                <button onClick={() => goToBreadcrumb(-1)} className="flex items-center gap-1 shrink-0 hover:text-foreground transition-colors">
+                  <Home className="h-3.5 w-3.5" />
+                  Gốc
+                </button>
+                {breadcrumb.map((b, i) => (
+                  <span key={b.id} className="flex items-center gap-1 min-w-0">
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                    <button
+                      onClick={() => goToBreadcrumb(i)}
+                      className={`truncate ${i === breadcrumb.length - 1 ? 'text-foreground font-medium' : 'hover:text-foreground transition-colors'}`}
+                    >
+                      {b.name}
+                    </button>
+                  </span>
+                ))}
+              </div>
+              {folderSelectOnly && (
+                <button
+                  onClick={() => {
+                    onSelect({ id: currentFolderId || '', name: currentFolderName, kind: 'folder' } as LibraryResource)
+                    onClose()
+                  }}
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  Chọn &quot;{currentFolderName}&quot;
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -134,7 +156,7 @@ export function ResourcePicker({ open, onClose, onSelect, filterKind }: Props) {
           ) : filtered.length === 0 ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">Không có gì ở đây</div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-3">
               {filtered.map((r) => (
                 <LibraryGridCard
                   key={r.id}

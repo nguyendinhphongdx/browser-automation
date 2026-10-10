@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isDescendantOf } from './library-service'
+import { isDescendantOf, timestampSuffix } from './library-service'
 
 function makeLookup(tree: Record<string, string | null>) {
   return (id: string) => (id in tree ? { parentId: tree[id] } : null)
@@ -36,5 +36,18 @@ describe('isDescendantOf', () => {
   it('false at the root with no parent chain at all', () => {
     const lookup = makeLookup({ a: null, b: null })
     expect(isDescendantOf('a', 'b', lookup)).toBe(false)
+  })
+})
+
+describe('timestampSuffix', () => {
+  it('formats as "HH:mm:ss DD/MM/YYYY", zero-padded', () => {
+    const d = new Date(2026, 2, 5, 9, 7, 3) // 5/3/2026, 09:07:03 — tháng Date() 0-indexed
+    expect(timestampSuffix(d)).toBe('09:07:03 05/03/2026')
+  })
+
+  it('two calls a moment apart produce different strings (the whole point — distinguishing repeat saves)', () => {
+    const a = timestampSuffix(new Date(2026, 0, 1, 10, 0, 0))
+    const b = timestampSuffix(new Date(2026, 0, 1, 10, 0, 1))
+    expect(a).not.toBe(b)
   })
 })

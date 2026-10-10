@@ -72,15 +72,30 @@ describe('DownloadFileNode', () => {
     expect(downloadToBuffer).toHaveBeenCalledWith('https://cdn.example.com/x.jpg')
   })
 
-  it('derives the resource name from the url when "name" is not given', async () => {
+  it('derives the resource name from the url + a timestamp when "name" is not given — distinguishes repeat downloads of the same filename', async () => {
     downloadToBuffer.mockResolvedValue(Buffer.from('bytes'))
     extensionFromUrl.mockReturnValue('png')
-    createResourceFromBuffer.mockReturnValue({ id: 'r3', name: 'cat.png' })
+    createResourceFromBuffer.mockReturnValue({ id: 'r3', name: 'cat.png ...' })
 
     const node = new DownloadFileNode(makeCtx(), makeInput({ url: 'https://cdn.example.com/path/cat.png' }))
     await node.run()
 
-    expect(createResourceFromBuffer.mock.calls[0][0].name).toBe('cat.png')
+    const name = createResourceFromBuffer.mock.calls[0][0].name as string
+    expect(name).toMatch(/^cat\.png \d{2}:\d{2}:\d{2} \d{2}\/\d{2}\/\d{4}$/)
+  })
+
+  it('leaves a user-provided "name" untouched — no timestamp appended', async () => {
+    downloadToBuffer.mockResolvedValue(Buffer.from('bytes'))
+    extensionFromUrl.mockReturnValue('png')
+    createResourceFromBuffer.mockReturnValue({ id: 'r3b', name: 'Ảnh nhân vật chính' })
+
+    const node = new DownloadFileNode(
+      makeCtx(),
+      makeInput({ url: 'https://cdn.example.com/path/cat.png', name: 'Ảnh nhân vật chính' })
+    )
+    await node.run()
+
+    expect(createResourceFromBuffer.mock.calls[0][0].name).toBe('Ảnh nhân vật chính')
   })
 
   it('does not require a variable — the saved resource id is optional to capture', async () => {

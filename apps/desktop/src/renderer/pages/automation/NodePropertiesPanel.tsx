@@ -200,7 +200,11 @@ export function NodePropertiesPanel() {
                   >
                     <option value="">-- Chọn tài nguyên --</option>
                     {resources
-                      .filter(r => r.kind !== 'folder' && (!field.resourceKind || r.kind === field.resourceKind))
+                      .filter(r =>
+                        field.resourceKind === 'folder'
+                          ? r.kind === 'folder'
+                          : r.kind !== 'folder' && (!field.resourceKind || r.kind === field.resourceKind)
+                      )
                       .map(r => (
                         <option key={r.id} value={r.id}>{r.name}</option>
                       ))}

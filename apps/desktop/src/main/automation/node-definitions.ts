@@ -756,7 +756,7 @@ export const NODE_DEFINITIONS: NodeDefinition[] = [
         { label: 'Data export', value: 'data-export' }
       ], defaultValue: 'file' },
       { key: 'name', label: 'Tên hiển thị', type: 'text', placeholder: 'Bỏ trống = lấy từ tên file trong URL' },
-      { key: 'parentId', label: 'Thư mục đích (tuỳ chọn)', type: 'text', placeholder: 'id thư mục trong Thư viện' },
+      { key: 'parentId', label: 'Thư mục đích (tuỳ chọn)', type: 'resource-select', resourceKind: 'folder' },
       { key: 'tags', label: 'Tags (phân cách bởi dấu phẩy)', type: 'text' },
       { key: 'variable', label: 'Lưu id resource vào biến', type: 'text', placeholder: 'downloadedResourceId' }
     ]

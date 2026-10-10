@@ -1,4 +1,5 @@
-import { FolderOpen, FileText, Database, File as FileIcon, Music } from 'lucide-react'
+import { useState } from 'react'
+import { FolderOpen, FileText, Database, File as FileIcon, Music, ImageOff } from 'lucide-react'
 import type { LibraryResource } from '@shared/types'
 
 interface Props {
@@ -9,6 +10,8 @@ interface Props {
 }
 
 export function LibraryGridCard({ resource, onOpenFolder, onSelect, selected }: Props) {
+  const [imgFailed, setImgFailed] = useState(false)
+
   const handleClick = () => {
     if (resource.kind === 'folder') onOpenFolder(resource)
     else onSelect(resource)
@@ -21,14 +24,17 @@ export function LibraryGridCard({ resource, onOpenFolder, onSelect, selected }: 
         selected ? 'border-primary bg-primary/5' : ''
       }`}
     >
-      <div className="flex h-20 w-full items-center justify-center overflow-hidden rounded-lg bg-muted/50">
-        {resource.kind === 'image' ? (
+      <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg bg-muted/50">
+        {resource.kind === 'image' && !imgFailed ? (
           <img
             src={`app-resource://${resource.id}`}
             alt={resource.name}
             loading="lazy"
+            onError={() => setImgFailed(true)}
             className="h-full w-full object-cover"
           />
+        ) : resource.kind === 'image' ? (
+          <ImageOff className="h-8 w-8 text-muted-foreground" />
         ) : resource.kind === 'video' ? (
           <video
             src={`app-resource://${resource.id}`}
@@ -49,7 +55,7 @@ export function LibraryGridCard({ resource, onOpenFolder, onSelect, selected }: 
           <FileIcon className="h-8 w-8 text-muted-foreground" />
         )}
       </div>
-      <span className="w-full truncate text-xs font-medium" title={resource.name}>
+      <span className="line-clamp-2 w-full text-xs font-medium leading-snug" title={resource.name}>
         {resource.name}
       </span>
     </button>

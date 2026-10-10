@@ -1,6 +1,6 @@
 import { BaseNode } from './base-node'
 import { downloadToBuffer, extensionFromUrl } from '../../download'
-import { createResourceFromBuffer, mimeTypeForExtension, defaultExtensionForKind } from '../../services/library-service'
+import { createResourceFromBuffer, mimeTypeForExtension, defaultExtensionForKind, timestampSuffix } from '../../services/library-service'
 import type { LibraryResourceKind } from '../../../shared/types'
 
 export class HttpRequestNode extends BaseNode {
@@ -95,7 +95,13 @@ export class DownloadFileNode extends BaseNode {
   protected async execute() {
     const url = this.resolve(this.config.url)
     const kind = (this.config.kind || 'file') as LibraryResourceKind
-    const name = this.config.name ? this.resolve(this.config.name) : url.split('/').pop() || `download-${Date.now()}`
+    // Tên tự sinh (người dùng không đặt "name") luôn gắn thêm giờ/ngày — 2
+    // lần tải cùng 1 URL (hay 2 file trùng tên base) ra 2 tên nhìn phân biệt
+    // được trên Thư viện, không chỉ khác id ngầm. Tên người dùng tự đặt giữ
+    // nguyên, không tự ý gắn thêm gì.
+    const name = this.config.name
+      ? this.resolve(this.config.name)
+      : `${url.split('/').pop() || 'download'} ${timestampSuffix()}`
 
     const buffer = await downloadToBuffer(url)
     const extension = extensionFromUrl(url) || defaultExtensionForKind(kind)
