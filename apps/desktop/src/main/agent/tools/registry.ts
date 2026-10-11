@@ -28,6 +28,7 @@ import { createCreateTaskTool } from './create-task'
 import { createUpdateTaskStatusTool } from './update-task-status'
 import { createListProjectTasksTool } from './list-project-tasks'
 import { createMoveTaskTool } from './move-task'
+import { createListProjectsTool } from './list-projects'
 
 /**
  * Builds the full toolset for one agent run, closing over that run's
@@ -121,5 +122,20 @@ export function buildProjectToolset(ctx: AgentToolContext): ToolSet {
     update_task_status: createUpdateTaskStatusTool(ctx),
     list_project_tasks: createListProjectTasksTool(ctx),
     move_task: createMoveTaskTool(ctx)
+  }
+}
+
+/**
+ * Toolset cho domain 'general' (ADR-0006) — trợ lý chung, mount ở
+ * Layout.tsx, dùng được từ MỌI trang. Giống buildProjectToolset (mọi tool
+ * Project/Task + thư viện đều nhận id qua tham số tool, không qua
+ * AgentToolContext, nên gọi được không cần biết "đang ở trang nào"), cộng
+ * thêm list_projects vì trợ lý chung không có 1 projectId cố định như trang
+ * Project — phải tự tra được "đang có project nào" trước.
+ */
+export function buildGeneralToolset(ctx: AgentToolContext): ToolSet {
+  return {
+    ...buildProjectToolset(ctx),
+    list_projects: createListProjectsTool(ctx)
   }
 }

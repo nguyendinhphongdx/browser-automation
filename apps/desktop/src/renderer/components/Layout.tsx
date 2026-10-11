@@ -14,12 +14,20 @@ import {
   User,
   LogOut,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n'
 import { useAuthStore } from '@/stores/auth-store'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { AgentChatPanel } from '@/components/agent/AgentChatPanel'
+
+const GENERAL_AGENT_SUGGESTIONS = [
+  'Tôi có những project nào?',
+  'Tóm tắt sổ tay của project X',
+  'Tìm trong Thư viện ảnh nhân vật tên "Tí Sún"'
+]
 
 const navItems = [
   { to: '/profiles', labelKey: 'nav.profiles', icon: Users },
@@ -38,6 +46,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { user, isLoggedIn, checkAuth, logout } = useAuthStore()
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(false)
+  const [showGeneralAI, setShowGeneralAI] = useState(false)
 
   useKeyboardShortcuts()
 
@@ -162,8 +171,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 relative flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto">{children}</div>
+
+        {/* Trợ lý chung (ADR-0006) — nổi ở mọi trang, độc lập với nút AI
+            riêng của Automation/Video Studio/Project (vẫn giữ nguyên) */}
+        <button
+          onClick={() => setShowGeneralAI((v) => !v)}
+          className="absolute bottom-5 right-5 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105"
+          title="Trợ lý chung"
+        >
+          <Sparkles className="h-5 w-5" />
+        </button>
+
+        <AgentChatPanel
+          domain="general"
+          open={showGeneralAI}
+          onClose={() => setShowGeneralAI(false)}
+          buildRunContext={() => ({})}
+          title="Trợ lý chung"
+          description="Quản lý Thư viện và Project từ bất kỳ trang nào. Chưa thấy được workflow/pipeline đang mở ở Automation/Video Studio — mở đúng trang đó để AI ở đó hỗ trợ."
+          suggestions={GENERAL_AGENT_SUGGESTIONS}
+          placeholder="Hỏi về Thư viện hoặc Project..."
+        />
       </main>
     </div>
   )

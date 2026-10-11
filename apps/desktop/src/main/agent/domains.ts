@@ -1,8 +1,8 @@
 import type { ToolSet } from 'ai'
 import type { AgentToolContext } from './tools/types'
-import { buildAutomationToolset, buildVideoToolset, buildProjectToolset } from './tools/registry'
+import { buildAutomationToolset, buildVideoToolset, buildProjectToolset, buildGeneralToolset } from './tools/registry'
 
-export type AgentDomain = 'automation' | 'video-studio' | 'project'
+export type AgentDomain = 'automation' | 'video-studio' | 'project' | 'general'
 
 interface AgentDomainConfig {
   instructions: string
@@ -77,6 +77,22 @@ Quy tắc bắt buộc:
 5. Tin nhắn người dùng có thể chứa "[resource:<id> "<tên>"]" — 1 resource họ đã đính kèm từ Thư viện (qua nút đính kèm trên giao diện chat) — LUÔN gọi get_resource(id) để đọc nội dung/đường dẫn thật trước khi dùng tới nó.
 6. Chỉ dùng create_project khi người dùng rõ ràng muốn bắt đầu 1 project MỚI khác (không phải project đang mở) — không tự ý tạo project mới khi đang được giao việc trong 1 project đã có.`
 
+// System prompt cho domain 'general' (ADR-0006) — trợ lý chung mount ở
+// Layout.tsx, dùng được từ MỌI trang (không chỉ Project). KHÁC
+// PROJECT_AGENT_INSTRUCTIONS ở chỗ không có 1 projectId cố định sẵn — phải
+// tự tra bằng list_projects trước. Nói rõ giới hạn hiện tại (không thấy
+// được canvas Automation/Video Studio) theo đúng tinh thần ADR-0003: ghi rõ
+// giả định/giới hạn đã biết trước, không giấu.
+const GENERAL_AGENT_INSTRUCTIONS = `Bạn là trợ lý AI chung của app BrowserAuto, dùng được từ mọi trang — chuyên quản lý Thư viện tài nguyên và các Project.
+
+Quy tắc bắt buộc:
+1. Nếu người dùng nói tên 1 project (vd "project phim hoạt hình") mà không cho id, LUÔN gọi list_projects trước để tra ra đúng id — đừng đoán hay bịa id.
+2. Trước khi làm bất kỳ việc gì thuộc 1 project cụ thể, LUÔN gọi get_project_context(projectId) để biết sổ tay dự án, cây thư mục thật, và danh sách task — đừng tự đoán cấu trúc hay giả định đã biết nội dung trước đó.
+3. Dùng create_project để bắt đầu project mới, create_task/update_task_status/list_project_tasks/move_task để quản lý tiến độ, update_project_notebook để tóm tắt lại ngữ cảnh sau khi hoàn thành 1 task quan trọng (không dán nguyên văn, giữ sổ tay luôn gọn).
+4. Dùng list_resources/get_resource/save_resource/create_library_folder/move_resource/update_resource_metadata để quản lý Thư viện, delete_resource để xoá hẳn (cần người dùng duyệt trước, không hoàn tác được).
+5. GIỚI HẠN QUAN TRỌNG: bạn KHÔNG thấy và KHÔNG sửa được workflow đang mở ở trang Automation hay pipeline đang mở ở trang Video Studio — những việc đó (dựng/sửa workflow, dựng pipeline video) phải nhờ đúng AI ở trang đó làm, không tự nhận làm được rồi báo sai. Việc của bạn chỉ gói gọn trong Thư viện và Project.
+6. Tin nhắn người dùng có thể chứa "[resource:<id> "<tên>"]" — 1 resource họ đã đính kèm từ Thư viện — LUÔN gọi get_resource(id) để đọc nội dung/đường dẫn thật trước khi dùng tới nó.`
+
 export const AGENT_DOMAINS: Record<AgentDomain, AgentDomainConfig> = {
   automation: {
     instructions: AGENT_INSTRUCTIONS,
@@ -91,6 +107,11 @@ export const AGENT_DOMAINS: Record<AgentDomain, AgentDomainConfig> = {
   project: {
     instructions: PROJECT_AGENT_INSTRUCTIONS,
     buildToolset: buildProjectToolset,
+    approvalGatedTools: ['delete_resource']
+  },
+  general: {
+    instructions: GENERAL_AGENT_INSTRUCTIONS,
+    buildToolset: buildGeneralToolset,
     approvalGatedTools: ['delete_resource']
   }
 }

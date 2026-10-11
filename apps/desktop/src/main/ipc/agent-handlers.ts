@@ -93,6 +93,28 @@ export function registerAgentHandlers(ipcMain: IpcMain) {
       return { success: true }
     }
 
+    // Domain 'general' (ADR-0006) — trợ lý chung mount ở Layout.tsx, dùng
+    // được từ mọi trang, không gắn với 1 project/profile/canvas cụ thể nào.
+    // toolContext inert giống nhánh 'project' vì cùng lý do: không tool nào
+    // trong buildGeneralToolset đọc ctx.
+    if (domain === 'general') {
+      const threadId = 'general'
+      const toolContext: AgentToolContext = {
+        page: null,
+        profileId: '',
+        workflowSnapshot: { nodes: [], edges: [] },
+        nodeDefinitions: [],
+        onScreenshot,
+        onResourcePreview
+      }
+
+      await agentService.run(
+        { runId, threadId, messages: payload.messages, toolContext, domain },
+        (aguiEvent) => emit({ runId, event: aguiEvent })
+      )
+      return { success: true }
+    }
+
     // '' from the profile dropdown means "Default browser" (same convention
     // automation-handlers.ts's workflow:run already follows) — not "no
     // profile selected". Resolve it here so every downstream use (thread id,

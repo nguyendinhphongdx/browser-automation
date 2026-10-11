@@ -167,7 +167,7 @@ const api = {
   // one-way 'agent:event' channel (see the `on`/`off` wrapper below)
   runAgent: (payload: {
     runId: string
-    domain?: 'automation' | 'video-studio' | 'project'
+    domain?: 'automation' | 'video-studio' | 'project' | 'general'
     profileId?: string
     workflowId?: string
     workflowSnapshot?: { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }

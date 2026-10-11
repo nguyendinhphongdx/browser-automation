@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ModelMessage } from 'ai'
 import { EventType, type AGUIEvent, type AgentApprovalRequest, type AgentEventEnvelope } from '@shared/agent/ag-ui-events'
 
-export type AgentDomain = 'automation' | 'video-studio' | 'project'
+export type AgentDomain = 'automation' | 'video-studio' | 'project' | 'general'
 
 // Derived straight from preload.ts's `runAgent` payload type (ADR-0002 style
 // — single source of truth, no hand-kept duplicate) minus the 3 fields this
