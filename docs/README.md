@@ -109,6 +109,7 @@ Architecture Decision Record — quyết định kiến trúc đã chốt + alte
 | 0004 | [Project & Task — theo dõi tiến độ phủ trên Thư viện](adr/0004-project-task-production-tracking.md) | Project = 1 folder Thư viện + bảng `tasks` theo dõi tiến độ riêng; ngữ cảnh gốc là tool động (`get_project_context`), không phải file tĩnh |
 | 0005 | [Unified AI Agent — domain registry](adr/0005-unified-agent-domain-registry.md) | Tool/instructions/config agent tách theo domain (registry `AGENT_DOMAINS`), UI chat dùng chung 1 component — sửa luôn lỗi approval treo ở domain video-studio |
 | 0006 | [Trợ lý chung (domain 'general')](adr/0006-general-assistant-domain.md) | Mount AI ở `Layout.tsx` cho mọi trang, toolset = project + 1 tool `list_projects` mới — không chặn đường điều phối sang domain khác sau này |
+| 0007 | [Điều phối sang domain khác](adr/0007-agent-orchestration.md) | Trợ lý chung `delegate_to_*` chạy sub-agent trên workflow/pipeline ĐÃ LƯU trong DB (không cần trang đang mở), ghi thẳng DB — bỏ qua re-validate 2 lớp của renderer |
 
 ## [development/](development/) — Đóng góp code
 
