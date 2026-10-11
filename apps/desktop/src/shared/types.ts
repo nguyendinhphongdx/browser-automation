@@ -155,7 +155,7 @@ export interface CookieEntry {
 }
 
 export type LibraryResourceKind = 'folder' | 'file' | 'image' | 'prompt-template' | 'data-export' | 'video' | 'audio'
-export type LibraryResourceObjectType = 'manual' | 'workflow' | 'agent' | 'video-pipeline'
+export type LibraryResourceObjectType = 'manual' | 'workflow' | 'agent' | 'video-pipeline' | 'task'
 
 export interface LibraryResource {
   id: string
@@ -564,4 +564,63 @@ export interface VideoJob {
   costEstimate: number | null
   createdAt: string
   updatedAt: string
+}
+
+// ── Project & Task (ADR-0004) ──────────────────
+// Project luôn gắn 1 folder trong Resource Library (libraryFolderId) — không
+// phải 1 hệ lưu trữ song song. Task là lớp theo dõi tiến độ mỏng phủ lên đó;
+// output thật của Task là 1 LibraryResource gắn objectType:'task'.
+
+export interface Project {
+  id: string
+  name: string
+  description: string
+  libraryFolderId: string
+  notebookResourceId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateProjectInput {
+  name: string
+  description?: string
+}
+
+export interface UpdateProjectInput {
+  name?: string
+  description?: string
+  notebookResourceId?: string | null
+}
+
+export type TaskStatus = 'todo' | 'in-progress' | 'done'
+
+export interface Task {
+  id: string
+  projectId: string
+  title: string
+  status: TaskStatus
+  parentTaskId: string | null
+  sequence: number
+  outputFolderId: string | null
+  notes: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateTaskInput {
+  projectId: string
+  title: string
+  parentTaskId?: string | null
+  sequence?: number
+  outputFolderId?: string | null
+  notes?: string
+}
+
+export interface UpdateTaskInput {
+  title?: string
+  status?: TaskStatus
+  parentTaskId?: string | null
+  sequence?: number
+  outputFolderId?: string | null
+  notes?: string
 }

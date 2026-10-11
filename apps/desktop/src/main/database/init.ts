@@ -244,6 +244,33 @@ export function initDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_video_jobs_run ON video_jobs(run_id);
     CREATE INDEX IF NOT EXISTS idx_video_jobs_status ON video_jobs(status);
+
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      library_folder_id TEXT NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+      notebook_resource_id TEXT REFERENCES resources(id) ON DELETE SET NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'todo',
+      parent_task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
+      sequence INTEGER NOT NULL DEFAULT 0,
+      output_folder_id TEXT REFERENCES resources(id) ON DELETE SET NULL,
+      notes TEXT DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
+    CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent_task_id);
   `)
 
   // Tạo Default Browser profile nếu chưa có

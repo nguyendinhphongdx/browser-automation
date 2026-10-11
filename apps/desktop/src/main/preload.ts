@@ -1,6 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { ModelMessage } from 'ai'
-import type { WorkflowNode, WorkflowEdge, WorkflowMode, LibraryResourceKind, VideoNode, VideoEdge } from '../shared/types'
+import type {
+  WorkflowNode, WorkflowEdge, WorkflowMode, LibraryResourceKind, VideoNode, VideoEdge,
+  UpdateProjectInput, CreateTaskInput, UpdateTaskInput, TaskStatus
+} from '../shared/types'
 
 const ALLOWED_CHANNELS = new Set([
   'auth:deeplink-success',
@@ -212,6 +215,18 @@ const api = {
   getLibraryResourceText: (id: string) => ipcRenderer.invoke('library:getTextContent', id),
   getLibraryResourceDataUrl: (id: string) => ipcRenderer.invoke('library:getDataUrl', id),
   exportLibraryResource: (id: string) => ipcRenderer.invoke('library:exportToDisk', id),
+
+  // Project & Task (ADR-0004)
+  getProjects: () => ipcRenderer.invoke('project:getAll'),
+  getProject: (id: string) => ipcRenderer.invoke('project:get', id),
+  createProject: (data: { name: string; description?: string }) => ipcRenderer.invoke('project:create', data),
+  updateProject: (id: string, data: UpdateProjectInput) => ipcRenderer.invoke('project:update', id, data),
+  deleteProject: (id: string) => ipcRenderer.invoke('project:delete', id),
+  getTasksByProject: (projectId: string) => ipcRenderer.invoke('task:getByProject', projectId),
+  createTask: (data: CreateTaskInput) => ipcRenderer.invoke('task:create', data),
+  updateTask: (id: string, data: UpdateTaskInput) => ipcRenderer.invoke('task:update', id, data),
+  updateTaskStatus: (id: string, status: TaskStatus) => ipcRenderer.invoke('task:updateStatus', id, status),
+  deleteTask: (id: string) => ipcRenderer.invoke('task:delete', id),
 
   // Events (restricted to allowed channels). Returns an unsubscribe
   // function — callers should not try to pair calls via `off()` by passing

@@ -14,6 +14,7 @@ import { registerBrowserPreviewHandlers } from './ipc/browser-preview-handlers'
 import { registerLibraryHandlers } from './ipc/library-handlers'
 import { registerLibrarySchemeAsPrivileged, registerLibraryProtocol } from './ipc/library-protocol'
 import { registerVideoStudioHandlers } from './ipc/video-studio-handlers'
+import { registerProjectHandlers } from './ipc/project-handlers'
 import { startScheduler, stopScheduler } from './automation/scheduler'
 import { startWebhookServer, stopWebhookServer } from './automation/webhook-server'
 import { closeAllBrowsers } from './browser/launcher'
@@ -153,6 +154,7 @@ app.whenReady().then(() => {
   registerLibraryHandlers(ipcMain)
   registerLibraryProtocol()
   registerVideoStudioHandlers(ipcMain)
+  registerProjectHandlers(ipcMain)
 
   // IPC: mở browser để đăng nhập
   ipcMain.handle('auth:openBrowser', async () => {
