@@ -34,6 +34,29 @@ import { createListPipelinesTool } from './list-pipelines'
 import { createDelegateToAutomationTool } from './delegate-to-automation'
 import { createDelegateToVideoStudioTool } from './delegate-to-video-studio'
 import { createDelegateToProjectTool } from './delegate-to-project'
+import { createListCampaignsTool } from './list-campaigns'
+import { createCreateCampaignTool } from './create-campaign'
+import { createUpdateCampaignTool } from './update-campaign'
+import { createDuplicateCampaignTool } from './duplicate-campaign'
+import { createDeleteCampaignTool } from './delete-campaign'
+import { createListCookiesTool } from './list-cookies'
+import { createCreateCookieTool } from './create-cookie'
+import { createUpdateCookieTool } from './update-cookie'
+import { createDeleteCookieTool } from './delete-cookie'
+import { createListProxiesTool } from './list-proxies'
+import { createCreateProxyTool } from './create-proxy'
+import { createUpdateProxyTool } from './update-proxy'
+import { createDeleteProxyTool } from './delete-proxy'
+import { createCheckProxyTool } from './check-proxy'
+import { createListEmailsTool } from './list-emails'
+import { createCreateEmailTool } from './create-email'
+import { createUpdateEmailTool } from './update-email'
+import { createDeleteEmailTool } from './delete-email'
+import { createListProfilesTool } from './list-profiles'
+import { createCreateProfileTool } from './create-profile'
+import { createUpdateProfileTool } from './update-profile'
+import { createDuplicateProfileTool } from './duplicate-profile'
+import { createDeleteProfileTool } from './delete-profile'
 
 /**
  * Builds the full toolset for one agent run, closing over that run's
@@ -146,6 +169,29 @@ export function buildGeneralToolset(ctx: AgentToolContext): ToolSet {
     list_pipelines: createListPipelinesTool(ctx),
     delegate_to_automation: createDelegateToAutomationTool(ctx),
     delegate_to_video_studio: createDelegateToVideoStudioTool(ctx),
-    delegate_to_project: createDelegateToProjectTool(ctx)
+    delegate_to_project: createDelegateToProjectTool(ctx),
+    list_campaigns: createListCampaignsTool(ctx),
+    create_campaign: createCreateCampaignTool(ctx),
+    update_campaign: createUpdateCampaignTool(ctx),
+    duplicate_campaign: createDuplicateCampaignTool(ctx),
+    delete_campaign: createDeleteCampaignTool(ctx),
+    list_cookies: createListCookiesTool(ctx),
+    create_cookie: createCreateCookieTool(ctx),
+    update_cookie: createUpdateCookieTool(ctx),
+    delete_cookie: createDeleteCookieTool(ctx),
+    list_proxies: createListProxiesTool(ctx),
+    create_proxy: createCreateProxyTool(ctx),
+    update_proxy: createUpdateProxyTool(ctx),
+    delete_proxy: createDeleteProxyTool(ctx),
+    check_proxy: createCheckProxyTool(ctx),
+    list_emails: createListEmailsTool(ctx),
+    create_email: createCreateEmailTool(ctx),
+    update_email: createUpdateEmailTool(ctx),
+    delete_email: createDeleteEmailTool(ctx),
+    list_profiles: createListProfilesTool(ctx),
+    create_profile: createCreateProfileTool(ctx),
+    update_profile: createUpdateProfileTool(ctx),
+    duplicate_profile: createDuplicateProfileTool(ctx),
+    delete_profile: createDeleteProfileTool(ctx)
   }
 }

@@ -91,7 +91,10 @@ Quy tắc bắt buộc:
 3. Dùng create_project để bắt đầu project mới, create_task/update_task_status/list_project_tasks/move_task để quản lý tiến độ, update_project_notebook để tóm tắt lại ngữ cảnh sau khi hoàn thành 1 task quan trọng (không dán nguyên văn, giữ sổ tay luôn gọn).
 4. Dùng list_resources/get_resource/save_resource/create_library_folder/move_resource/update_resource_metadata để quản lý Thư viện, delete_resource để xoá hẳn (cần người dùng duyệt trước, không hoàn tác được).
 5. ĐIỀU PHỐI: dùng delegate_to_automation(workflowId, task)/delegate_to_video_studio(videoPipelineId, task)/delegate_to_project(projectId, task) để giao 1 việc cụ thể cho đúng trợ lý domain đó tự làm. GIỚI HẠN QUAN TRỌNG cần nói rõ cho người dùng khi liên quan: sub-agent làm việc trên bản ĐÃ LƯU trong DB, KHÔNG phải canvas đang mở ở trang đó — nếu trang Automation/Video Studio đang mở với thay đổi CHƯA lưu, kết quả điều phối có thể bị đè khi người dùng bấm Lưu sau. Sub-agent cũng không có trình duyệt thật và không tự làm được việc cần người duyệt (vd xoá) — sẽ báo lại thay vì tự làm.
-6. Tin nhắn người dùng có thể chứa "[resource:<id> "<tên>"]" — 1 resource họ đã đính kèm từ Thư viện — LUÔN gọi get_resource(id) để đọc nội dung/đường dẫn thật trước khi dùng tới nó.`
+6. Tin nhắn người dùng có thể chứa "[resource:<id> "<tên>"]" — 1 resource họ đã đính kèm từ Thư viện — LUÔN gọi get_resource(id) để đọc nội dung/đường dẫn thật trước khi dùng tới nó.
+7. Quản lý Campaigns: list_campaigns/create_campaign/update_campaign/duplicate_campaign/delete_campaign. KHÔNG có tool chạy/dừng 1 campaign thật — nếu người dùng muốn chạy, báo họ tự bấm Chạy trên trang Campaigns.
+8. Quản lý Resources (khác Thư viện): cookie (list_cookies/create_cookie/update_cookie/delete_cookie), proxy (list_proxies/create_proxy/update_proxy/delete_proxy/check_proxy), email (list_emails/create_email/update_email/delete_email). Các tool list KHÔNG trả về cookie/mật khẩu/username thật (dữ liệu nhạy cảm) — khi tạo/sửa, dùng ĐÚNG giá trị người dùng cung cấp trực tiếp trong tin nhắn, không tự bịa ra mật khẩu/username/cookie.
+9. Quản lý Profiles (hồ sơ trình duyệt chống dấu vết): list_profiles/create_profile/update_profile/duplicate_profile/delete_profile. KHÔNG có tool mở/đóng browser thật — nếu người dùng muốn mở 1 profile, báo họ tự bấm trên trang Profiles hoặc chuyển sang chat ở Automation.`
 
 export const AGENT_DOMAINS: Record<AgentDomain, AgentDomainConfig> = {
   automation: {
@@ -116,6 +119,19 @@ export const AGENT_DOMAINS: Record<AgentDomain, AgentDomainConfig> = {
     // lớp của renderer (ADR-0007) — rủi ro cao hơn tool thường, cần người
     // duyệt trước khi chạy thật. delegate_to_project KHÔNG gate vì tool
     // Project/Task gọi trực tiếp qua buildGeneralToolset đã sẵn không gate.
-    approvalGatedTools: ['delete_resource', 'delegate_to_automation', 'delegate_to_video_studio']
+    // delete_campaign/cookie/proxy/email/profile — xoá vĩnh viễn không hoàn
+    // tác (ADR-0008); check_proxy — hành động mạng thật (TCP) do model khởi
+    // tạo, cùng mức rủi ro với các hành động side-effecting khác.
+    approvalGatedTools: [
+      'delete_resource',
+      'delegate_to_automation',
+      'delegate_to_video_studio',
+      'delete_campaign',
+      'delete_cookie',
+      'delete_proxy',
+      'delete_email',
+      'delete_profile',
+      'check_proxy'
+    ]
   }
 }
