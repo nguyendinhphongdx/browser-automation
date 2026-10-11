@@ -1,5 +1,5 @@
-import type { NodeDefinition, WorkflowNode, WorkflowEdge } from '@shared/types'
-import { validateWorkflowPatch, type ExistingNodeRef } from '@shared/agent/validate-workflow-patch'
+import type { NodeDefinition, WorkflowNode, WorkflowEdge } from '../types'
+import { validateWorkflowPatch, type ExistingNodeRef } from './validate-workflow-patch'
 
 // Loose shapes matching main/agent/tools/propose-workflow-change.ts's Zod
 // schemas — not importing those directly since that file pulls in 'ai'/'zod'
@@ -39,6 +39,11 @@ export interface ApplyWorkflowPatchResult {
  * touching it, since a long multi-step run can span the user editing the
  * canvas by hand in between. Pure function: returns the new nodes/edges,
  * caller is responsible for actually calling updateNodes()/updateEdges().
+ *
+ * Moved from renderer/pages/automation/agent/ into shared/ (ADR-0007) so
+ * main process's delegate_to_automation tool can reuse the exact same
+ * validation+mutation logic when persisting a patch straight to the DB
+ * (no renderer canvas open) instead of duplicating it.
  */
 export function applyWorkflowPatch(
   patch: WorkflowChangePatch,

@@ -14,7 +14,7 @@ import { VideoStudioNode } from './VideoStudioNode'
 import { VideoNodePalette } from './VideoNodePalette'
 import { VideoNodePropertiesPanel } from './VideoNodePropertiesPanel'
 import { AgentChatPanel } from '@/components/agent/AgentChatPanel'
-import { applyVideoPipelinePatch, type VideoPipelineChangePatch } from './agent/apply-video-pipeline-patch'
+import { applyVideoPipelinePatch, type VideoPipelineChangePatch } from '@shared/video-studio/apply-video-pipeline-patch'
 
 const nodeTypes = { videoStudioNode: VideoStudioNode }
 

@@ -29,6 +29,11 @@ import { createUpdateTaskStatusTool } from './update-task-status'
 import { createListProjectTasksTool } from './list-project-tasks'
 import { createMoveTaskTool } from './move-task'
 import { createListProjectsTool } from './list-projects'
+import { createListWorkflowsTool } from './list-workflows'
+import { createListPipelinesTool } from './list-pipelines'
+import { createDelegateToAutomationTool } from './delegate-to-automation'
+import { createDelegateToVideoStudioTool } from './delegate-to-video-studio'
+import { createDelegateToProjectTool } from './delegate-to-project'
 
 /**
  * Builds the full toolset for one agent run, closing over that run's
@@ -136,6 +141,11 @@ export function buildProjectToolset(ctx: AgentToolContext): ToolSet {
 export function buildGeneralToolset(ctx: AgentToolContext): ToolSet {
   return {
     ...buildProjectToolset(ctx),
-    list_projects: createListProjectsTool(ctx)
+    list_projects: createListProjectsTool(ctx),
+    list_workflows: createListWorkflowsTool(ctx),
+    list_pipelines: createListPipelinesTool(ctx),
+    delegate_to_automation: createDelegateToAutomationTool(ctx),
+    delegate_to_video_studio: createDelegateToVideoStudioTool(ctx),
+    delegate_to_project: createDelegateToProjectTool(ctx)
   }
 }

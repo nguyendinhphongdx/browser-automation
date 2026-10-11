@@ -1,6 +1,6 @@
-import type { VideoNodeDefinition, VideoNode, VideoEdge } from '@shared/types'
-import { validateVideoPipelinePatch, type ExistingVideoNodeRef } from '@shared/video-studio/validate-pipeline-patch'
-import { topologicalLevels } from '@shared/video-studio/topological-levels'
+import type { VideoNodeDefinition, VideoNode, VideoEdge } from '../types'
+import { validateVideoPipelinePatch, type ExistingVideoNodeRef } from './validate-pipeline-patch'
+import { topologicalLevels } from './topological-levels'
 
 interface PatchNodeInput {
   id?: string
@@ -29,6 +29,11 @@ export interface ApplyVideoPipelinePatchResult {
 /**
  * Mirror apply-workflow-patch.ts — lớp validate thứ 2 (chống canvas đã đổi
  * giữa chừng run dài) + mutation thật, cho đồ thị Video Studio.
+ *
+ * Moved from renderer/pages/video-studio/agent/ into shared/video-studio/
+ * (ADR-0007) so main process's delegate_to_video_studio tool can reuse
+ * nguyên bản khi persist patch thẳng vào DB (không có canvas renderer đang
+ * mở) thay vì viết trùng.
  */
 export function applyVideoPipelinePatch(
   patch: VideoPipelineChangePatch,

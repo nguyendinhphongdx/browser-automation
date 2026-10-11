@@ -1,5 +1,11 @@
 import { ToolLoopAgent, type ModelMessage, type ToolApprovalResponse } from 'ai'
-import { EventType, type AGUIEvent, type AgentApprovalResponse } from '../../shared/agent/ag-ui-events'
+import { randomUUID } from 'crypto'
+import {
+  EventType,
+  type AGUIEvent,
+  type AgentApprovalRequest,
+  type AgentApprovalResponse
+} from '../../shared/agent/ag-ui-events'
 import { resolveAgentModel } from './model-provider'
 import { adaptStreamPart } from './ag-ui-adapter'
 import { AGENT_DOMAINS, type AgentDomain } from './domains'
@@ -174,6 +180,70 @@ export class AgentService {
     }
   }
 
+  /**
+   * Runs 1 "sub-agent" turn to completion and resolves with just its final
+   * text — used by the 'general' domain's delegate_to_* tools (ADR-0007) to
+   * hand a task off to another domain's agent without a renderer page open
+   * for it. Reuses `run()` entirely (same loop, same approval machinery),
+   * only the `emit` differs: nothing streams out to a real `agent:event`
+   * subscriber (this isn't a run any renderer is watching), and any
+   * approval-gated tool the sub-agent tries gets auto-DENIED the instant it
+   * comes up — there's no human available to answer it mid-delegation, and
+   * defaulting to deny is the safe direction (vs. auto-approving, which
+   * would let a delegated task silently do something destructive).
+   *
+   * `onToolResult` mirrors the renderer's `useAgentRun` callback shape
+   * (ADR-0005) on purpose — same generalization, now reused server-side so
+   * a delegate_to_* tool can react to e.g. propose_workflow_change's result
+   * and persist the patch straight to the DB itself.
+   */
+  async runSubAgent(opts: {
+    domain: AgentDomain
+    toolContext: AgentToolContext
+    task: string
+    onToolResult?: (toolName: string, resultText: string, ok: boolean) => void
+  }): Promise<{ ok: boolean; text: string }> {
+    const runId = `sub-${randomUUID()}`
+    const toolNameById = new Map<string, string>()
+    let text = ''
+    let errorMessage: string | null = null
+
+    await new Promise<void>((resolve) => {
+      const emit: EmitFn = (event) => {
+        if (event.type === EventType.TEXT_MESSAGE_CONTENT) {
+          text += event.delta
+        }
+        if (event.type === EventType.TOOL_CALL_START) {
+          toolNameById.set(event.toolCallId, event.toolCallName)
+        }
+        if (event.type === EventType.TOOL_CALL_RESULT) {
+          const toolName = toolNameById.get(event.toolCallId)
+          if (toolName && opts.onToolResult) {
+            const contentText = typeof event.content === 'string' ? event.content : JSON.stringify(event.content)
+            opts.onToolResult(toolName, contentText, resultOk(event.content))
+          }
+        }
+        if (event.type === EventType.CUSTOM && event.name === 'tool-approval-request') {
+          const req = event.value as AgentApprovalRequest
+          this.resolveApproval({
+            approvalId: req.approvalId,
+            approved: false,
+            reason: 'Hành động cần người duyệt không thể tự chạy trong 1 task được giao (delegate) — thực hiện trực tiếp nếu thật sự cần.'
+          })
+        }
+        if (event.type === EventType.RUN_ERROR) errorMessage = event.message
+        if (event.type === EventType.RUN_FINISHED || event.type === EventType.RUN_ERROR) resolve()
+      }
+
+      this.run(
+        { runId, threadId: runId, messages: [{ role: 'user', content: opts.task }], toolContext: opts.toolContext, domain: opts.domain },
+        emit
+      )
+    })
+
+    return errorMessage ? { ok: false, text: errorMessage } : { ok: true, text: text.trim() || '(không có phản hồi)' }
+  }
+
   /** Called from agent-handlers.ts's `agent:respondApproval` handler. */
   resolveApproval(response: AgentApprovalResponse): void {
     const resolve = this.pendingApprovals.get(response.approvalId)
@@ -226,6 +296,16 @@ export class AgentService {
         resolve(response)
       })
     })
+  }
+}
+
+function resultOk(content: unknown): boolean {
+  const contentText = typeof content === 'string' ? content : JSON.stringify(content)
+  try {
+    const parsed = JSON.parse(contentText) as { ok?: unknown }
+    return parsed.ok === true
+  } catch {
+    return false
   }
 }
 

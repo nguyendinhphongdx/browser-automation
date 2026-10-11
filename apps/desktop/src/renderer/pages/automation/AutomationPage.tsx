@@ -12,7 +12,7 @@ import { SchedulePanel } from './SchedulePanel'
 import { RecorderPanel } from './RecorderPanel'
 import { AIButton } from './NodePalette'
 import { AgentChatPanel } from '@/components/agent/AgentChatPanel'
-import { applyWorkflowPatch, type WorkflowChangePatch } from './agent/apply-workflow-patch'
+import { applyWorkflowPatch, type WorkflowChangePatch } from '@shared/agent/apply-workflow-patch'
 import type { WorkflowMode } from '@shared/types'
 
 const AGENT_SUGGESTIONS = [

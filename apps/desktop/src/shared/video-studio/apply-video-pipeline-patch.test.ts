@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { applyVideoPipelinePatch, type VideoPipelineChangePatch } from './apply-video-pipeline-patch'
-import type { VideoNodeDefinition, VideoNode, VideoEdge } from '@shared/types'
+import type { VideoNodeDefinition, VideoNode, VideoEdge } from '../types'
 
 const NODE_DEFS: VideoNodeDefinition[] = [
   {
