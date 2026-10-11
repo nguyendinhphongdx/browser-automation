@@ -6,6 +6,7 @@ import {
   Rocket,
   Database,
   FolderOpen,
+  FolderKanban,
   Clapperboard,
   ShoppingBag,
   Settings,
@@ -22,6 +23,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 const navItems = [
   { to: '/profiles', labelKey: 'nav.profiles', icon: Users },
+  { to: '/projects', labelKey: 'nav.projects', icon: FolderKanban },
   { to: '/automation', labelKey: 'nav.automation', icon: Play },
   { to: '/campaigns', labelKey: 'nav.campaigns', icon: Rocket },
   { to: '/resources', labelKey: 'nav.resources', icon: Database },

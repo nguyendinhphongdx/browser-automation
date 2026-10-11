@@ -6,6 +6,7 @@ const translations: Record<Locale, Record<string, string>> = {
   vi: {
     // Sidebar
     'nav.profiles': 'Hồ sơ',
+    'nav.projects': 'Project',
     'nav.automation': 'Tự động hoá',
     'nav.campaigns': 'Chiến dịch',
     'nav.resources': 'Tài nguyên',
@@ -81,6 +82,7 @@ const translations: Record<Locale, Record<string, string>> = {
   en: {
     // Sidebar
     'nav.profiles': 'Profiles',
+    'nav.projects': 'Projects',
     'nav.automation': 'Automation',
     'nav.campaigns': 'Campaigns',
     'nav.resources': 'Resources',

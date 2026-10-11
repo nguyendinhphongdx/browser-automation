@@ -10,6 +10,7 @@ const ResourcesPage = lazy(() => import('./pages/resources/ResourcesPage').then(
 const LibraryPage = lazy(() => import('./pages/library/LibraryPage').then(m => ({ default: m.LibraryPage })))
 const VideoStudioPage = lazy(() => import('./pages/video-studio/VideoStudioPage').then(m => ({ default: m.VideoStudioPage })))
 const CampaignPage = lazy(() => import('./pages/campaigns/CampaignPage').then(m => ({ default: m.CampaignPage })))
+const ProjectPage = lazy(() => import('./pages/projects/ProjectPage').then(m => ({ default: m.ProjectPage })))
 const MarketplacePage = lazy(() => import('./pages/marketplace/MarketplacePage').then(m => ({ default: m.MarketplacePage })))
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
 const AuthPage = lazy(() => import('./pages/auth/AuthPage').then(m => ({ default: m.AuthPage })))
@@ -50,6 +51,7 @@ export function App() {
             <Route path="/profiles" element={<ProfilesPage />} />
             <Route path="/automation" element={<AutomationPage />} />
             <Route path="/campaigns" element={<CampaignPage />} />
+            <Route path="/projects" element={<ProjectPage />} />
             <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/video-studio" element={<VideoStudioPage />} />
