@@ -30,26 +30,17 @@ import { createListProjectTasksTool } from './list-project-tasks'
 import { createMoveTaskTool } from './move-task'
 
 /**
- * Tool names that must pause for human approval before executing — read by
- * agent-service.ts to build the ToolLoopAgent's `toolApproval` config. Kept
- * in exactly one place so gating can't drift out of sync with the actual
- * tool set.
- */
-export const APPROVAL_GATED_TOOLS = [
-  'run_js',
-  'propose_destructive_workflow_change',
-  'propose_code_change',
-  'delete_resource'
-] as const
-
-/**
  * Builds the full toolset for one agent run, closing over that run's
  * `AgentToolContext` (live page, workflow snapshot, etc.) — mirrors
  * `nodes/registry.ts`'s NODE_REGISTRY idea (a table of pluggable typed
  * handlers), adapted to factory functions since ToolLoopAgent consumes plain
  * `tool()` objects rather than class instances.
+ *
+ * Which of these names actually need human approval (ADR-0005: per-domain,
+ * not one shared list) lives in `../domains.ts`'s `AGENT_DOMAINS`, right next
+ * to this builder — not here, since gating is a domain-level config concern.
  */
-export function buildToolset(ctx: AgentToolContext): ToolSet {
+export function buildAutomationToolset(ctx: AgentToolContext): ToolSet {
   return {
     start_browser: createStartBrowserTool(ctx),
     check_browser_status: createCheckBrowserStatusTool(ctx),
@@ -91,6 +82,31 @@ export function buildToolset(ctx: AgentToolContext): ToolSet {
 export function buildVideoToolset(ctx: AgentToolContext): ToolSet {
   return {
     propose_video_pipeline_change: createProposeVideoPipelineChangeTool(ctx),
+    list_resources: createListResourcesTool(ctx),
+    get_resource: createGetResourceTool(ctx),
+    save_resource: createSaveResourceTool(ctx),
+    create_library_folder: createCreateLibraryFolderTool(ctx),
+    move_resource: createMoveResourceTool(ctx),
+    update_resource_metadata: createUpdateResourceMetadataTool(ctx),
+    delete_resource: createDeleteResourceTool(ctx),
+    get_project_context: createGetProjectContextTool(ctx),
+    update_project_notebook: createUpdateProjectNotebookTool(ctx),
+    create_project: createCreateProjectTool(ctx),
+    create_task: createCreateTaskTool(ctx),
+    update_task_status: createUpdateTaskStatusTool(ctx),
+    list_project_tasks: createListProjectTasksTool(ctx),
+    move_task: createMoveTaskTool(ctx)
+  }
+}
+
+/**
+ * Toolset riêng cho domain 'project' (ADR-0005) — không có khái niệm
+ * browser/workflow/pipeline, chỉ gồm 7 tool Project/Task (ADR-0004) + đúng
+ * bộ tool thư viện đã dùng chung với buildVideoToolset (để AI tự tổ chức
+ * output trong folder gốc project).
+ */
+export function buildProjectToolset(ctx: AgentToolContext): ToolSet {
+  return {
     list_resources: createListResourcesTool(ctx),
     get_resource: createGetResourceTool(ctx),
     save_resource: createSaveResourceTool(ctx),

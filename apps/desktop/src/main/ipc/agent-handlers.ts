@@ -6,6 +6,7 @@ import { getProfileById } from '../services/profile-service'
 import { DEFAULT_PROFILE_ID } from '../database/init'
 import { NODE_DEFINITIONS } from '../automation/node-definitions'
 import { agentService } from '../agent/agent-service'
+import type { AgentDomain } from '../agent/domains'
 import type { AgentToolContext } from '../agent/tools/types'
 import type { WorkflowNode, WorkflowEdge, WorkflowMode, VideoNode, VideoEdge } from '../../shared/types'
 import { EventType, type AgentEventEnvelope } from '../../shared/agent/ag-ui-events'
@@ -17,12 +18,13 @@ interface AgentRunPayload {
   // so it can't learn the id from this call's return value in time to
   // correlate the very first event with the run it belongs to.
   runId: string
-  domain?: 'automation' | 'video-studio'
+  domain?: AgentDomain
   profileId?: string
   workflowId?: string
   workflowSnapshot?: { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
   videoPipelineId?: string
   videoPipelineSnapshot?: { nodes: VideoNode[]; edges: VideoEdge[] }
+  projectId?: string
   messages: ModelMessage[]
 }
 
@@ -58,6 +60,28 @@ export function registerAgentHandlers(ipcMain: IpcMain) {
         workflowSnapshot: { nodes: [], edges: [] },
         videoPipelineSnapshot: payload.videoPipelineSnapshot || { nodes: [], edges: [] },
         nodeDefinitions: NODE_DEFINITIONS,
+        onScreenshot,
+        onResourcePreview
+      }
+
+      await agentService.run(
+        { runId, threadId, messages: payload.messages, toolContext, domain },
+        (aguiEvent) => emit({ runId, event: aguiEvent })
+      )
+      return { success: true }
+    }
+
+    // Domain 'project' (ADR-0005) không có khái niệm browser/workflow/pipeline
+    // gì cả — 7 tool Project/Task + tool thư viện đều không đọc `ctx` (mọi
+    // tool ADR-0004 đều comment "ctx unused"), nên toolContext ở đây chỉ cần
+    // đủ hình dạng để thoả type, không mang dữ liệu thật nào.
+    if (domain === 'project') {
+      const threadId = payload.projectId || 'project'
+      const toolContext: AgentToolContext = {
+        page: null,
+        profileId: '',
+        workflowSnapshot: { nodes: [], edges: [] },
+        nodeDefinitions: [],
         onScreenshot,
         onResourcePreview
       }

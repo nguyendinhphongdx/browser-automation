@@ -7,7 +7,7 @@ import type { AgentToolContext } from './types'
 export function createDeleteResourceTool(ctx: AgentToolContext) {
   return tool({
     description:
-      'XOÁ VĨNH VIỄN 1 resource hoặc thư mục rỗng khỏi Thư viện — không có thùng rác/hoàn tác. Thư mục còn chứa resource bên trong sẽ bị từ chối xoá (dọn/di chuyển con trước bằng move_resource). Luôn cần người dùng duyệt trước khi chạy thật (xem APPROVAL_GATED_TOOLS) — không tự ý xoá khi chưa chắc chắn người dùng muốn vậy.',
+      'XOÁ VĨNH VIỄN 1 resource hoặc thư mục rỗng khỏi Thư viện — không có thùng rác/hoàn tác. Thư mục còn chứa resource bên trong sẽ bị từ chối xoá (dọn/di chuyển con trước bằng move_resource). Luôn cần người dùng duyệt trước khi chạy thật (xem domains.ts\'s AGENT_DOMAINS) — không tự ý xoá khi chưa chắc chắn người dùng muốn vậy.',
     inputSchema: z.object({
       id: z.string().describe('id resource/thư mục cần xoá')
     }),

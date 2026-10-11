@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { Page } from 'playwright-core'
-import { buildToolset, APPROVAL_GATED_TOOLS } from './registry'
+import { buildAutomationToolset as buildToolset } from './registry'
+import { AGENT_DOMAINS } from '../domains'
 import type { AgentToolContext } from './types'
 
 function makeCtx(overrides: Partial<AgentToolContext> = {}): AgentToolContext {
@@ -76,7 +77,7 @@ describe('get_page_html', () => {
 
 describe('run_js', () => {
   it('is in the approval-gated tool list', () => {
-    expect(APPROVAL_GATED_TOOLS).toContain('run_js')
+    expect(AGENT_DOMAINS.automation.approvalGatedTools).toContain('run_js')
   })
 
   it('evaluates the given expression and returns a JSON-serializable result', async () => {

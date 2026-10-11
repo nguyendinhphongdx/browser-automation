@@ -11,9 +11,9 @@ function toExistingNodeRefs(ctx: AgentToolContext): ExistingNodeRef[] {
 /**
  * Destructive workflow edits (delete nodes, replace the whole workflow) —
  * a SEPARATE tool from propose-workflow-change.ts specifically so gating can
- * be a static per-tool-name `toolApproval` entry (see tools/registry.ts's
- * APPROVAL_GATED_TOOLS), since a dynamic per-call approval predicate isn't a
- * confirmed-stable part of the API this app relies on.
+ * be a static per-tool-name `toolApproval` entry (see `../domains.ts`'s
+ * AGENT_DOMAINS.automation.approvalGatedTools), since a dynamic per-call
+ * approval predicate isn't a confirmed-stable part of the API this app relies on.
  */
 export function createProposeDestructiveWorkflowChangeTool(ctx: AgentToolContext) {
   return tool({

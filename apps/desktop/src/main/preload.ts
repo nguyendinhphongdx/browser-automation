@@ -167,12 +167,13 @@ const api = {
   // one-way 'agent:event' channel (see the `on`/`off` wrapper below)
   runAgent: (payload: {
     runId: string
-    domain?: 'automation' | 'video-studio'
+    domain?: 'automation' | 'video-studio' | 'project'
     profileId?: string
     workflowId?: string
     workflowSnapshot?: { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
     videoPipelineId?: string
     videoPipelineSnapshot?: { nodes: VideoNode[]; edges: VideoEdge[] }
+    projectId?: string
     messages: ModelMessage[]
   }) => ipcRenderer.invoke('agent:run', payload),
   respondAgentApproval: (payload: { approvalId: string; approved: boolean; reason?: string }) =>

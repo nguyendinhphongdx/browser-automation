@@ -7,7 +7,7 @@ import type { AgentToolContext } from './types'
  * Destructive — replaces the ENTIRE workflow.code (chế độ "Viết code"), the
  * same risk tier as propose-destructive-workflow-change.ts's `replace_all`
  * for node-graph workflows, so it's gated the same way (see
- * tools/registry.ts's APPROVAL_GATED_TOOLS).
+ * `../domains.ts`'s AGENT_DOMAINS.automation.approvalGatedTools).
  *
  * Deliberately scoped to workflows that are ALREADY in code mode — this
  * tool never silently converts a node-graph (Visual) workflow into a code
