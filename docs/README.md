@@ -110,6 +110,7 @@ Architecture Decision Record — quyết định kiến trúc đã chốt + alte
 | 0005 | [Unified AI Agent — domain registry](adr/0005-unified-agent-domain-registry.md) | Tool/instructions/config agent tách theo domain (registry `AGENT_DOMAINS`), UI chat dùng chung 1 component — sửa luôn lỗi approval treo ở domain video-studio |
 | 0006 | [Trợ lý chung (domain 'general')](adr/0006-general-assistant-domain.md) | Mount AI ở `Layout.tsx` cho mọi trang, toolset = project + 1 tool `list_projects` mới — không chặn đường điều phối sang domain khác sau này |
 | 0007 | [Điều phối sang domain khác](adr/0007-agent-orchestration.md) | Trợ lý chung `delegate_to_*` chạy sub-agent trên workflow/pipeline ĐÃ LƯU trong DB (không cần trang đang mở), ghi thẳng DB — bỏ qua re-validate 2 lớp của renderer |
+| 0008 | [Trợ lý chung — Campaigns/Resources/Profiles](adr/0008-general-assistant-campaigns-resources-profiles.md) | CRUD cơ bản cho 3 domain còn thiếu, ẩn field nhạy cảm (mật khẩu/cookie) khỏi context model, loại trừ rõ executeCampaign/launchBrowser/exportCookiesJSON |
 
 ## [development/](development/) — Đóng góp code
 
