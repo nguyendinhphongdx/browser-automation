@@ -1,6 +1,6 @@
 import { v4 as uuid } from 'uuid'
 import { getDatabase } from '../database/init'
-import { createFolder, isDescendantOf } from './library-service'
+import { createFolder, isDescendantOf, getChildren } from './library-service'
 import type {
   Project, CreateProjectInput, UpdateProjectInput,
   Task, CreateTaskInput, UpdateTaskInput, TaskStatus
@@ -176,4 +176,30 @@ export function resolveTaskOutputFolderId(task: Task): string | null {
   if (task.outputFolderId) return task.outputFolderId
   const project = getProjectById(task.projectId)
   return project?.libraryFolderId ?? null
+}
+
+export interface ProjectFolderTreeEntry {
+  id: string
+  name: string
+  kind: string
+  children?: ProjectFolderTreeEntry[]
+}
+
+/**
+ * Quét SỐNG cây thư mục con của 1 project — dùng cho get_project_context
+ * (ADR-0004: "ngữ cảnh gốc" phải dynamic, không phải 1 file map tĩnh dễ lệch
+ * thực tế). Giới hạn độ sâu để tránh phình to với project nhiều resource,
+ * cùng tinh thần MAX_DOWNLOAD_BYTES/MAX_PREVIEW_BYTES đã áp dụng cho các
+ * giới hạn an toàn khác trong phiên này.
+ */
+export function getProjectFolderTree(folderId: string, maxDepth = 3): ProjectFolderTreeEntry[] {
+  function walk(parentId: string, depth: number): ProjectFolderTreeEntry[] {
+    return getChildren(parentId).map((r) => ({
+      id: r.id,
+      name: r.name,
+      kind: r.kind,
+      ...(r.kind === 'folder' && depth < maxDepth ? { children: walk(r.id, depth + 1) } : {})
+    }))
+  }
+  return walk(folderId, 1)
 }

@@ -21,6 +21,13 @@ import { createMoveResourceTool } from './move-resource'
 import { createUpdateResourceMetadataTool } from './update-resource-metadata'
 import { createDeleteResourceTool } from './delete-resource'
 import { createProposeVideoPipelineChangeTool } from './propose-video-pipeline-change'
+import { createGetProjectContextTool } from './get-project-context'
+import { createUpdateProjectNotebookTool } from './update-project-notebook'
+import { createCreateProjectTool } from './create-project'
+import { createCreateTaskTool } from './create-task'
+import { createUpdateTaskStatusTool } from './update-task-status'
+import { createListProjectTasksTool } from './list-project-tasks'
+import { createMoveTaskTool } from './move-task'
 
 /**
  * Tool names that must pause for human approval before executing — read by
@@ -63,7 +70,14 @@ export function buildToolset(ctx: AgentToolContext): ToolSet {
     create_library_folder: createCreateLibraryFolderTool(ctx),
     move_resource: createMoveResourceTool(ctx),
     update_resource_metadata: createUpdateResourceMetadataTool(ctx),
-    delete_resource: createDeleteResourceTool(ctx)
+    delete_resource: createDeleteResourceTool(ctx),
+    get_project_context: createGetProjectContextTool(ctx),
+    update_project_notebook: createUpdateProjectNotebookTool(ctx),
+    create_project: createCreateProjectTool(ctx),
+    create_task: createCreateTaskTool(ctx),
+    update_task_status: createUpdateTaskStatusTool(ctx),
+    list_project_tasks: createListProjectTasksTool(ctx),
+    move_task: createMoveTaskTool(ctx)
   }
 }
 
@@ -83,6 +97,13 @@ export function buildVideoToolset(ctx: AgentToolContext): ToolSet {
     create_library_folder: createCreateLibraryFolderTool(ctx),
     move_resource: createMoveResourceTool(ctx),
     update_resource_metadata: createUpdateResourceMetadataTool(ctx),
-    delete_resource: createDeleteResourceTool(ctx)
+    delete_resource: createDeleteResourceTool(ctx),
+    get_project_context: createGetProjectContextTool(ctx),
+    update_project_notebook: createUpdateProjectNotebookTool(ctx),
+    create_project: createCreateProjectTool(ctx),
+    create_task: createCreateTaskTool(ctx),
+    update_task_status: createUpdateTaskStatusTool(ctx),
+    list_project_tasks: createListProjectTasksTool(ctx),
+    move_task: createMoveTaskTool(ctx)
   }
 }
