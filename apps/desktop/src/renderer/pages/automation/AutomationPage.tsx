@@ -11,8 +11,15 @@ import { ExecutionHistory } from './ExecutionHistory'
 import { SchedulePanel } from './SchedulePanel'
 import { RecorderPanel } from './RecorderPanel'
 import { AIButton } from './NodePalette'
-import { AgentChatPanel } from './agent/AgentChatPanel'
+import { AgentChatPanel } from '@/components/agent/AgentChatPanel'
+import { applyWorkflowPatch, type WorkflowChangePatch } from './agent/apply-workflow-patch'
 import type { WorkflowMode } from '@shared/types'
+
+const AGENT_SUGGESTIONS = [
+  'Trang này đang hiển thị gì, có nút đăng nhập không?',
+  'Chụp màn hình trang hiện tại cho tôi xem',
+  'Kiểm tra xem phần tử .login-button có tồn tại không'
+]
 
 function CreateWorkflowDialog({ onClose }: { onClose: () => void }) {
   const { createWorkflow } = useWorkflowStore()
@@ -79,9 +86,10 @@ function CreateWorkflowDialog({ onClose }: { onClose: () => void }) {
 
 export function AutomationPage() {
   const {
-    workflows, activeWorkflow, isRunning, loading,
+    workflows, activeWorkflow, isRunning, loading, nodeDefinitions,
     fetchWorkflows, fetchNodeDefinitions, setActiveWorkflow,
-    saveWorkflow, deleteWorkflow, runWorkflow, stopWorkflow
+    saveWorkflow, deleteWorkflow, runWorkflow, stopWorkflow,
+    updateNodes, updateEdges, updateCode
   } = useWorkflowStore()
   const { profiles, fetchProfiles } = useProfileStore()
   const [showCreate, setShowCreate] = useState(false)
@@ -91,12 +99,45 @@ export function AutomationPage() {
   const [showVersions, setShowVersions] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [showSchedules, setShowSchedules] = useState(false)
+  const [patchError, setPatchError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchWorkflows()
     fetchNodeDefinitions()
     fetchProfiles()
   }, [])
+
+  // Re-validates against the LIVE canvas (not the stale snapshot the run
+  // started with) right before actually mutating it — the authoritative
+  // second gate of the two-gate validation design (main process's tool
+  // already did the fast first check against a start-of-run snapshot).
+  const handleToolResult = (toolName: string, resultText: string, ok: boolean) => {
+    if (!ok) return
+    if (toolName === 'propose_workflow_change' || toolName === 'propose_destructive_workflow_change' || toolName === 'propose_code_change') {
+      const current = useWorkflowStore.getState().activeWorkflow
+      if (!current) return
+      let patch: WorkflowChangePatch
+      try {
+        const parsed = JSON.parse(resultText) as { patch?: unknown }
+        if (!parsed.patch || typeof parsed.patch !== 'object') return
+        patch = parsed.patch as WorkflowChangePatch
+      } catch {
+        return
+      }
+      const result = applyWorkflowPatch(patch, nodeDefinitions, { nodes: current.nodes, edges: current.edges })
+      if (!result.ok) {
+        setPatchError(`Không áp dụng được thay đổi AI đề xuất: ${result.errors?.join('; ') ?? 'không rõ lý do'}`)
+        return
+      }
+      setPatchError(null)
+      if (result.code !== undefined) {
+        updateCode(result.code)
+      } else {
+        updateNodes(result.nodes!)
+        updateEdges(result.edges!)
+      }
+    }
+  }
 
   const handleSave = async () => {
     if (!activeWorkflow) return
@@ -256,7 +297,28 @@ export function AutomationPage() {
             <AIButton onClick={() => setShowAIPanel(prev => !prev)} />
 
             {/* AI Agent Drawer */}
-            <AgentChatPanel open={showAIPanel} onClose={() => setShowAIPanel(false)} profileId={selectedProfileId} />
+            <AgentChatPanel
+              domain="automation"
+              open={showAIPanel}
+              onClose={() => setShowAIPanel(false)}
+              profileId={selectedProfileId}
+              buildRunContext={() => ({
+                profileId: selectedProfileId,
+                workflowId: activeWorkflow?.id,
+                workflowSnapshot: {
+                  nodes: activeWorkflow?.nodes ?? [],
+                  edges: activeWorkflow?.edges ?? [],
+                  mode: activeWorkflow?.mode,
+                  code: activeWorkflow?.code
+                }
+              })}
+              onToolResult={handleToolResult}
+              extraError={patchError}
+              title="AI Agent"
+              description="Có thể đọc DOM/URL trang đang mở, chạy JS để kiểm tra (cần bạn duyệt), chụp màn hình, và đề xuất thay đổi workflow đã validate."
+              suggestions={AGENT_SUGGESTIONS}
+              placeholder="Hỏi hoặc yêu cầu agent kiểm tra trang, đề xuất workflow..."
+            />
 
             {/* Logs drawer */}
             <ExecutionPanel open={showLogs} onClose={() => setShowLogs(false)} />

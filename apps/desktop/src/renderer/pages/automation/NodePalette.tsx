@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useWorkflowStore } from '@/stores/workflow-store'
-import { Drawer } from './Drawer'
+import { Drawer } from '@/components/Drawer'
 import {
   Plus, Search,
   Globe, ArrowLeftRight, PanelTop, ArrowRightLeft, PanelTopClose, Camera, Maximize, Power,

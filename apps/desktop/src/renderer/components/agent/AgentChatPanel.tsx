@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Sparkles, RotateCcw, X, Shield, ShieldOff, Library } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useWorkflowStore } from '@/stores/workflow-store'
-import { Drawer } from '../Drawer'
+import { Drawer } from '@/components/Drawer'
 import { Conversation } from '@/components/ai-elements/Conversation'
 import { Message } from '@/components/ai-elements/Message'
 import { ReasoningBlock } from '@/components/ai-elements/ReasoningBlock'
@@ -12,90 +11,94 @@ import { PromptInput } from '@/components/ai-elements/PromptInput'
 import { BrowserPreview } from '@/components/ai-elements/BrowserPreview'
 import { AttachmentChip } from '@/components/ai-elements/AttachmentChip'
 import { ResourcePicker } from '@/components/library/ResourcePicker'
-import { useAgentRun } from './use-agent-run'
+import { useAgentRun, type AgentDomain, type AgentRunContext } from './use-agent-run'
 import { useBrowserPreview } from './use-browser-preview'
-import { applyWorkflowPatch, type WorkflowChangePatch } from './apply-workflow-patch'
 import type { LibraryResource } from '@shared/types'
 
 interface Props {
+  domain: AgentDomain
   open: boolean
   onClose: () => void
-  profileId: string
+  buildRunContext: () => AgentRunContext
+  // Pattern-match toolName here to react to a successful tool call — apply a
+  // workflow/pipeline patch, refetch a store, reconnect the browser preview
+  // (via the `browserPreview` object this component exposes no further —
+  // automation's page does this itself through its own hook instance it
+  // doesn't need; see AutomationPage.tsx). See use-agent-run.ts for why this
+  // replaced the old per-domain onWorkflowPatch/onPipelinePatch callbacks.
+  onToolResult?: (toolName: string, resultText: string, ok: boolean) => void
+  // Only 'automation' passes a real profileId — mounts the live browser
+  // preview. Other domains leave this undefined and the preview UI is
+  // skipped entirely (useBrowserPreview already no-ops on undefined).
+  profileId?: string
+  // Domain-specific validation error to show inline (e.g. "AI's proposed
+  // workflow patch failed re-validation against the live canvas") — a
+  // concern this component can't own since what counts as "a patch" differs
+  // per domain; the page sets/clears it from its own onToolResult handler.
+  extraError?: string | null
+  title: string
+  description: string
+  suggestions: string[]
+  placeholder: string
 }
 
-const SUGGESTIONS = [
-  'Trang này đang hiển thị gì, có nút đăng nhập không?',
-  'Chụp màn hình trang hiện tại cho tôi xem',
-  'Kiểm tra xem phần tử .login-button có tồn tại không'
-]
-
-export function AgentChatPanel({ open, onClose, profileId }: Props) {
-  const { activeWorkflow, nodeDefinitions, updateNodes, updateEdges, updateCode } = useWorkflowStore()
+/**
+ * Shared AI chat panel (ADR-0005) — 1 component for every domain, replacing
+ * the old per-module AgentChatPanel/VideoAgentChatPanel duplication. Always
+ * supports approval cards + resource attachment, since any domain's toolset
+ * can include an approval-gated tool (e.g. delete_resource is gated in
+ * automation, video-studio, AND project — see domains.ts) — making this
+ * optional-per-domain was exactly the bug ADR-0005 found and fixed (a run
+ * could hang forever waiting on an approval the UI had no way to show).
+ */
+export function AgentChatPanel({
+  domain,
+  open,
+  onClose,
+  buildRunContext,
+  onToolResult,
+  profileId,
+  extraError,
+  title,
+  description,
+  suggestions,
+  placeholder
+}: Props) {
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<LibraryResource[]>([])
-  const [patchError, setPatchError] = useState<string | null>(null)
   const [showResourcePicker, setShowResourcePicker] = useState(false)
+  const bypassStorageKey = `agent-bypass-approvals:${domain}`
   const [bypassApprovals, setBypassApprovals] = useState(() => {
     try {
-      return localStorage.getItem('agent-bypass-approvals') === 'true'
+      return localStorage.getItem(bypassStorageKey) === 'true'
     } catch {
       return false
     }
   })
   const browserPreview = useBrowserPreview(open ? profileId : undefined)
 
-  // Re-validates against the LIVE canvas (not the stale snapshot the run
-  // started with) right before actually mutating it — the authoritative
-  // second gate of the two-gate validation design (main process's tool
-  // already did the fast first check against a start-of-run snapshot).
-  const handleWorkflowPatch = useCallback(
-    (patch: WorkflowChangePatch) => {
-      const current = useWorkflowStore.getState().activeWorkflow
-      if (!current) return
-      const result = applyWorkflowPatch(patch, nodeDefinitions, { nodes: current.nodes, edges: current.edges })
-      if (!result.ok) {
-        setPatchError(result.errors?.join('; ') ?? 'Không thể áp dụng thay đổi do AI đề xuất')
-        return
-      }
-      setPatchError(null)
-      if (result.code !== undefined) {
-        updateCode(result.code)
-      } else {
-        updateNodes(result.nodes!)
-        updateEdges(result.edges!)
-      }
+  const handleToolResult = useCallback(
+    (toolName: string, resultText: string, ok: boolean) => {
+      if (ok && toolName === 'start_browser') browserPreview.reconnect()
+      if (ok && toolName === 'close_browser') browserPreview.disconnect()
+      onToolResult?.(toolName, resultText, ok)
     },
-    [nodeDefinitions, updateNodes, updateEdges, updateCode]
-  )
-
-  const handleBrowserLifecycle = useCallback(
-    (kind: 'started' | 'closed') => {
-      if (kind === 'started') browserPreview.reconnect()
-      else browserPreview.disconnect()
-    },
-    [browserPreview.reconnect, browserPreview.disconnect]
+    [browserPreview.reconnect, browserPreview.disconnect, onToolResult]
   )
 
   const { items, loading, error, send, respondApproval, cancel, reset } = useAgentRun({
-    profileId,
-    workflowId: activeWorkflow?.id,
-    getWorkflowSnapshot: () => ({
-      nodes: activeWorkflow?.nodes ?? [],
-      edges: activeWorkflow?.edges ?? [],
-      mode: activeWorkflow?.mode,
-      code: activeWorkflow?.code
-    }),
-    onWorkflowPatch: handleWorkflowPatch,
-    onBrowserLifecycle: handleBrowserLifecycle
+    domain,
+    buildRunContext,
+    onToolResult: handleToolResult
   })
 
   useEffect(() => {
     try {
-      localStorage.setItem('agent-bypass-approvals', String(bypassApprovals))
+      localStorage.setItem(bypassStorageKey, String(bypassApprovals))
     } catch {
       // Private window / blocked storage — bypass just won't persist across reopens.
     }
-  }, [bypassApprovals])
+  }, [bypassApprovals, bypassStorageKey])
 
   // Auto-respond to every pending approval the instant it shows up while
   // bypass is on — respondApproval flips the item's status away from
@@ -109,11 +112,11 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
     }
   }, [items, bypassApprovals, respondApproval])
 
-  // Tag thật gửi cho model vẫn là "[resource:id "name"]" như cũ (AGENT_INSTRUCTIONS
-  // giờ dạy model nhận ra cú pháp này — xem rule 8), chỉ khác là người dùng
-  // không còn phải nhìn/sửa chung với văn bản họ gõ trong lúc soạn — mỗi
-  // attachment hiện thành badge riêng (AttachmentChip), ghép vào cuối tin
-  // nhắn CHỈ lúc gửi.
+  // Tag thật gửi cho model vẫn là "[resource:id "name"]" (mọi
+  // PROJECT/VIDEO/AGENT_INSTRUCTIONS đều dạy model nhận ra cú pháp này),
+  // chỉ khác là người dùng không còn phải nhìn/sửa chung với văn bản họ gõ
+  // trong lúc soạn — mỗi attachment hiện thành badge riêng, ghép vào cuối
+  // tin nhắn CHỈ lúc gửi.
   const handleSend = () => {
     const text = attachments.length
       ? `${input}\n${attachments.map((r) => `[resource:${r.id} "${r.name}"]`).join('\n')}`.trim()
@@ -123,10 +126,9 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
     send(text)
   }
 
-  // Prompt-template -> insert its actual text (ready to send as-is), vẫn
-  // chèn thẳng vào ô nhập vì đây LÀ nội dung tin nhắn, không phải tham chiếu.
-  // Mọi loại khác -> thêm vào danh sách attachment (hiện badge), không đụng
-  // vào text người dùng đang gõ.
+  // Prompt-template -> insert its actual text (ready to send as-is). Mọi
+  // loại khác -> thêm vào danh sách attachment (hiện badge), không đụng vào
+  // text người dùng đang gõ.
   const handlePickResource = async (resource: LibraryResource) => {
     if (resource.kind === 'prompt-template') {
       const text = (await window.api.getLibraryResourceText(resource.id)) ?? ''
@@ -142,10 +144,7 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
       <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-purple-500" />
-          <h3 className="text-sm font-semibold">AI Agent</h3>
-          <span className="rounded-full bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-            Beta
-          </span>
+          <h3 className="text-sm font-semibold">{title}</h3>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -164,8 +163,10 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
         </div>
       </div>
 
-      {/* Live browser preview */}
-      <BrowserPreview status={browserPreview.status} frame={browserPreview.frame} message={browserPreview.message} />
+      {/* Live browser preview — automation only (profileId undefined elsewhere) */}
+      {profileId !== undefined && (
+        <BrowserPreview status={browserPreview.status} frame={browserPreview.frame} message={browserPreview.message} />
+      )}
 
       {/* Conversation */}
       <Conversation>
@@ -174,13 +175,10 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-900/30">
               <Sparkles className="h-6 w-6 text-purple-500" />
             </div>
-            <h3 className="mb-1 text-sm font-semibold">AI Agent</h3>
-            <p className="max-w-[280px] text-xs leading-relaxed text-muted-foreground">
-              Có thể đọc DOM/URL trang đang mở, chạy JS để kiểm tra (cần bạn duyệt), chụp màn hình, và đề xuất
-              thay đổi workflow đã validate.
-            </p>
+            <h3 className="mb-1 text-sm font-semibold">{title}</h3>
+            <p className="max-w-[280px] text-xs leading-relaxed text-muted-foreground">{description}</p>
             <div className="mt-4 w-full max-w-[280px] space-y-1.5">
-              {SUGGESTIONS.map((s) => (
+              {suggestions.map((s) => (
                 <button
                   key={s}
                   onClick={() => setInput(s)}
@@ -253,9 +251,9 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
             <strong>Lỗi:</strong> {error}
           </div>
         )}
-        {patchError && (
+        {extraError && (
           <div className="max-w-[85%] rounded-xl bg-destructive/10 px-3 py-2 text-xs leading-relaxed text-destructive">
-            <strong>Không áp dụng được thay đổi AI đề xuất:</strong> {patchError}
+            {extraError}
           </div>
         )}
       </Conversation>
@@ -278,7 +276,7 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
                 ? 'border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400'
                 : 'border-dashed text-muted-foreground hover:bg-accent'
             )}
-            title="Khi bật, AI sẽ tự động duyệt mọi hành động cần xác nhận (chạy JS, sửa code, xoá node...) mà không hỏi lại bạn — chỉ bật khi bạn tin tưởng hoàn toàn yêu cầu đang đưa ra."
+            title="Khi bật, AI sẽ tự động duyệt mọi hành động cần xác nhận (xoá resource, chạy JS...) mà không hỏi lại bạn — chỉ bật khi bạn tin tưởng hoàn toàn yêu cầu đang đưa ra."
           >
             {bypassApprovals ? <ShieldOff className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
             {bypassApprovals ? 'Đang tự động duyệt mọi hành động' : 'Tự động duyệt (bỏ qua xác nhận)'}
@@ -297,7 +295,7 @@ export function AgentChatPanel({ open, onClose, profileId }: Props) {
           onSubmit={handleSend}
           onStop={cancel}
           loading={loading}
-          placeholder="Hỏi hoặc yêu cầu agent kiểm tra trang, đề xuất workflow..."
+          placeholder={placeholder}
         />
         <p className="mt-1.5 text-center text-[10px] text-muted-foreground">
           Enter để gửi · Shift+Enter xuống dòng

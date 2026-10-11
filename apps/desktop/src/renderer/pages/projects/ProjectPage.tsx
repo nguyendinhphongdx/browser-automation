@@ -2,13 +2,31 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus, Trash2, FolderKanban, FolderOpen, Circle, Loader2, CheckCircle2,
-  Pencil, X, BookOpen, Save
+  Pencil, X, BookOpen, Save, Sparkles
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useLibraryStore } from '@/stores/library-store'
 import { ResourcePicker } from '@/components/library/ResourcePicker'
+import { AgentChatPanel } from '@/components/agent/AgentChatPanel'
 import { cn } from '@/lib/utils'
 import type { Project, Task, TaskStatus, LibraryResource } from '@shared/types'
+
+const PROJECT_AGENT_SUGGESTIONS = [
+  'Tạo task mới "Viết kịch bản tập 3"',
+  'Tóm tắt lại nhân vật và mạch truyện đã có vào sổ tay dự án',
+  'Liệt kê các task đang "Đang làm"'
+]
+
+// Tool nào trong buildProjectToolset (ADR-0005) thật sự làm thay đổi dữ
+// liệu project/task — sau khi gọi xong, refetch lại store để UI đồng bộ
+// (AI tự sửa DB qua tool, không đi qua action của project-store).
+const PROJECT_MUTATING_TOOLS = new Set([
+  'create_task',
+  'update_task_status',
+  'move_task',
+  'update_project_notebook',
+  'create_project'
+])
 
 const TASK_STATUS_CONFIG: Record<TaskStatus, { label: string; color: string; icon: any }> = {
   'todo': { label: 'Chưa làm', color: 'text-gray-500 bg-gray-100', icon: Circle },
@@ -286,6 +304,7 @@ export function ProjectPage() {
   const { projects, activeProject, tasks, loading, fetchProjects, setProject, deleteProject, updateTaskStatus, deleteTask } = useProjectStore()
   const [showCreate, setShowCreate] = useState(false)
   const [taskDialog, setTaskDialog] = useState<{ parentTaskId: string | null; task: Task | null } | null>(null)
+  const [showAIPanel, setShowAIPanel] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => { fetchProjects() }, [])
@@ -294,6 +313,21 @@ export function ProjectPage() {
     if (!activeProject) return
     if (confirm(`Xoá project "${activeProject.name}"? Mọi task bên trong cũng sẽ bị xoá.`)) {
       await deleteProject(activeProject.id)
+    }
+  }
+
+  // AI tự sửa project/task qua tool (ADR-0005's domain 'project') — không đi
+  // qua action của store, nên refetch lại để UI khớp với DB sau khi 1 tool
+  // mutating thật sự thành công.
+  const handleAgentToolResult = (toolName: string, _resultText: string, ok: boolean) => {
+    if (!ok || !activeProject || !PROJECT_MUTATING_TOOLS.has(toolName)) return
+    if (toolName === 'create_project') {
+      fetchProjects()
+      return
+    }
+    useProjectStore.getState().fetchTasks(activeProject.id)
+    if (toolName === 'update_project_notebook') {
+      useProjectStore.getState().setProject(activeProject.id)
     }
   }
 
@@ -347,10 +381,14 @@ export function ProjectPage() {
 
       {/* Main Area */}
       {activeProject ? (
-        <div className="flex-1 flex flex-col overflow-auto">
+        <div className="flex-1 relative flex flex-col overflow-auto">
           <div className="h-14 border-b flex items-center justify-between px-5 bg-card shrink-0">
             <h2 className="text-base font-semibold">{activeProject.name}</h2>
             <div className="flex items-center gap-2">
+              <button onClick={() => setShowAIPanel((v) => !v)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-medium hover:bg-accent transition-colors text-purple-600 border-purple-200">
+                <Sparkles className="h-3.5 w-3.5" /> AI
+              </button>
               <button onClick={openInLibrary}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-medium hover:bg-accent transition-colors">
                 <FolderOpen className="h-3.5 w-3.5" /> Mở trong Thư viện
@@ -393,6 +431,18 @@ export function ProjectPage() {
               )}
             </div>
           </div>
+
+          <AgentChatPanel
+            domain="project"
+            open={showAIPanel}
+            onClose={() => setShowAIPanel(false)}
+            buildRunContext={() => ({ projectId: activeProject.id })}
+            onToolResult={handleAgentToolResult}
+            title="AI dự án"
+            description="Luôn đọc sổ tay + cây thư mục + task trước khi làm gì — hỏi AI viết kịch bản tập mới, tạo task, hoặc tóm tắt lại ngữ cảnh dự án."
+            suggestions={PROJECT_AGENT_SUGGESTIONS}
+            placeholder="Yêu cầu AI về project này..."
+          />
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center text-muted-foreground">

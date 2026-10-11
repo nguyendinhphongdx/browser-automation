@@ -1,19 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ModelMessage } from 'ai'
-import type { WorkflowNode, WorkflowEdge, WorkflowMode } from '@shared/types'
-import {
-  EventType,
-  type AGUIEvent,
-  type AgentApprovalRequest,
-  type AgentEventEnvelope
-} from '@shared/agent/ag-ui-events'
-import type { WorkflowChangePatch } from './apply-workflow-patch'
+import { EventType, type AGUIEvent, type AgentApprovalRequest, type AgentEventEnvelope } from '@shared/agent/ag-ui-events'
 
-const WORKFLOW_PATCH_TOOLS = new Set([
-  'propose_workflow_change',
-  'propose_destructive_workflow_change',
-  'propose_code_change'
-])
+export type AgentDomain = 'automation' | 'video-studio' | 'project'
+
+// Derived straight from preload.ts's `runAgent` payload type (ADR-0002 style
+// — single source of truth, no hand-kept duplicate) minus the 3 fields this
+// hook itself owns. Each domain's page supplies exactly its own slice
+// (profileId/workflowId/workflowSnapshot, or videoPipelineId/..., or
+// projectId) via `buildRunContext`.
+type AgentRunPayload = Parameters<typeof window.api.runAgent>[0]
+export type AgentRunContext = Omit<AgentRunPayload, 'runId' | 'domain' | 'messages'>
 
 export type AgentUIItem =
   | { kind: 'user-message'; id: string; text: string }
@@ -41,44 +38,37 @@ export type AgentUIItem =
   | { kind: 'resource-preview'; id: string; dataUrl: string; name: string }
 
 interface UseAgentRunOptions {
-  profileId: string
-  workflowId?: string
-  getWorkflowSnapshot: () => { nodes: WorkflowNode[]; edges: WorkflowEdge[]; mode?: WorkflowMode; code?: string }
-  // Called whenever propose_workflow_change/propose_destructive_workflow_change
-  // comes back with `ok: true` — the caller owns re-validating against the
-  // LIVE canvas and actually applying it (see apply-workflow-patch.ts).
-  onWorkflowPatch: (patch: WorkflowChangePatch) => void
-  // Called when the agent's start_browser/close_browser tools succeed, so
-  // the caller can reconnect/disconnect the live preview — nothing launches
-  // or stops the browser itself from here, the tool already did that.
-  onBrowserLifecycle: (kind: 'started' | 'closed') => void
+  domain: AgentDomain
+  buildRunContext: () => AgentRunContext
+  // Fired once per TOOL_CALL_RESULT, for EVERY tool regardless of name — the
+  // caller pattern-matches `toolName` itself to decide what to do (apply a
+  // workflow/pipeline patch, refetch a store, reconnect a browser preview...).
+  // Replaces the old per-domain special-casing (WORKFLOW_PATCH_TOOLS set,
+  // onWorkflowPatch/onPipelinePatch/onBrowserLifecycle) with 1 generic hook —
+  // ADR-0005.
+  onToolResult?: (toolName: string, resultText: string, ok: boolean) => void
 }
 
 /**
  * OBSERVER: subscribes to the `agent:event` push channel and reduces the
- * incoming AG-UI event stream into UI-ready state — the renderer-side half
- * of ag-ui-adapter.ts's translation (main process AI SDK part -> AG-UI
- * event -> here, AG-UI event -> UI item).
+ * incoming AG-UI event stream into UI-ready state — shared across every
+ * domain (ADR-0005). The renderer-side half of ag-ui-adapter.ts's
+ * translation (main process AI SDK part -> AG-UI event -> here, AG-UI
+ * event -> UI item).
  */
-export function useAgentRun({
-  profileId,
-  workflowId,
-  getWorkflowSnapshot,
-  onWorkflowPatch,
-  onBrowserLifecycle
-}: UseAgentRunOptions) {
+export function useAgentRun({ domain, buildRunContext, onToolResult }: UseAgentRunOptions) {
   const [items, setItems] = useState<AgentUIItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const runIdRef = useRef<string | null>(null)
   const historyRef = useRef<ModelMessage[]>([])
   // toolCallId -> toolName, so a later TOOL_CALL_RESULT (which only carries
-  // the id) can tell whether it belongs to one of the workflow-patch tools.
+  // the id) can be forwarded to onToolResult with the right name.
   const toolNameByIdRef = useRef<Map<string, string>>(new Map())
-  const onWorkflowPatchRef = useRef(onWorkflowPatch)
-  onWorkflowPatchRef.current = onWorkflowPatch
-  const onBrowserLifecycleRef = useRef(onBrowserLifecycle)
-  onBrowserLifecycleRef.current = onBrowserLifecycle
+  const onToolResultRef = useRef(onToolResult)
+  onToolResultRef.current = onToolResult
+  const buildRunContextRef = useRef(buildRunContext)
+  buildRunContextRef.current = buildRunContext
 
   useEffect(() => {
     const handler = (envelope: AgentEventEnvelope) => {
@@ -90,14 +80,9 @@ export function useAgentRun({
       }
       if (event.type === EventType.TOOL_CALL_RESULT) {
         const toolName = toolNameByIdRef.current.get(event.toolCallId)
-        if (toolName && WORKFLOW_PATCH_TOOLS.has(toolName)) {
-          tryApplyPatchFromResult(event.content, onWorkflowPatchRef.current)
-        }
-        if (toolName === 'start_browser' && resultOk(event.content)) {
-          onBrowserLifecycleRef.current('started')
-        }
-        if (toolName === 'close_browser' && resultOk(event.content)) {
-          onBrowserLifecycleRef.current('closed')
+        if (toolName && onToolResultRef.current) {
+          const contentText = typeof event.content === 'string' ? event.content : JSON.stringify(event.content)
+          onToolResultRef.current(toolName, contentText, resultOk(event.content))
         }
       }
 
@@ -138,9 +123,8 @@ export function useAgentRun({
       try {
         await window.api.runAgent({
           runId,
-          profileId,
-          workflowId,
-          workflowSnapshot: getWorkflowSnapshot(),
+          domain,
+          ...buildRunContextRef.current(),
           messages: historyRef.current
         })
       } catch (err) {
@@ -148,7 +132,7 @@ export function useAgentRun({
         setError(err instanceof Error ? err.message : String(err))
       }
     },
-    [profileId, workflowId, getWorkflowSnapshot, loading]
+    [domain, loading]
   )
 
   const respondApproval = useCallback((approvalId: string, approved: boolean, reason?: string) => {
@@ -254,18 +238,6 @@ function resultOk(content: unknown): boolean {
     return parsed.ok === true
   } catch {
     return false
-  }
-}
-
-function tryApplyPatchFromResult(content: unknown, onWorkflowPatch: (patch: WorkflowChangePatch) => void) {
-  const contentText = typeof content === 'string' ? content : JSON.stringify(content)
-  try {
-    const parsed = JSON.parse(contentText) as { ok?: unknown; patch?: unknown }
-    if (parsed.ok === true && parsed.patch && typeof parsed.patch === 'object') {
-      onWorkflowPatch(parsed.patch as WorkflowChangePatch)
-    }
-  } catch {
-    // Not JSON, or didn't match the expected {ok, patch} shape — nothing to apply.
   }
 }
 

@@ -1,6 +1,6 @@
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { CheckCircle, XCircle, AlertTriangle, Info, Clock } from 'lucide-react'
-import { Drawer } from './Drawer'
+import { Drawer } from '@/components/Drawer'
 import type { LogEntry } from '@shared/types'
 
 const LOG_ICONS: Record<string, any> = {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Trash2, ChevronDown, ChevronRight, BarChart3, FolderOpen } from 'lucide-react'
 import { useWorkflowStore } from '@/stores/workflow-store'
-import { Drawer } from './Drawer'
+import { Drawer } from '@/components/Drawer'
 import { ICON_MAP, CATEGORY_COLORS } from './NodePalette'
 import { KeyRecorderInput } from '@/components/KeyRecorderInput'
 import { Zap } from 'lucide-react'

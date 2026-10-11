@@ -16,6 +16,9 @@ interface BrowserPreviewFramePayload {
  * hits Play themselves) — `reconnect()` is how the caller re-attempts the
  * connection once that happens, and `disconnect()` is how it reacts to the
  * browser being closed again.
+ *
+ * `profileId === undefined` (domains other than 'automation') is a built-in
+ * idle no-op — safe to call unconditionally from the shared AgentChatPanel.
  */
 export function useBrowserPreview(profileId: string | undefined) {
   const [status, setStatus] = useState<BrowserPreviewStatus>('idle')

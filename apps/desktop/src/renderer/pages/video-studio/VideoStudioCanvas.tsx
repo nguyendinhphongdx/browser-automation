@@ -13,9 +13,16 @@ import type { VideoNodeDefinition, VideoSocketDef } from '@shared/types'
 import { VideoStudioNode } from './VideoStudioNode'
 import { VideoNodePalette } from './VideoNodePalette'
 import { VideoNodePropertiesPanel } from './VideoNodePropertiesPanel'
-import { VideoAgentChatPanel } from './agent/VideoAgentChatPanel'
+import { AgentChatPanel } from '@/components/agent/AgentChatPanel'
+import { applyVideoPipelinePatch, type VideoPipelineChangePatch } from './agent/apply-video-pipeline-patch'
 
 const nodeTypes = { videoStudioNode: VideoStudioNode }
+
+const VIDEO_AGENT_SUGGESTIONS = [
+  'Mèo phiêu lưu trong thành phố neon, 3 cảnh, phong cách cinematic, có giọng kể',
+  'Hướng dẫn pha cà phê, 2 cảnh, có lời thoại nhân vật',
+  'Quảng cáo sản phẩm 15 giây, 1 cảnh, không lời thoại'
+]
 
 const defaultEdgeOptions = {
   type: 'smoothstep' as const,
@@ -40,6 +47,32 @@ function VideoStudioCanvasInner() {
   const [showAgent, setShowAgent] = useState(false)
   const [saving, setSaving] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
+  const [patchError, setPatchError] = useState<string | null>(null)
+
+  const handleAgentToolResult = useCallback(
+    (toolName: string, resultText: string, ok: boolean) => {
+      if (!ok || toolName !== 'propose_video_pipeline_change') return
+      const current = useVideoStudioStore.getState().activePipeline
+      if (!current) return
+      let patch: VideoPipelineChangePatch
+      try {
+        const parsed = JSON.parse(resultText) as { patch?: unknown }
+        if (!parsed.patch || typeof parsed.patch !== 'object') return
+        patch = parsed.patch as VideoPipelineChangePatch
+      } catch {
+        return
+      }
+      const result = applyVideoPipelinePatch(patch, nodeDefinitions, { nodes: current.nodes, edges: current.edges })
+      if (!result.ok) {
+        setPatchError(`Không áp dụng được pipeline AI đề xuất: ${result.errors?.join('; ') ?? 'không rõ lý do'}`)
+        return
+      }
+      setPatchError(null)
+      updateNodes(result.nodes!)
+      updateEdges(result.edges!)
+    },
+    [nodeDefinitions, updateNodes, updateEdges]
+  )
 
   const handleSave = useCallback(async () => {
     const current = useVideoStudioStore.getState().activePipeline
@@ -251,7 +284,21 @@ function VideoStudioCanvasInner() {
 
       <VideoNodePalette open={showPalette} onClose={() => setShowPalette(false)} onAddNode={addNodeAtCenter} />
       <VideoNodePropertiesPanel />
-      <VideoAgentChatPanel open={showAgent} onClose={() => setShowAgent(false)} />
+      <AgentChatPanel
+        domain="video-studio"
+        open={showAgent}
+        onClose={() => setShowAgent(false)}
+        buildRunContext={() => ({
+          videoPipelineId: activePipeline?.id,
+          videoPipelineSnapshot: { nodes: activePipeline?.nodes ?? [], edges: activePipeline?.edges ?? [] }
+        })}
+        onToolResult={handleAgentToolResult}
+        extraError={patchError}
+        title="AI dựng pipeline"
+        description="Mô tả ý tưởng video — AI sẽ tự dựng nhân vật, các cảnh, TTS, ghép nối lên canvas để bạn xem/sửa trước khi chạy."
+        suggestions={VIDEO_AGENT_SUGGESTIONS}
+        placeholder="Mô tả ý tưởng video muốn tạo..."
+      />
     </div>
   )
 }
