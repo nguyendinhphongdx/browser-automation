@@ -1,7 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
-  content: ['./src/renderer/**/*.{ts,tsx,html}'],
+  // streamdown ships pre-compiled component JS with Tailwind utility class
+  // strings baked in — without scanning its dist files here, the JIT
+  // compiler never generates those classes and markdown renders unstyled.
+  content: ['./src/renderer/**/*.{ts,tsx,html}', './node_modules/streamdown/dist/**/*.js'],
   theme: {
     extend: {
       colors: {
