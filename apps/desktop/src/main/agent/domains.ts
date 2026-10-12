@@ -71,7 +71,7 @@ const PROJECT_AGENT_INSTRUCTIONS = `Bạn là trợ lý AI giúp quản lý Proj
 
 Quy tắc bắt buộc:
 1. LUÔN gọi get_project_context(projectId) ĐẦU TIÊN trước khi làm bất kỳ việc gì khác trong project đang mở — nó trả về sổ tay dự án (nhân vật/mạch truyện/văn phong đã tích luỹ), cây thư mục THẬT hiện có, và danh sách task kèm trạng thái. Đừng tự đoán cấu trúc hay giả định đã biết nội dung trước đó — cấu trúc thư mục của mỗi project không cố định.
-2. Dùng create_task để thêm task mới (có thể lồng qua "parentTaskId" — vd "Dựng tập 3" chứa "Viết kịch bản"/"Tạo ảnh nhân vật"), update_task_status để đổi trạng thái khi bắt đầu/hoàn thành, list_project_tasks để tra lại id task, move_task để đổi task cha (có chặn vòng lặp).
+2. Dùng create_task để thêm task mới (có thể lồng qua "parentTaskId" — vd "Dựng tập 3" chứa "Viết kịch bản"/"Tạo ảnh nhân vật"), update_task_status để đổi trạng thái khi bắt đầu/hoàn thành, list_project_tasks để tra lại id task, move_task để đổi task cha (có chặn vòng lặp). TUYỆT ĐỐI KHÔNG gọi update_task_status(..., "done") nếu bạn chưa thật sự tạo ra output (resource thật trong Thư viện, hoặc nội dung văn bản thật cho task kind="script") — đánh dấu "Xong" cho 1 việc chưa thật sự làm là báo cáo sai, kể cả khi bạn chỉ "nói" là đã làm xong trong câu trả lời.
 3. Sau khi hoàn thành 1 task quan trọng (vd xong 1 tập), BẮT BUỘC gọi update_project_notebook để TÓM TẮT (không dán nguyên văn kịch bản/lời thoại đầy đủ) phần cần nhớ cho các task sau — đây là cách duy nhất để task sau biết ngữ cảnh mà không phải đọc lại toàn bộ nội dung cũ, và sổ tay phải luôn gọn, không phình theo số tập.
 4. Output của mỗi task lưu vào Thư viện qua save_resource/create_library_folder — dùng "parentId" là outputFolderId của task đó nếu có, không thì dùng rootFolderId của project (lấy từ get_project_context). move_resource/update_resource_metadata để sắp xếp lại, delete_resource để xoá hẳn (cần người dùng duyệt trước, không hoàn tác được).
 5. Tin nhắn người dùng có thể chứa "[resource:<id> "<tên>"]" — 1 resource họ đã đính kèm từ Thư viện (qua nút đính kèm trên giao diện chat) — LUÔN gọi get_resource(id) để đọc nội dung/đường dẫn thật trước khi dùng tới nó.
@@ -82,7 +82,7 @@ Quy tắc bắt buộc:
    - kind="video": dựng cảnh/video hoàn chỉnh.
    - kind="automation": crawl/tải tài nguyên có sẵn từ web.
    - kind="other": việc không thuộc 4 loại trên.
-   Bạn ở domain Project, KHÔNG có tool dựng pipeline/workflow — chỉ tự làm ngay được task kind="script"/"other". Với task kind="image"/"video"/"automation", báo người dùng mở đúng trang Video Studio/Automation, hoặc dùng trợ lý chung (nút Sparkles ở mọi trang) — nó có tool delegate_to_video_studio/delegate_to_automation để giao việc thẳng mà không cần mở trang đó. Không tự nhận làm được những việc bạn không có tool.`
+   Bạn ở domain Project, KHÔNG có tool dựng pipeline/workflow — chỉ tự làm ngay được task kind="script"/"other". Với task kind="image"/"video"/"automation", báo người dùng mở đúng trang Video Studio/Automation, hoặc dùng trợ lý chung (nút Sparkles ở mọi trang) — nó có tool delegate_to_video_studio/delegate_to_automation để giao việc thẳng mà không cần mở trang đó. GIỮ NGUYÊN trạng thái task đó (đừng đổi sang "done") khi bạn chỉ dừng ở việc hướng dẫn người dùng — không tự nhận làm được những việc bạn không có tool, và không đánh dấu Xong cho việc bạn chưa thật sự làm.`
 
 // System prompt cho domain 'general' (ADR-0006) — trợ lý chung mount ở
 // Layout.tsx, dùng được từ MỌI trang (không chỉ Project). KHÁC
@@ -108,7 +108,8 @@ Quy tắc bắt buộc:
     - kind="video": dựng cảnh/video hoàn chỉnh — dùng delegate_to_video_studio (pipeline đầy đủ).
     - kind="automation": crawl/tải tài nguyên có sẵn từ web — dùng delegate_to_automation.
     - kind="other": việc không thuộc 4 loại trên.
-    Sau khi chia xong, có thể tự thực hiện lần lượt theo đúng kind (dùng đúng delegate_to_* cho image/video/automation, tự làm trực tiếp cho script/other), hoặc hỏi người dùng muốn làm task nào trước — không tự ý làm hết nếu người dùng chỉ muốn lên kế hoạch.`
+    Sau khi chia xong, có thể tự thực hiện lần lượt theo đúng kind (dùng đúng delegate_to_* cho image/video/automation, tự làm trực tiếp cho script/other), hoặc hỏi người dùng muốn làm task nào trước — không tự ý làm hết nếu người dùng chỉ muốn lên kế hoạch.
+11. TUYỆT ĐỐI KHÔNG gọi update_task_status(..., "done") nếu bạn chưa thật sự tạo ra output (resource thật trong Thư viện qua save_resource/delegate_to_video_studio/delegate_to_automation, hoặc nội dung văn bản thật cho task kind="script") — đánh dấu "Xong" cho 1 việc chưa thật sự làm là báo cáo sai, kể cả khi bạn chỉ "nói" là đã làm xong trong câu trả lời. Nếu delegate_to_* trả lỗi hay không tạo được gì, GIỮ NGUYÊN trạng thái và báo lại cho người dùng.`
 
 export const AGENT_DOMAINS: Record<AgentDomain, AgentDomainConfig> = {
   automation: {
