@@ -40,6 +40,13 @@ interface Props {
   description: string
   suggestions: string[]
   placeholder: string
+  // Tin nhắn tự động GỬI NGAY khi panel đang mở — dùng cho các lối tắt kiểu
+  // "Nhờ AI làm" từ nơi khác (vd TaskDetailDrawer) muốn vừa mở panel vừa gửi
+  // luôn, không bắt người dùng gõ lại. Chỉ gửi đúng 1 lần — bên gọi PHẢI tự
+  // xoá nó (set về null) trong onInitialMessageSent, nếu không lần mở panel
+  // sau sẽ gửi lại đúng tin nhắn cũ.
+  initialMessage?: string | null
+  onInitialMessageSent?: () => void
 }
 
 /**
@@ -62,7 +69,9 @@ export function AgentChatPanel({
   title,
   description,
   suggestions,
-  placeholder
+  placeholder,
+  initialMessage,
+  onInitialMessageSent
 }: Props) {
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<LibraryResource[]>([])
@@ -91,6 +100,17 @@ export function AgentChatPanel({
     buildRunContext,
     onToolResult: handleToolResult
   })
+
+  // "Nhờ AI làm" shortcut — gửi NGAY khi mở, không chờ người dùng gõ/bấm gì
+  // thêm (đã hỏi và chốt với người dùng). Guard theo initialMessage còn giá
+  // trị, không theo `open` một mình, để effect chỉ bắn đúng 1 lần cho mỗi
+  // tin nhắn (bên gọi set về null trong onInitialMessageSent ngay sau đó).
+  useEffect(() => {
+    if (open && initialMessage) {
+      send(initialMessage)
+      onInitialMessageSent?.()
+    }
+  }, [open, initialMessage, send, onInitialMessageSent])
 
   useEffect(() => {
     try {

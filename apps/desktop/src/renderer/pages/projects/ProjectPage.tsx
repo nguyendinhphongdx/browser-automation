@@ -268,11 +268,12 @@ function TaskNode({ task, allTasks, depth, onAddChild, onEdit, onDelete, onCycle
 }
 
 /** Chi tiết 1 task kiểu Jira (ADR-0010) — mô tả/đính kèm/output/comment. */
-function TaskDetailDrawer({ task, project, onClose, onEdit }: {
+function TaskDetailDrawer({ task, project, onClose, onEdit, onAskAI }: {
   task: Task
   project: Project
   onClose: () => void
   onEdit: (task: Task) => void
+  onAskAI: (message: string) => void
 }) {
   const {
     taskAttachments, taskComments, setActiveTask, attachResourceToTask, detachResourceFromTask,
@@ -346,6 +347,15 @@ function TaskDetailDrawer({ task, project, onClose, onEdit }: {
   const kindCfg = TASK_KIND_CONFIG[task.kind]
   const KindIcon = kindCfg?.icon
 
+  // Lối tắt "Nhờ AI làm" — mở panel AI của project VÀ gửi luôn (không chờ
+  // người dùng gõ lại) 1 tin nhắn mô tả đúng task đang xem. AI đã có đủ
+  // instructions (ADR-0009) để tự quyết định cách làm theo đúng "kind".
+  const handleAskAI = () => {
+    const kindNote = kindCfg ? ` (loại: ${kindCfg.label})` : ''
+    const notesNote = task.notes.trim() ? `\nMô tả: ${task.notes.trim()}` : ''
+    onAskAI(`Làm task "${task.title}"${kindNote} trong project này.${notesNote}`)
+  }
+
   return (
     <Drawer open onClose={onClose} width={440}>
       <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
@@ -360,7 +370,7 @@ function TaskDetailDrawer({ task, project, onClose, onEdit }: {
       </div>
 
       <div className="flex-1 overflow-auto p-4 space-y-5">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => updateTaskStatus(task.id, NEXT_STATUS[task.status])}
             className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium', statusCfg.color)}>
             <StatusIcon className={cn('h-3 w-3', task.status === 'in-progress' && 'animate-spin')} />
@@ -371,6 +381,10 @@ function TaskDetailDrawer({ task, project, onClose, onEdit }: {
               <KindIcon className="h-3 w-3" /> {kindCfg.label}
             </span>
           )}
+          <button onClick={handleAskAI}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border border-purple-200 text-purple-600 hover:bg-purple-50 transition-colors ml-auto">
+            <Sparkles className="h-3 w-3" /> Nhờ AI làm
+          </button>
         </div>
 
         {/* Mô tả */}
@@ -542,7 +556,18 @@ export function ProjectPage() {
   const [taskDialog, setTaskDialog] = useState<{ parentTaskId: string | null; task: Task | null } | null>(null)
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null)
   const [showAIPanel, setShowAIPanel] = useState(false)
+  const [pendingAIMessage, setPendingAIMessage] = useState<string | null>(null)
   const navigate = useNavigate()
+
+  // "Nhờ AI làm" từ TaskDetailDrawer — mở panel AI VÀ đặt sẵn tin nhắn để
+  // AgentChatPanel tự gửi ngay (xem initialMessage/onInitialMessageSent).
+  // Đóng luôn Task Detail — cả 2 đều là Drawer neo bên phải cùng 1 khung,
+  // mở đồng thời sẽ chồng lên nhau.
+  const handleAskAIFromTask = (message: string) => {
+    setPendingAIMessage(message)
+    setShowAIPanel(true)
+    setDetailTaskId(null)
+  }
 
   useEffect(() => { fetchProjects() }, [])
 
@@ -681,12 +706,15 @@ export function ProjectPage() {
             description="Luôn đọc sổ tay + cây thư mục + task trước khi làm gì — hỏi AI viết kịch bản tập mới, tạo task, hoặc tóm tắt lại ngữ cảnh dự án."
             suggestions={PROJECT_AGENT_SUGGESTIONS}
             placeholder="Yêu cầu AI về project này..."
+            initialMessage={pendingAIMessage}
+            onInitialMessageSent={() => setPendingAIMessage(null)}
           />
 
           {detailTask && (
             <TaskDetailDrawer task={detailTask} project={activeProject}
               onClose={() => setDetailTaskId(null)}
-              onEdit={(task) => setTaskDialog({ parentTaskId: task.parentTaskId, task })} />
+              onEdit={(task) => setTaskDialog({ parentTaskId: task.parentTaskId, task })}
+              onAskAI={handleAskAIFromTask} />
           )}
         </div>
       ) : (
