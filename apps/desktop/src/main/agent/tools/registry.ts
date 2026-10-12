@@ -131,10 +131,14 @@ export function buildVideoToolset(ctx: AgentToolContext): ToolSet {
 }
 
 /**
- * Toolset riêng cho domain 'project' (ADR-0005) — không có khái niệm
- * browser/workflow/pipeline, chỉ gồm 7 tool Project/Task (ADR-0004) + đúng
- * bộ tool thư viện đã dùng chung với buildVideoToolset (để AI tự tổ chức
- * output trong folder gốc project).
+ * Toolset riêng cho domain 'project' (ADR-0005) — 7 tool Project/Task
+ * (ADR-0004) + tool thư viện + tool điều phối sang Automation/Video Studio
+ * (ADR-0007/0011). Trước đây KHÔNG có delegate_to_* / run_video_pipeline, bắt
+ * người dùng tự chuyển sang trợ lý chung mới thực thi được task
+ * kind="image"/"video"/"automation" — gây đúng trải nghiệm "AI chỉ đưa
+ * prompt, bắt tự copy/paste" dù đang chat NGAY TRONG project đó. Domain này
+ * đã biết chắc 1 projectId cố định (qua contextNote, xem agent-handlers.ts)
+ * nên không cần list_projects/delegate_to_project như domain 'general'.
  */
 export function buildProjectToolset(ctx: AgentToolContext): ToolSet {
   return {
@@ -151,27 +155,28 @@ export function buildProjectToolset(ctx: AgentToolContext): ToolSet {
     create_task: createCreateTaskTool(ctx),
     update_task_status: createUpdateTaskStatusTool(ctx),
     list_project_tasks: createListProjectTasksTool(ctx),
-    move_task: createMoveTaskTool(ctx)
+    move_task: createMoveTaskTool(ctx),
+    list_workflows: createListWorkflowsTool(ctx),
+    list_pipelines: createListPipelinesTool(ctx),
+    run_video_pipeline: createRunVideoPipelineTool(ctx),
+    delegate_to_automation: createDelegateToAutomationTool(ctx),
+    delegate_to_video_studio: createDelegateToVideoStudioTool(ctx)
   }
 }
 
 /**
  * Toolset cho domain 'general' (ADR-0006) — trợ lý chung, mount ở
- * Layout.tsx, dùng được từ MỌI trang. Giống buildProjectToolset (mọi tool
- * Project/Task + thư viện đều nhận id qua tham số tool, không qua
- * AgentToolContext, nên gọi được không cần biết "đang ở trang nào"), cộng
- * thêm list_projects vì trợ lý chung không có 1 projectId cố định như trang
- * Project — phải tự tra được "đang có project nào" trước.
+ * Layout.tsx, dùng được từ MỌI trang. Kế thừa toàn bộ buildProjectToolset
+ * (mọi tool Project/Task/thư viện/điều phối đều nhận id qua tham số tool,
+ * không qua AgentToolContext, nên gọi được không cần biết "đang ở trang
+ * nào"), cộng thêm list_projects + delegate_to_project vì trợ lý chung
+ * không có 1 projectId cố định như trang Project — phải tự tra được "đang
+ * có project nào" trước.
  */
 export function buildGeneralToolset(ctx: AgentToolContext): ToolSet {
   return {
     ...buildProjectToolset(ctx),
     list_projects: createListProjectsTool(ctx),
-    list_workflows: createListWorkflowsTool(ctx),
-    list_pipelines: createListPipelinesTool(ctx),
-    run_video_pipeline: createRunVideoPipelineTool(ctx),
-    delegate_to_automation: createDelegateToAutomationTool(ctx),
-    delegate_to_video_studio: createDelegateToVideoStudioTool(ctx),
     delegate_to_project: createDelegateToProjectTool(ctx),
     list_campaigns: createListCampaignsTool(ctx),
     create_campaign: createCreateCampaignTool(ctx),

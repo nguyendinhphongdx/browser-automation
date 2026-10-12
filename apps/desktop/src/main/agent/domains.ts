@@ -83,7 +83,11 @@ Quy tắc bắt buộc:
    - kind="video": dựng cảnh/video hoàn chỉnh.
    - kind="automation": crawl/tải tài nguyên có sẵn từ web.
    - kind="other": việc không thuộc 4 loại trên.
-   Bạn ở domain Project, KHÔNG có tool dựng pipeline/workflow — chỉ tự làm ngay được task kind="script"/"other". Với task kind="image"/"video"/"automation", báo người dùng mở đúng trang Video Studio/Automation, hoặc dùng trợ lý chung (nút Sparkles ở mọi trang) — nó có tool delegate_to_video_studio/delegate_to_automation để giao việc thẳng mà không cần mở trang đó. GIỮ NGUYÊN trạng thái task đó (đừng đổi sang "done") khi bạn chỉ dừng ở việc hướng dẫn người dùng — không tự nhận làm được những việc bạn không có tool, và không đánh dấu Xong cho việc bạn chưa thật sự làm.`
+   Bạn CÓ ĐẦY ĐỦ tool để tự làm hết, ngay trong cuộc chat này — không cần bảo người dùng mở trang khác hay tự copy/paste prompt đi đâu:
+   - kind="script"/"other": làm trực tiếp bằng văn bản, lưu qua save_resource.
+   - kind="image"/"video": dùng delegate_to_video_studio để DỰNG pipeline (dùng list_pipelines nếu cần tra id pipeline đã có), SAU ĐÓ bắt buộc dùng run_video_pipeline(videoPipelineId) để CHẠY THẬT ra ảnh/video — dựng xong mà chưa chạy thì chưa có gì thật cả, đừng bảo người dùng tự làm nốt phần này.
+   - kind="automation": dùng delegate_to_automation (dùng list_workflows nếu cần tra id workflow).
+   run_video_pipeline/delegate_to_automation/delegate_to_video_studio đều cần người dùng duyệt trước khi chạy thật (tốn tiền/thời gian) — đó là xác nhận bình thường trong CHÍNH cuộc chat này, không phải lý do để từ chối làm hay đẩy việc sang chỗ khác. Nếu 1 tool trả lỗi, báo lại người dùng và GIỮ NGUYÊN trạng thái task (đừng đổi sang "done") — không đánh dấu Xong cho việc chưa thật sự làm xong.`
 
 // System prompt cho domain 'general' (ADR-0006) — trợ lý chung mount ở
 // Layout.tsx, dùng được từ MỌI trang (không chỉ Project). KHÁC
@@ -131,7 +135,11 @@ export const AGENT_DOMAINS: Record<AgentDomain, AgentDomainConfig> = {
   project: {
     instructions: PROJECT_AGENT_INSTRUCTIONS,
     buildToolset: buildProjectToolset,
-    approvalGatedTools: ['delete_resource']
+    // delegate_to_automation/delegate_to_video_studio/run_video_pipeline
+    // (ADR-0007/0011) nay có thẳng trong domain này — gate giống hệt domain
+    // 'general' vì cùng rủi ro (ghi thẳng DB bỏ qua re-validate renderer,
+    // hoặc gọi thật provider tốn tiền/thời gian).
+    approvalGatedTools: ['delete_resource', 'delegate_to_automation', 'delegate_to_video_studio', 'run_video_pipeline']
   },
   general: {
     instructions: GENERAL_AGENT_INSTRUCTIONS,
