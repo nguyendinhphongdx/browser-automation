@@ -98,6 +98,27 @@ export function validateVideoPipelinePatch(
         )
       }
     }
+
+    // Input socket bắt buộc (vd generate-image's "prompt") không phải
+    // configSchema — validateConfig ở trên không bắt được trường hợp model
+    // tạo node generate-image nhưng QUÊN nối edge scene-prompt -> prompt,
+    // khiến ảnh sinh ra không có prompt thật (chỉ phát hiện lúc chạy, hoặc
+    // không phát hiện gì cả, cứ thế sinh ảnh rỗng). Chỉ check node MỚI tạo
+    // trong patch này — node đã có sẵn trên canvas có thể đã được nối từ
+    // trước (patch hiện tại không nhận được danh sách edge cũ để biết chắc).
+    actionNodes.forEach((n, i) => {
+      const nodeType = n?.nodeType || ''
+      const label = n?.label || nodeType || `#${i}`
+      const def = defsByType.get(nodeType)
+      if (!def || !n?.id) return
+      for (const input of def.inputs) {
+        if (!input.required) continue
+        const hasEdge = actionEdges.some((e) => String(e?.target) === String(n.id) && e?.targetHandle === input.name)
+        if (!hasEdge) {
+          errors.push(`Node "${label}" (${nodeType}): input bắt buộc "${input.name}" chưa được nối edge nào`)
+        }
+      }
+    })
   }
 
   if (act.type === 'update_node') {

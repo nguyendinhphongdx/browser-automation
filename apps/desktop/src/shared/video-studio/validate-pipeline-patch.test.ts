@@ -22,6 +22,19 @@ const NODE_DEFS: VideoNodeDefinition[] = [
     inputs: [{ name: 'prompt', type: 'TEXT', required: false }],
     outputs: [{ name: 'video', type: 'VIDEO', required: true }],
     configSchema: [{ key: 'provider', label: 'Provider', type: 'select', options: [{ label: 'Kling', value: 'kling' }], required: true }]
+  },
+  {
+    type: 'generate-image',
+    label: 'Tạo ảnh',
+    category: 'generate',
+    icon: 'ImagePlus',
+    description: '',
+    inputs: [
+      { name: 'prompt', type: 'TEXT', required: true },
+      { name: 'referenceImage', type: 'IMAGE', required: false }
+    ],
+    outputs: [{ name: 'image', type: 'IMAGE', required: true }],
+    configSchema: [{ key: 'provider', label: 'Provider', type: 'select', options: [{ label: 'Flux', value: 'flux' }], required: true }]
   }
 ]
 
@@ -119,6 +132,51 @@ describe('validateVideoPipelinePatch', () => {
       [{ id: 'existing-1', nodeType: 'generate-video' }]
     )
     expect(errors.some((e) => e.includes('provider'))).toBe(true)
+  })
+
+  it('rejects a new node whose required input socket (generate-image\'s "prompt") has no edge at all — the exact bug that let the model create prompt-less image nodes', () => {
+    const { errors } = validateVideoPipelinePatch(
+      {
+        type: 'add_nodes',
+        nodes: [{ id: 'n1', nodeType: 'generate-image', label: 'Tạo ảnh Cảnh 1', config: { provider: 'flux' } }]
+        // không có edges — "prompt" (required) không được nối với gì cả
+      },
+      NODE_DEFS,
+      []
+    )
+    expect(errors.some((e) => e.includes('"prompt"') && e.includes('chưa được nối edge'))).toBe(true)
+  })
+
+  it('accepts a generate-image node once its required "prompt" input is wired to a scene-prompt node', () => {
+    const { errors } = validateVideoPipelinePatch(
+      {
+        type: 'add_nodes',
+        nodes: [
+          { id: 'n1', nodeType: 'scene-prompt', label: 'Cảnh 1', config: { prompt: 'a cat' } },
+          { id: 'n2', nodeType: 'generate-image', label: 'Tạo ảnh Cảnh 1', config: { provider: 'flux' } }
+        ],
+        edges: [{ source: 'n1', target: 'n2', sourceHandle: 'text', targetHandle: 'prompt' }]
+      },
+      NODE_DEFS,
+      []
+    )
+    expect(errors).toEqual([])
+  })
+
+  it('does not flag the optional "referenceImage" input as missing when only "prompt" is wired', () => {
+    const { errors } = validateVideoPipelinePatch(
+      {
+        type: 'add_nodes',
+        nodes: [
+          { id: 'n1', nodeType: 'scene-prompt', label: 'Cảnh 1', config: { prompt: 'a cat' } },
+          { id: 'n2', nodeType: 'generate-image', label: 'Tạo ảnh Cảnh 1', config: { provider: 'flux' } }
+        ],
+        edges: [{ source: 'n1', target: 'n2', sourceHandle: 'text', targetHandle: 'prompt' }]
+      },
+      NODE_DEFS,
+      []
+    )
+    expect(errors.some((e) => e.includes('referenceImage'))).toBe(false)
   })
 
   it('edges can reference an existing node already on the canvas, not just local patch ids', () => {
