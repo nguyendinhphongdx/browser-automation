@@ -113,6 +113,7 @@ Architecture Decision Record — quyết định kiến trúc đã chốt + alte
 | 0008 | [Trợ lý chung — Campaigns/Resources/Profiles](adr/0008-general-assistant-campaigns-resources-profiles.md) | CRUD cơ bản cho 3 domain còn thiếu, ẩn field nhạy cảm (mật khẩu/cookie) khỏi context model, loại trừ rõ executeCampaign/launchBrowser/exportCookiesJSON |
 | 0009 | [Task có "kind"](adr/0009-task-kind.md) | AI chủ động chia project thành task đúng loại (script/image/video/automation/other), định tuyến đúng domain khi thực hiện — ALTER TABLE đầu tiên trong codebase, đã kiểm chứng trên bản sao DB thật |
 | 0010 | [Task Detail kiểu Jira](adr/0010-task-detail-view.md) | Mô tả/đính kèm/output/comment cho từng task — 2 bảng mới `task_attachments` (N-N) + `task_comments`, tái dùng ResourcePicker/upload/Drawer đã có |
+| 0011 | [AI tự chạy pipeline video thật](adr/0011-run-video-pipeline-tool.md) | Tool `run_video_pipeline` gate approval, dùng thẳng `executeVideoPipeline` (không cần WebContents) — auto-deny của sub-agent (ADR-0007) tự chặn chạy ngầm qua delegate |
 
 ## [development/](development/) — Đóng góp code
 
