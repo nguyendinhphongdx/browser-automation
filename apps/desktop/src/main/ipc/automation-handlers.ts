@@ -12,7 +12,7 @@ import {
   duplicateCampaign, createCampaignRun, getCampaignRuns
 } from '../services/campaign-service'
 import { getProfileById, updateLastUsed } from '../services/profile-service'
-import { launchBrowser, closeBrowser, getActiveBrowserContext } from '../browser/launcher'
+import { acquireBrowserPage, getActiveBrowserContext } from '../browser/launcher'
 import { startRecording, stopRecording, isRecording, getRecordedActions, actionsToWorkflow } from '../automation/recorder'
 import { executeVisualWorkflow, executeCodeWorkflow, type ExecutionContext } from '../automation/engine'
 import { NODE_DEFINITIONS, NODE_CATEGORIES } from '../automation/node-definitions'
@@ -90,28 +90,18 @@ export function registerAutomationHandlers(ipcMain: IpcMain) {
     })
 
     try {
-      // Lấy browser đã mở, kiểm tra còn sống không
-      let active = getActiveBrowserContext(actualProfileId)
-
-      if (active) {
-        try {
-          active.context.pages()
-        } catch {
-          await closeBrowser(actualProfileId).catch(() => {})
-          active = null
-        }
-      }
-
-      if (!active) {
-        await launchBrowser(profile)
-        active = getActiveBrowserContext(actualProfileId)
-      }
-      if (!active) throw new Error('Không thể khởi chạy browser')
+      // acquireBrowserPage (browser/launcher.ts) tự phát hiện context chết
+      // thật sự (browser process đã crash/bị đóng ngoài tầm kiểm soát) bằng
+      // cách thử thao tác thật rồi relaunch nếu lỗi — KHÔNG dùng
+      // context.pages() để "dò" (hàm đồng bộ chỉ đọc cache local, không hề
+      // hỏi browser process còn sống hay không, nên không bắt được đúng
+      // trường hợp này, từng khiến newPage() văng lỗi "Target page, context
+      // or browser has been closed" thẳng ra ngoài không được xử lý).
+      const { context, page } = await acquireBrowserPage(profile)
       updateLastUsed(actualProfileId)
 
-      ctx.context = active.context
-      const pages = active.context.pages().filter(p => !p.isClosed())
-      ctx.page = pages[pages.length - 1] || await active.context.newPage()
+      ctx.context = context
+      ctx.page = page
 
       // Initialize variables from workflow
       for (const v of workflow.variables) {
@@ -185,8 +175,17 @@ export function registerAutomationHandlers(ipcMain: IpcMain) {
       throw new Error('Trình duyệt chưa được khởi chạy. Vui lòng mở browser trước.')
     }
 
-    const pages = active.context.pages()
-    const page = pages[pages.length - 1] || await active.context.newPage()
+    let page
+    try {
+      const pages = active.context.pages()
+      page = pages[pages.length - 1] || await active.context.newPage()
+    } catch {
+      // Context tưởng còn sống (có trong Map) nhưng process browser thật đã
+      // chết — chỉ newPage() thật mới lộ ra, không phải context.pages() (xem
+      // comment ở acquireBrowserPage, browser/launcher.ts). Báo lỗi rõ ràng
+      // thay vì để lỗi nội bộ Playwright văng thẳng ra UI.
+      throw new Error('Trình duyệt đã đóng ngoài tầm kiểm soát. Vui lòng mở lại browser trước khi ghi lại.')
+    }
 
     await startRecording(page)
     return { success: true }

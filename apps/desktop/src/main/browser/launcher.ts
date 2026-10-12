@@ -156,8 +156,16 @@ export async function launchBrowser(profile: BrowserProfile): Promise<void> {
 export async function closeBrowser(profileId: string): Promise<void> {
   const entry = activeBrowsers.get(profileId)
   if (entry) {
-    await entry.context.close()
-    activeBrowsers.delete(profileId)
+    // finally, không phải sau await trực tiếp — nếu process browser đã chết
+    // ngoài tầm kiểm soát (crash/bị kill thủ công), context.close() tự nó
+    // ném lỗi vì không còn gì để đóng, và nếu lỗi đó văng ra TRƯỚC dòng
+    // delete, entry chết sẽ kẹt lại trong Map mãi mãi — lần gọi sau vẫn thấy
+    // "đang có browser" dù thực ra đã chết.
+    try {
+      await entry.context.close()
+    } finally {
+      activeBrowsers.delete(profileId)
+    }
   }
 }
 
@@ -183,35 +191,43 @@ export async function closeAllBrowsers(): Promise<void> {
  * fresh browser if none is active, then picks a usable page (reusing the
  * last non-closed open page, or opening a new one).
  */
+async function pickOrOpenPage(context: BrowserContext): Promise<Page> {
+  const pages = context.pages().filter((p) => !p.isClosed())
+  return pages.length > 0 ? pages[pages.length - 1] : await context.newPage()
+}
+
 export async function acquireBrowserPage(
   profile: BrowserProfile
 ): Promise<{ context: BrowserContext; page: Page; launchedNow: boolean }> {
   let active = getActiveBrowserContext(profile.id)
+  let launchedNow = false
 
-  // Detect a stale/dead context (e.g. browser process crashed/closed outside
-  // of our tracking) and force a relaunch instead of using it.
   if (active) {
     try {
-      active.context.pages()
+      const page = await pickOrOpenPage(active.context)
+      return { context: active.context, page, launchedNow }
     } catch {
+      // context.pages() (dùng ở bản cũ để "dò" context chết) là hàm ĐỒNG BỘ
+      // chỉ đọc cache local của Playwright — không hề hỏi thật browser process
+      // còn sống hay không, nên không bao giờ bắt được đúng trường hợp này
+      // (process đã crash/bị đóng ngoài tầm kiểm soát, nhưng Map
+      // `activeBrowsers` chưa kịp dọn). Chỉ thao tác THẬT như newPage() mới
+      // lộ ra lỗi "Target page, context or browser has been closed" — và lúc
+      // đó coi như xác nhận context đã chết, dọn sạch rồi khởi chạy lại từ
+      // đầu thay vì ném lỗi thẳng cho người dùng.
       await closeBrowser(profile.id).catch(() => {})
       active = null
     }
   }
 
-  let launchedNow = false
-  if (!active) {
-    await launchBrowser(profile)
-    active = getActiveBrowserContext(profile.id)
-    launchedNow = true
-  }
+  await launchBrowser(profile)
+  active = getActiveBrowserContext(profile.id)
+  launchedNow = true
 
   if (!active) {
     throw new Error('Không thể khởi chạy browser')
   }
 
-  const pages = active.context.pages().filter((p) => !p.isClosed())
-  const page = pages.length > 0 ? pages[pages.length - 1] : await active.context.newPage()
-
+  const page = await pickOrOpenPage(active.context)
   return { context: active.context, page, launchedNow }
 }
