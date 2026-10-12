@@ -594,11 +594,18 @@ export interface UpdateProjectInput {
 
 export type TaskStatus = 'todo' | 'in-progress' | 'done'
 
+// Bản chất công việc của 1 task (ADR-0009) — cho AI cơ sở để tự phân rã 1
+// mục tiêu project lớn thành nhiều task đúng loại, và biết chọn đúng domain
+// khi thực hiện (script = làm trực tiếp, image/video = delegate_to_video_studio,
+// automation = delegate_to_automation).
+export type TaskKind = 'script' | 'image' | 'video' | 'automation' | 'other'
+
 export interface Task {
   id: string
   projectId: string
   title: string
   status: TaskStatus
+  kind: TaskKind
   parentTaskId: string | null
   sequence: number
   outputFolderId: string | null
@@ -610,6 +617,7 @@ export interface Task {
 export interface CreateTaskInput {
   projectId: string
   title: string
+  kind?: TaskKind
   parentTaskId?: string | null
   sequence?: number
   outputFolderId?: string | null
@@ -619,6 +627,7 @@ export interface CreateTaskInput {
 export interface UpdateTaskInput {
   title?: string
   status?: TaskStatus
+  kind?: TaskKind
   parentTaskId?: string | null
   sequence?: number
   outputFolderId?: string | null

@@ -260,6 +260,7 @@ export function initDatabase() {
       project_id TEXT NOT NULL,
       title TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'todo',
+      kind TEXT NOT NULL DEFAULT 'other',
       parent_task_id TEXT REFERENCES tasks(id) ON DELETE SET NULL,
       sequence INTEGER NOT NULL DEFAULT 0,
       output_folder_id TEXT REFERENCES resources(id) ON DELETE SET NULL,
@@ -272,6 +273,16 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent_task_id);
   `)
+
+  // DB đã tồn tại từ trước khi có cột `kind` (ADR-0009) — CREATE TABLE IF NOT
+  // EXISTS ở trên không tự thêm cột vào bảng `tasks` đã có sẵn, nên cần
+  // ALTER TABLE riêng, chỉ chạy nếu cột thật sự chưa có (tránh lỗi "duplicate
+  // column" khi hàm này chạy lại ở lần khởi động sau, và không đụng tới dữ
+  // liệu project/task đã có của người dùng).
+  const taskColumns = db.prepare("PRAGMA table_info(tasks)").all() as { name: string }[]
+  if (!taskColumns.some((c) => c.name === 'kind')) {
+    db.exec("ALTER TABLE tasks ADD COLUMN kind TEXT NOT NULL DEFAULT 'other'")
+  }
 
   // Tạo Default Browser profile nếu chưa có
   ensureDefaultProfile(db)

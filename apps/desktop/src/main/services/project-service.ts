@@ -28,6 +28,7 @@ function rowToTask(row: any): Task {
     projectId: row.project_id,
     title: row.title,
     status: row.status,
+    kind: row.kind || 'other',
     parentTaskId: row.parent_task_id || null,
     sequence: row.sequence,
     outputFolderId: row.output_folder_id || null,
@@ -108,12 +109,13 @@ export function createTask(input: CreateTaskInput): Task {
   const now = new Date().toISOString()
 
   db.prepare(`
-    INSERT INTO tasks (id, project_id, title, parent_task_id, sequence, output_folder_id, notes, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO tasks (id, project_id, title, kind, parent_task_id, sequence, output_folder_id, notes, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     input.projectId,
     input.title,
+    input.kind ?? 'other',
     input.parentTaskId ?? null,
     input.sequence ?? 0,
     input.outputFolderId ?? null,
@@ -145,11 +147,12 @@ export function updateTask(id: string, input: UpdateTaskInput): Task | null {
   const now = new Date().toISOString()
   db.prepare(`
     UPDATE tasks SET
-      title = ?, status = ?, parent_task_id = ?, sequence = ?, output_folder_id = ?, notes = ?, updated_at = ?
+      title = ?, status = ?, kind = ?, parent_task_id = ?, sequence = ?, output_folder_id = ?, notes = ?, updated_at = ?
     WHERE id = ?
   `).run(
     input.title ?? existing.title,
     input.status ?? existing.status,
+    input.kind ?? existing.kind,
     input.parentTaskId !== undefined ? input.parentTaskId : existing.parentTaskId,
     input.sequence ?? existing.sequence,
     input.outputFolderId !== undefined ? input.outputFolderId : existing.outputFolderId,

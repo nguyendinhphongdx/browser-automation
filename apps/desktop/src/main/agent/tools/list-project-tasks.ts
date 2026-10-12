@@ -17,6 +17,7 @@ export function createListProjectTasksTool(ctx: AgentToolContext) {
         id: t.id,
         title: t.title,
         status: t.status,
+        kind: t.kind,
         parentTaskId: t.parentTaskId,
         sequence: t.sequence,
         outputFolderId: t.outputFolderId

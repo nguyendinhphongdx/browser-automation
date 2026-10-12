@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus, Trash2, FolderKanban, FolderOpen, Circle, Loader2, CheckCircle2,
-  Pencil, X, BookOpen, Save, Sparkles
+  Pencil, X, BookOpen, Save, Sparkles, FileText, Image, Clapperboard, Play
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useLibraryStore } from '@/stores/library-store'
 import { ResourcePicker } from '@/components/library/ResourcePicker'
 import { AgentChatPanel } from '@/components/agent/AgentChatPanel'
 import { cn } from '@/lib/utils'
-import type { Project, Task, TaskStatus, LibraryResource } from '@shared/types'
+import type { Project, Task, TaskStatus, TaskKind, LibraryResource } from '@shared/types'
 
 const PROJECT_AGENT_SUGGESTIONS = [
   'Tạo task mới "Viết kịch bản tập 3"',
@@ -38,6 +38,17 @@ const NEXT_STATUS: Record<TaskStatus, TaskStatus> = {
   'todo': 'in-progress',
   'in-progress': 'done',
   'done': 'todo'
+}
+
+// Bản chất công việc của 1 task (ADR-0009) — icon riêng để nhìn là biết loại
+// việc mà không cần đọc title, "other" không hiện icon (mặc định, không cần
+// nhấn mạnh).
+const TASK_KIND_CONFIG: Record<TaskKind, { label: string; icon: any } | null> = {
+  script: { label: 'Kịch bản', icon: FileText },
+  image: { label: 'Hình ảnh', icon: Image },
+  video: { label: 'Video', icon: Clapperboard },
+  automation: { label: 'Automation', icon: Play },
+  other: null
 }
 
 function CreateProjectDialog({ onClose }: { onClose: () => void }) {
@@ -100,6 +111,7 @@ function TaskDialog({ projectId, parentTaskId, task, onClose }: {
 }) {
   const { createTask, updateTask } = useProjectStore()
   const [title, setTitle] = useState(task?.title ?? '')
+  const [kind, setKind] = useState<TaskKind>(task?.kind ?? 'other')
   const [sequence, setSequence] = useState(task?.sequence ?? 0)
   const [notes, setNotes] = useState(task?.notes ?? '')
   const [outputFolder, setOutputFolder] = useState<{ id: string; name: string } | null>(null)
@@ -121,12 +133,12 @@ function TaskDialog({ projectId, parentTaskId, task, onClose }: {
     try {
       if (task) {
         await updateTask(task.id, {
-          title: title.trim(), sequence, notes,
+          title: title.trim(), kind, sequence, notes,
           outputFolderId: outputFolder ? outputFolder.id : null
         })
       } else {
         await createTask({
-          projectId, parentTaskId, title: title.trim(), sequence, notes,
+          projectId, parentTaskId, title: title.trim(), kind, sequence, notes,
           outputFolderId: outputFolder?.id
         })
       }
@@ -151,6 +163,17 @@ function TaskDialog({ projectId, parentTaskId, task, onClose }: {
             <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="VD: Viết kịch bản tập 3"
               required autoFocus
               className="w-full px-3 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Loại việc</label>
+            <select value={kind} onChange={e => setKind(e.target.value as TaskKind)}
+              className="w-full px-3 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+              <option value="other">Khác</option>
+              <option value="script">Kịch bản</option>
+              <option value="image">Hình ảnh</option>
+              <option value="video">Video</option>
+              <option value="automation">Automation</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1.5">Thứ tự</label>
@@ -206,6 +229,8 @@ function TaskNode({ task, allTasks, depth, onAddChild, onEdit, onDelete, onCycle
   const children = allTasks.filter(t => t.parentTaskId === task.id)
   const statusCfg = TASK_STATUS_CONFIG[task.status]
   const StatusIcon = statusCfg.icon
+  const kindCfg = TASK_KIND_CONFIG[task.kind]
+  const KindIcon = kindCfg?.icon
 
   return (
     <div>
@@ -215,6 +240,11 @@ function TaskNode({ task, allTasks, depth, onAddChild, onEdit, onDelete, onCycle
           <StatusIcon className={cn('h-3 w-3', task.status === 'in-progress' && 'animate-spin')} />
           {statusCfg.label}
         </button>
+        {kindCfg && KindIcon && (
+          <span title={kindCfg.label} className="inline-flex items-center justify-center p-1 rounded-md bg-accent text-muted-foreground shrink-0">
+            <KindIcon className="h-3 w-3" />
+          </span>
+        )}
         <span className="text-sm flex-1 truncate">{task.title}</span>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
           <button onClick={() => onAddChild(task.id)} title="Thêm task con"
