@@ -111,6 +111,7 @@ Architecture Decision Record — quyết định kiến trúc đã chốt + alte
 | 0006 | [Trợ lý chung (domain 'general')](adr/0006-general-assistant-domain.md) | Mount AI ở `Layout.tsx` cho mọi trang, toolset = project + 1 tool `list_projects` mới — không chặn đường điều phối sang domain khác sau này |
 | 0007 | [Điều phối sang domain khác](adr/0007-agent-orchestration.md) | Trợ lý chung `delegate_to_*` chạy sub-agent trên workflow/pipeline ĐÃ LƯU trong DB (không cần trang đang mở), ghi thẳng DB — bỏ qua re-validate 2 lớp của renderer |
 | 0008 | [Trợ lý chung — Campaigns/Resources/Profiles](adr/0008-general-assistant-campaigns-resources-profiles.md) | CRUD cơ bản cho 3 domain còn thiếu, ẩn field nhạy cảm (mật khẩu/cookie) khỏi context model, loại trừ rõ executeCampaign/launchBrowser/exportCookiesJSON |
+| 0009 | [Task có "kind"](adr/0009-task-kind.md) | AI chủ động chia project thành task đúng loại (script/image/video/automation/other), định tuyến đúng domain khi thực hiện — ALTER TABLE đầu tiên trong codebase, đã kiểm chứng trên bản sao DB thật |
 
 ## [development/](development/) — Đóng góp code
 
