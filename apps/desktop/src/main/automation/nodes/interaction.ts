@@ -38,7 +38,19 @@ export class TypeTextNode extends BaseNode {
     const selector = this.resolve(this.config.selector)
     const text = this.resolve(this.config.text)
     if (this.config.clearFirst) {
-      await this.page.fill(selector, '')
+      // KHÔNG dùng page.fill(selector, '') để xoá — fill() ghi thẳng vào DOM,
+      // bỏ qua handler input/keydown riêng của element. Với input/textarea
+      // thường thì vô hại, nhưng với rich-text editor dựng trên
+      // contenteditable (vd ô prompt của ChatGPT dùng ProseMirror, Notion,
+      // Slack...), editor tự quản lý state riêng và không biết DOM vừa bị
+      // ghi đè ngoài ý nó — DOM bị ghi rồi editor tự revert/không đồng bộ ở
+      // lần render kế tiếp, khiến bước gõ chữ sau đó coi như vô tác dụng dù
+      // node KHÔNG báo lỗi gì cả. Click focus + Ctrl/Cmd+A + Backspace là
+      // phím bấm THẬT (qua CDP), editor nào cũng xử lý đúng vì đó là cách
+      // người dùng thật xoá chữ.
+      await this.page.click(selector)
+      await this.page.keyboard.press('ControlOrMeta+A')
+      await this.page.keyboard.press('Backspace')
     }
     await this.page.type(selector, text, { delay: this.config.delay || 50 })
     this.log('info', `Typed into: ${selector}`)
