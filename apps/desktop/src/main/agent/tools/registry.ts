@@ -21,6 +21,7 @@ import { createMoveResourceTool } from './move-resource'
 import { createUpdateResourceMetadataTool } from './update-resource-metadata'
 import { createDeleteResourceTool } from './delete-resource'
 import { createProposeVideoPipelineChangeTool } from './propose-video-pipeline-change'
+import { createRunVideoPipelineTool } from './run-video-pipeline'
 import { createGetProjectContextTool } from './get-project-context'
 import { createUpdateProjectNotebookTool } from './update-project-notebook'
 import { createCreateProjectTool } from './create-project'
@@ -111,6 +112,7 @@ export function buildAutomationToolset(ctx: AgentToolContext): ToolSet {
 export function buildVideoToolset(ctx: AgentToolContext): ToolSet {
   return {
     propose_video_pipeline_change: createProposeVideoPipelineChangeTool(ctx),
+    run_video_pipeline: createRunVideoPipelineTool(ctx),
     list_resources: createListResourcesTool(ctx),
     get_resource: createGetResourceTool(ctx),
     save_resource: createSaveResourceTool(ctx),
@@ -167,6 +169,7 @@ export function buildGeneralToolset(ctx: AgentToolContext): ToolSet {
     list_projects: createListProjectsTool(ctx),
     list_workflows: createListWorkflowsTool(ctx),
     list_pipelines: createListPipelinesTool(ctx),
+    run_video_pipeline: createRunVideoPipelineTool(ctx),
     delegate_to_automation: createDelegateToAutomationTool(ctx),
     delegate_to_video_studio: createDelegateToVideoStudioTool(ctx),
     delegate_to_project: createDelegateToProjectTool(ctx),
