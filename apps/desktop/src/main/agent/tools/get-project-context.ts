@@ -12,7 +12,12 @@ export function createGetProjectContextTool(ctx: AgentToolContext) {
     inputSchema: z.object({ projectId: z.string() }),
     execute: async ({ projectId }) => {
       const project = getProjectById(projectId)
-      if (!project) return { ok: false, error: `Không tìm thấy project "${projectId}"` }
+      if (!project) {
+        return {
+          ok: false,
+          error: `Không tìm thấy project với id "${projectId}". ĐỪNG tự đoán hay bịa 1 id khác để thử lại — gọi list_projects để lấy đúng danh sách project và id thật, rồi dùng đúng id đó.`
+        }
+      }
 
       const notebook = project.notebookResourceId ? (getResourceTextContent(project.notebookResourceId) ?? '') : ''
       const folderTree = getProjectFolderTree(project.libraryFolderId)
