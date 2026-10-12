@@ -3,6 +3,7 @@ import type { ModelMessage } from 'ai'
 import type { Page } from 'playwright-core'
 import { getActiveBrowserContext } from '../browser/launcher'
 import { getProfileById } from '../services/profile-service'
+import { getProjectById } from '../services/project-service'
 import { DEFAULT_PROFILE_ID } from '../database/init'
 import { NODE_DEFINITIONS } from '../automation/node-definitions'
 import { agentService } from '../agent/agent-service'
@@ -86,8 +87,19 @@ export function registerAgentHandlers(ipcMain: IpcMain) {
         onResourcePreview
       }
 
+      // `projectId` trước đây chỉ dùng làm threadId, KHÔNG BAO GIỜ được nói
+      // cho model biết — model phải tự "đoán" khi gọi get_project_context
+      // v.v. (gọi với id bịa như "project-1", luôn fail). Bơm thẳng id thật
+      // vào instructions qua contextNote để model dùng đúng ngay từ đầu,
+      // không cần list_projects như domain 'general' (ở đây CHỈ có 1 project
+      // cố định — đã biết trước, không cần tra).
+      const project = payload.projectId ? getProjectById(payload.projectId) : null
+      const contextNote = project
+        ? `Project đang mở: id="${project.id}", tên="${project.name}". Dùng ĐÚNG id này cho mọi tool cần "projectId" trong suốt lượt chat này — không tự đoán hay bịa id khác.`
+        : undefined
+
       await agentService.run(
-        { runId, threadId, messages: payload.messages, toolContext, domain },
+        { runId, threadId, messages: payload.messages, toolContext, domain, contextNote },
         (aguiEvent) => emit({ runId, event: aguiEvent })
       )
       return { success: true }

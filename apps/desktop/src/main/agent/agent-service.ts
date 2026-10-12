@@ -18,6 +18,13 @@ export interface AgentRunRequest {
   toolContext: AgentToolContext
   /** 'automation' (mặc định) — xem AGENT_DOMAINS (domains.ts, ADR-0005) cho tools/instructions/approval-gating của từng domain. */
   domain?: AgentDomain
+  /**
+   * Nối thêm vào cuối instructions CHỈ cho run này — chỗ cho caller (vd
+   * agent-handlers.ts) bơm 1 sự thật cụ thể của run (vd "projectId đang mở
+   * là X") mà bản thân domain's instructions tĩnh không thể biết trước.
+   * Không dùng để thay thế instructions, chỉ để bổ sung ngữ cảnh runtime.
+   */
+  contextNote?: string
 }
 
 type EmitFn = (event: AGUIEvent) => void
@@ -53,7 +60,7 @@ export class AgentService {
       const model = resolveAgentModel()
       const domainConfig = AGENT_DOMAINS[domain]
       const tools = domainConfig.buildToolset(toolContext)
-      const instructions = domainConfig.instructions
+      const instructions = req.contextNote ? `${domainConfig.instructions}\n\n${req.contextNote}` : domainConfig.instructions
       const modelLabel = typeof model === 'string' ? model : `${model.provider}/${model.modelId}`
       this.log(runId, `run bắt đầu — domain=${domain} model=${modelLabel} tools=[${Object.keys(tools).join(', ')}]`)
       const toolApproval = Object.fromEntries(
