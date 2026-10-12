@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Plus, Trash2, FolderKanban, FolderOpen, Circle, Loader2, CheckCircle2,
-  Pencil, X, BookOpen, Save, Sparkles, FileText, Image, Clapperboard, Play
+  Pencil, X, BookOpen, Save, Sparkles, FileText, Image, Clapperboard, Play,
+  Paperclip, Upload, Send, MessageSquare, Package
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { useLibraryStore } from '@/stores/library-store'
 import { ResourcePicker } from '@/components/library/ResourcePicker'
+import { LibraryGridCard } from '@/components/library/LibraryGridCard'
 import { AgentChatPanel } from '@/components/agent/AgentChatPanel'
+import { Drawer } from '@/components/Drawer'
 import { cn } from '@/lib/utils'
 import type { Project, Task, TaskStatus, TaskKind, LibraryResource } from '@shared/types'
 
@@ -217,7 +220,7 @@ function TaskDialog({ projectId, parentTaskId, task, onClose }: {
   )
 }
 
-function TaskNode({ task, allTasks, depth, onAddChild, onEdit, onDelete, onCycleStatus }: {
+function TaskNode({ task, allTasks, depth, onAddChild, onEdit, onDelete, onCycleStatus, onOpenDetail }: {
   task: Task
   allTasks: Task[]
   depth: number
@@ -225,6 +228,7 @@ function TaskNode({ task, allTasks, depth, onAddChild, onEdit, onDelete, onCycle
   onEdit: (task: Task) => void
   onDelete: (task: Task) => void
   onCycleStatus: (task: Task) => void
+  onOpenDetail: (task: Task) => void
 }) {
   const children = allTasks.filter(t => t.parentTaskId === task.id)
   const statusCfg = TASK_STATUS_CONFIG[task.status]
@@ -245,7 +249,7 @@ function TaskNode({ task, allTasks, depth, onAddChild, onEdit, onDelete, onCycle
             <KindIcon className="h-3 w-3" />
           </span>
         )}
-        <span className="text-sm flex-1 truncate">{task.title}</span>
+        <button onClick={() => onOpenDetail(task)} className="text-sm flex-1 truncate text-left hover:underline">{task.title}</button>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
           <button onClick={() => onAddChild(task.id)} title="Thêm task con"
             className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"><Plus className="h-3.5 w-3.5" /></button>
@@ -257,9 +261,211 @@ function TaskNode({ task, allTasks, depth, onAddChild, onEdit, onDelete, onCycle
       </div>
       {children.map(child => (
         <TaskNode key={child.id} task={child} allTasks={allTasks} depth={depth + 1}
-          onAddChild={onAddChild} onEdit={onEdit} onDelete={onDelete} onCycleStatus={onCycleStatus} />
+          onAddChild={onAddChild} onEdit={onEdit} onDelete={onDelete} onCycleStatus={onCycleStatus} onOpenDetail={onOpenDetail} />
       ))}
     </div>
+  )
+}
+
+/** Chi tiết 1 task kiểu Jira (ADR-0010) — mô tả/đính kèm/output/comment. */
+function TaskDetailDrawer({ task, project, onClose, onEdit }: {
+  task: Task
+  project: Project
+  onClose: () => void
+  onEdit: (task: Task) => void
+}) {
+  const {
+    taskAttachments, taskComments, setActiveTask, attachResourceToTask, detachResourceFromTask,
+    addTaskComment, updateTask, updateTaskStatus, deleteTask
+  } = useProjectStore()
+  const [notes, setNotes] = useState(task.notes)
+  const [notesDirty, setNotesDirty] = useState(false)
+  const [savingNotes, setSavingNotes] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [sendingComment, setSendingComment] = useState(false)
+  const [outputResources, setOutputResources] = useState<LibraryResource[]>([])
+  const [loadingOutput, setLoadingOutput] = useState(false)
+
+  useEffect(() => {
+    setActiveTask(task.id)
+    setNotes(task.notes)
+    setNotesDirty(false)
+  }, [task.id])
+
+  useEffect(() => {
+    const folderId = task.outputFolderId ?? project.libraryFolderId
+    setLoadingOutput(true)
+    window.api.getLibraryChildren(folderId).then((rows: LibraryResource[]) => {
+      setOutputResources(rows)
+      setLoadingOutput(false)
+    })
+  }, [task.outputFolderId, project.libraryFolderId])
+
+  const handleSaveNotes = async () => {
+    setSavingNotes(true)
+    try {
+      await updateTask(task.id, { notes })
+      setNotesDirty(false)
+    } finally {
+      setSavingNotes(false)
+    }
+  }
+
+  const handleUpload = async () => {
+    setUploading(true)
+    try {
+      const resource = await window.api.uploadLibraryResource({ parentId: task.outputFolderId ?? project.libraryFolderId })
+      if (resource) await attachResourceToTask(resource.id)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleSendComment = async () => {
+    if (!commentText.trim()) return
+    setSendingComment(true)
+    try {
+      await addTaskComment(commentText.trim())
+      setCommentText('')
+    } finally {
+      setSendingComment(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (confirm(`Xoá task "${task.title}"?`)) {
+      await deleteTask(task.id)
+      onClose()
+    }
+  }
+
+  const statusCfg = TASK_STATUS_CONFIG[task.status]
+  const StatusIcon = statusCfg.icon
+  const kindCfg = TASK_KIND_CONFIG[task.kind]
+  const KindIcon = kindCfg?.icon
+
+  return (
+    <Drawer open onClose={onClose} width={440}>
+      <div className="flex h-12 shrink-0 items-center justify-between border-b px-4">
+        <h3 className="text-sm font-semibold truncate flex-1">{task.title}</h3>
+        <div className="flex items-center gap-1 shrink-0">
+          <button onClick={() => onEdit(task)} title="Sửa"
+            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground transition-colors"><Pencil className="h-4 w-4" /></button>
+          <button onClick={handleDelete} title="Xoá"
+            className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="h-4 w-4" /></button>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-accent transition-colors"><X className="h-4 w-4" /></button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto p-4 space-y-5">
+        <div className="flex items-center gap-2">
+          <button onClick={() => updateTaskStatus(task.id, NEXT_STATUS[task.status])}
+            className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium', statusCfg.color)}>
+            <StatusIcon className={cn('h-3 w-3', task.status === 'in-progress' && 'animate-spin')} />
+            {statusCfg.label}
+          </button>
+          {kindCfg && KindIcon && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-accent text-muted-foreground">
+              <KindIcon className="h-3 w-3" /> {kindCfg.label}
+            </span>
+          )}
+        </div>
+
+        {/* Mô tả */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <h4 className="text-sm font-semibold">Mô tả</h4>
+            <button onClick={handleSaveNotes} disabled={!notesDirty || savingNotes}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50">
+              <Save className="h-3 w-3" /> {savingNotes ? 'Đang lưu...' : 'Lưu'}
+            </button>
+          </div>
+          <textarea value={notes} onChange={e => { setNotes(e.target.value); setNotesDirty(true) }} rows={4}
+            placeholder="Chưa có mô tả..."
+            className="w-full px-3 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
+        </div>
+
+        {/* Đính kèm */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <h4 className="text-sm font-semibold flex items-center gap-1.5"><Paperclip className="h-3.5 w-3.5" /> Đính kèm</h4>
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setPickerOpen(true)}
+                className="px-2.5 py-1 border rounded-lg text-xs font-medium hover:bg-accent transition-colors">Chọn từ Thư viện</button>
+              <button onClick={handleUpload} disabled={uploading}
+                className="inline-flex items-center gap-1 px-2.5 py-1 border rounded-lg text-xs font-medium hover:bg-accent transition-colors disabled:opacity-50">
+                <Upload className="h-3 w-3" /> {uploading ? 'Đang tải...' : 'Tải lên'}
+              </button>
+            </div>
+          </div>
+          {taskAttachments.length === 0 ? (
+            <div className="text-center text-muted-foreground text-xs py-4 border border-dashed rounded-lg">Chưa có đính kèm</div>
+          ) : (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-2">
+              {taskAttachments.map(r => (
+                <div key={r.id} className="relative group">
+                  <LibraryGridCard resource={r} onOpenFolder={() => {}} onSelect={() => {}} />
+                  <button onClick={() => detachResourceFromTask(r.id)} title="Gỡ đính kèm"
+                    className="absolute top-1 right-1 p-1 rounded-md bg-background/90 border opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-opacity">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Output */}
+        <div>
+          <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-1.5"><Package className="h-3.5 w-3.5" /> Output</h4>
+          {loadingOutput ? (
+            <div className="text-center text-muted-foreground text-xs py-4">Đang tải...</div>
+          ) : outputResources.length === 0 ? (
+            <div className="text-center text-muted-foreground text-xs py-4 border border-dashed rounded-lg">Chưa có output</div>
+          ) : (
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-2">
+              {outputResources.map(r => (
+                <LibraryGridCard key={r.id} resource={r} onOpenFolder={() => {}} onSelect={() => {}} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Comment */}
+        <div>
+          <h4 className="text-sm font-semibold flex items-center gap-1.5 mb-1.5"><MessageSquare className="h-3.5 w-3.5" /> Comment</h4>
+          <div className="space-y-2 mb-2">
+            {taskComments.map(c => (
+              <div key={c.id} className="text-xs border rounded-lg px-3 py-2">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-medium">{c.author === 'ai' ? 'AI' : 'Bạn'}</span>
+                  <span className="text-muted-foreground">{new Date(c.createdAt).toLocaleString('vi-VN')}</span>
+                </div>
+                <p className="whitespace-pre-wrap">{c.text}</p>
+              </div>
+            ))}
+            {taskComments.length === 0 && (
+              <div className="text-center text-muted-foreground text-xs py-4 border border-dashed rounded-lg">Chưa có comment</div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="text" value={commentText} onChange={e => setCommentText(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSendComment() }}
+              placeholder="Viết comment..."
+              className="flex-1 px-3 py-2 border rounded-lg bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+            <button onClick={handleSendComment} disabled={!commentText.trim() || sendingComment}
+              className="p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50">
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <ResourcePicker open={pickerOpen} onClose={() => setPickerOpen(false)}
+        onSelect={(r) => attachResourceToTask(r.id)} />
+    </Drawer>
   )
 }
 
@@ -334,6 +540,7 @@ export function ProjectPage() {
   const { projects, activeProject, tasks, loading, fetchProjects, setProject, deleteProject, updateTaskStatus, deleteTask } = useProjectStore()
   const [showCreate, setShowCreate] = useState(false)
   const [taskDialog, setTaskDialog] = useState<{ parentTaskId: string | null; task: Task | null } | null>(null)
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null)
   const [showAIPanel, setShowAIPanel] = useState(false)
   const navigate = useNavigate()
 
@@ -374,6 +581,7 @@ export function ProjectPage() {
   }
 
   const rootTasks = tasks.filter(t => !t.parentTaskId)
+  const detailTask = tasks.find(t => t.id === detailTaskId) ?? null
 
   return (
     <div className="flex h-full">
@@ -455,7 +663,8 @@ export function ProjectPage() {
                       onAddChild={(parentId) => setTaskDialog({ parentTaskId: parentId, task: null })}
                       onEdit={(task) => setTaskDialog({ parentTaskId: task.parentTaskId, task })}
                       onDelete={handleDeleteTask}
-                      onCycleStatus={(task) => updateTaskStatus(task.id, NEXT_STATUS[task.status])} />
+                      onCycleStatus={(task) => updateTaskStatus(task.id, NEXT_STATUS[task.status])}
+                      onOpenDetail={(task) => setDetailTaskId(task.id)} />
                   ))}
                 </div>
               )}
@@ -473,6 +682,12 @@ export function ProjectPage() {
             suggestions={PROJECT_AGENT_SUGGESTIONS}
             placeholder="Yêu cầu AI về project này..."
           />
+
+          {detailTask && (
+            <TaskDetailDrawer task={detailTask} project={activeProject}
+              onClose={() => setDetailTaskId(null)}
+              onEdit={(task) => setTaskDialog({ parentTaskId: task.parentTaskId, task })} />
+          )}
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center text-muted-foreground">

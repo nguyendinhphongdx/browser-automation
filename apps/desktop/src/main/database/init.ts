@@ -272,6 +272,23 @@ export function initDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_parent ON tasks(parent_task_id);
+
+    CREATE TABLE IF NOT EXISTS task_attachments (
+      task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      resource_id TEXT NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (task_id, resource_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_task_attachments_task ON task_attachments(task_id);
+
+    CREATE TABLE IF NOT EXISTS task_comments (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      author TEXT NOT NULL DEFAULT 'user',
+      text TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments(task_id);
   `)
 
   // DB đã tồn tại từ trước khi có cột `kind` (ADR-0009) — CREATE TABLE IF NOT

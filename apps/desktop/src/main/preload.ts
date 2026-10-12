@@ -228,6 +228,12 @@ const api = {
   updateTask: (id: string, data: UpdateTaskInput) => ipcRenderer.invoke('task:update', id, data),
   updateTaskStatus: (id: string, status: TaskStatus) => ipcRenderer.invoke('task:updateStatus', id, status),
   deleteTask: (id: string) => ipcRenderer.invoke('task:delete', id),
+  getTaskAttachments: (taskId: string) => ipcRenderer.invoke('task:getAttachments', taskId),
+  attachResourceToTask: (taskId: string, resourceId: string) => ipcRenderer.invoke('task:attachResource', taskId, resourceId),
+  detachResourceFromTask: (taskId: string, resourceId: string) => ipcRenderer.invoke('task:detachResource', taskId, resourceId),
+  getTaskComments: (taskId: string) => ipcRenderer.invoke('task:getComments', taskId),
+  addTaskComment: (taskId: string, text: string, author?: string) => ipcRenderer.invoke('task:addComment', taskId, text, author),
+  deleteTaskComment: (id: string) => ipcRenderer.invoke('task:deleteComment', id),
 
   // Events (restricted to allowed channels). Returns an unsubscribe
   // function — callers should not try to pair calls via `off()` by passing

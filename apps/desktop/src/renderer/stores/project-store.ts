@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import type {
   Project, CreateProjectInput, UpdateProjectInput,
-  Task, CreateTaskInput, UpdateTaskInput, TaskStatus
+  Task, CreateTaskInput, UpdateTaskInput, TaskStatus,
+  TaskComment, LibraryResource
 } from '@shared/types'
 
 interface ProjectStore {
@@ -9,6 +10,10 @@ interface ProjectStore {
   activeProject: Project | null
   tasks: Task[]
   loading: boolean
+
+  activeTaskId: string | null
+  taskAttachments: LibraryResource[]
+  taskComments: TaskComment[]
 
   fetchProjects: () => Promise<void>
   setProject: (id: string | null) => Promise<void>
@@ -20,6 +25,12 @@ interface ProjectStore {
   updateTask: (id: string, data: UpdateTaskInput) => Promise<void>
   updateTaskStatus: (id: string, status: TaskStatus) => Promise<void>
   deleteTask: (id: string) => Promise<void>
+
+  setActiveTask: (id: string | null) => Promise<void>
+  attachResourceToTask: (resourceId: string) => Promise<void>
+  detachResourceFromTask: (resourceId: string) => Promise<void>
+  addTaskComment: (text: string) => Promise<void>
+  deleteTaskComment: (id: string) => Promise<void>
 }
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
@@ -27,6 +38,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
   activeProject: null,
   tasks: [],
   loading: false,
+
+  activeTaskId: null,
+  taskAttachments: [],
+  taskComments: [],
 
   fetchProjects: async () => {
     set({ loading: true })
@@ -103,5 +118,51 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     await window.api.deleteTask(id)
     const projectId = get().activeProject?.id
     if (projectId) await get().fetchTasks(projectId)
+    if (get().activeTaskId === id) set({ activeTaskId: null, taskAttachments: [], taskComments: [] })
+  },
+
+  setActiveTask: async (id) => {
+    if (!id) {
+      set({ activeTaskId: null, taskAttachments: [], taskComments: [] })
+      return
+    }
+    set({ activeTaskId: id })
+    const [attachments, comments] = await Promise.all([
+      window.api.getTaskAttachments(id),
+      window.api.getTaskComments(id)
+    ])
+    set({ taskAttachments: attachments, taskComments: comments })
+  },
+
+  attachResourceToTask: async (resourceId) => {
+    const taskId = get().activeTaskId
+    if (!taskId) return
+    await window.api.attachResourceToTask(taskId, resourceId)
+    const attachments = await window.api.getTaskAttachments(taskId)
+    set({ taskAttachments: attachments })
+  },
+
+  detachResourceFromTask: async (resourceId) => {
+    const taskId = get().activeTaskId
+    if (!taskId) return
+    await window.api.detachResourceFromTask(taskId, resourceId)
+    const attachments = await window.api.getTaskAttachments(taskId)
+    set({ taskAttachments: attachments })
+  },
+
+  addTaskComment: async (text) => {
+    const taskId = get().activeTaskId
+    if (!taskId) return
+    await window.api.addTaskComment(taskId, text)
+    const comments = await window.api.getTaskComments(taskId)
+    set({ taskComments: comments })
+  },
+
+  deleteTaskComment: async (id) => {
+    const taskId = get().activeTaskId
+    if (!taskId) return
+    await window.api.deleteTaskComment(id)
+    const comments = await window.api.getTaskComments(taskId)
+    set({ taskComments: comments })
   }
 }))

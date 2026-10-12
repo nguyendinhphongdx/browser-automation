@@ -1,9 +1,10 @@
 import { v4 as uuid } from 'uuid'
 import { getDatabase } from '../database/init'
-import { createFolder, isDescendantOf, getChildren } from './library-service'
+import { createFolder, isDescendantOf, getChildren, getResourceById } from './library-service'
 import type {
   Project, CreateProjectInput, UpdateProjectInput,
-  Task, CreateTaskInput, UpdateTaskInput, TaskStatus
+  Task, CreateTaskInput, UpdateTaskInput, TaskStatus,
+  TaskComment, LibraryResource
 } from '../../shared/types'
 
 // row: any — better-sqlite3's .get()/.all() return unknown/{}, not a typed
@@ -205,4 +206,61 @@ export function getProjectFolderTree(folderId: string, maxDepth = 3): ProjectFol
     }))
   }
   return walk(folderId, 1)
+}
+
+// ── Task attachments (ADR-0010) ─────────────────────────
+// Quan hệ N-N thật (1 resource có thể làm tham chiếu cho nhiều task) — khác
+// provenance resources.objectType/objectId (1 resource ↔ đúng 1 "chủ sở
+// hữu"), không tái dùng nhầm chỗ đó cho đính kèm.
+
+export function getTaskAttachments(taskId: string): LibraryResource[] {
+  const db = getDatabase()
+  const rows = db.prepare('SELECT resource_id FROM task_attachments WHERE task_id = ? ORDER BY created_at ASC').all(taskId) as { resource_id: string }[]
+  return rows.map((r) => getResourceById(r.resource_id)).filter((r): r is LibraryResource => r !== null)
+}
+
+export function attachResourceToTask(taskId: string, resourceId: string): void {
+  const db = getDatabase()
+  db.prepare('INSERT OR IGNORE INTO task_attachments (task_id, resource_id, created_at) VALUES (?, ?, ?)')
+    .run(taskId, resourceId, new Date().toISOString())
+}
+
+/** Chỉ gỡ liên kết — KHÔNG xoá resource gốc khỏi Thư viện. */
+export function detachResourceFromTask(taskId: string, resourceId: string): boolean {
+  const db = getDatabase()
+  const result = db.prepare('DELETE FROM task_attachments WHERE task_id = ? AND resource_id = ?').run(taskId, resourceId)
+  return result.changes > 0
+}
+
+// ── Task comments (ADR-0010) ────────────────────────────
+
+function rowToTaskComment(row: any): TaskComment {
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    author: row.author,
+    text: row.text,
+    createdAt: row.created_at
+  }
+}
+
+export function getTaskComments(taskId: string): TaskComment[] {
+  const db = getDatabase()
+  return db.prepare('SELECT * FROM task_comments WHERE task_id = ? ORDER BY created_at ASC')
+    .all(taskId).map(rowToTaskComment)
+}
+
+export function addTaskComment(taskId: string, text: string, author = 'user'): TaskComment {
+  const db = getDatabase()
+  const id = uuid()
+  const now = new Date().toISOString()
+  db.prepare('INSERT INTO task_comments (id, task_id, author, text, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(id, taskId, author, text, now)
+  return rowToTaskComment(db.prepare('SELECT * FROM task_comments WHERE id = ?').get(id))
+}
+
+export function deleteTaskComment(id: string): boolean {
+  const db = getDatabase()
+  const result = db.prepare('DELETE FROM task_comments WHERE id = ?').run(id)
+  return result.changes > 0
 }

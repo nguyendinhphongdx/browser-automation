@@ -633,3 +633,13 @@ export interface UpdateTaskInput {
   outputFolderId?: string | null
   notes?: string
 }
+
+// Comment trên 1 task (ADR-0010) — danh sách theo thời gian, không ghi đè
+// (khác update_project_notebook's 1 field tóm tắt duy nhất).
+export interface TaskComment {
+  id: string
+  taskId: string
+  author: string
+  text: string
+  createdAt: string
+}
