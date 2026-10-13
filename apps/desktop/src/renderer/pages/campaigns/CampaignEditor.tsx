@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
-  Users, GitBranch, Settings2, Plus, X, Search,
-  Shuffle, ListOrdered, Zap, Timer, Shield, TrendingUp,
+  Users, GitBranch, Settings2, Search,
+  ListOrdered, Zap, TrendingUp,
   ChevronDown, ChevronUp, Info
 } from 'lucide-react'
 import { useCampaignStore } from '@/stores/campaign-store'
