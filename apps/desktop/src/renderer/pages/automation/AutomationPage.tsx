@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Play, Square, Save, Trash2, Code, GitBranch, FileText, Circle, History, Activity, CalendarClock } from 'lucide-react'
+import { Plus, Play, Square, Save, Trash2, Code, GitBranch, FileText, History, Activity, CalendarClock } from 'lucide-react'
 import { useWorkflowStore } from '@/stores/workflow-store'
 import { useProfileStore } from '@/stores/profile-store'
 import { cn } from '@/lib/utils'
