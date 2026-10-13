@@ -11,3 +11,5 @@ Thumbs.db
 .claude/*
 !.claude/skills
 .pnpm-store/
+# Script test cục bộ của dev, có thể chứa key thật — không commit
+scratch/
