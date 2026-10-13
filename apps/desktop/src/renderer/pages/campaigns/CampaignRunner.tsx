@@ -1,12 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Play, Square, Pause, PlayCircle,
   CheckCircle2, XCircle, Loader2, Clock, AlertTriangle,
   ChevronDown, ChevronRight, User, GitBranch
 } from 'lucide-react'
 import { useCampaignStore } from '@/stores/campaign-store'
-import { useProfileStore } from '@/stores/profile-store'
-import { useWorkflowStore } from '@/stores/workflow-store'
 import { cn } from '@/lib/utils'
 import type { CampaignProfileResult } from '@shared/types'
 
@@ -399,7 +397,6 @@ function TimelineChart({ results }: { results: CampaignProfileResult[] }) {
   const maxDuration = Math.max(...durations.map(d => d.duration), 1)
   const barHeight = 18
   const gap = 4
-  const chartHeight = Math.min(durations.length * (barHeight + gap), 160)
   const chartWidth = 280
 
   return (
