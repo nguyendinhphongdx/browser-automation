@@ -1,3 +1,4 @@
+import { Notification } from 'electron'
 import { BaseNode } from './base-node'
 import { downloadToBuffer, extensionFromUrl } from '../../download'
 import { createResourceFromBuffer, mimeTypeForExtension, defaultExtensionForKind, timestampSuffix } from '../../services/library-service'
@@ -65,7 +66,6 @@ export class LocalStorageNode extends BaseNode {
 
 export class NotificationNode extends BaseNode {
   protected async execute() {
-    const { Notification } = require('electron')
     new Notification({
       title: this.resolve(this.config.title),
       body: this.resolve(this.config.message)
