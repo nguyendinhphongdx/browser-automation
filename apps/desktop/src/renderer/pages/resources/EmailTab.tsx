@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Plus, Trash2, Upload, Search, Mail } from 'lucide-react'
 import { useResourceStore } from '@/stores/resource-store'
 import { DownloadTemplate } from './DownloadTemplate'
-import type { EmailAccount } from '@shared/types'
 
 const STATUS_STYLES: Record<string, string> = {
   active: 'bg-green-100 text-green-700',
