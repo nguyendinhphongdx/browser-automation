@@ -114,6 +114,7 @@ Architecture Decision Record — quyết định kiến trúc đã chốt + alte
 | 0009 | [Task có "kind"](adr/0009-task-kind.md) | AI chủ động chia project thành task đúng loại (script/image/video/automation/other), định tuyến đúng domain khi thực hiện — ALTER TABLE đầu tiên trong codebase, đã kiểm chứng trên bản sao DB thật |
 | 0010 | [Task Detail kiểu Jira](adr/0010-task-detail-view.md) | Mô tả/đính kèm/output/comment cho từng task — 2 bảng mới `task_attachments` (N-N) + `task_comments`, tái dùng ResourcePicker/upload/Drawer đã có |
 | 0011 | [AI tự chạy pipeline video thật](adr/0011-run-video-pipeline-tool.md) | Tool `run_video_pipeline` gate approval, dùng thẳng `executeVideoPipeline` (không cần WebContents) — auto-deny của sub-agent (ADR-0007) tự chặn chạy ngầm qua delegate |
+| 0012 | [Gemini omni provider + node Tạo ảnh/Tạo video](adr/0012-gemini-omni-provider-and-automation-generate-nodes.md) | Automation tái dùng nguyên hạ tầng provider của Video Studio (1 danh sách model chung) — lần đầu Automation có node tạo ảnh/video |
 
 ## [development/](development/) — Đóng góp code
 
