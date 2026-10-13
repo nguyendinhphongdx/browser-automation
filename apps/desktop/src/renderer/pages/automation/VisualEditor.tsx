@@ -3,7 +3,7 @@ import ReactFlow, {
   addEdge, applyNodeChanges, applyEdgeChanges,
   Background, Controls, MiniMap, ReactFlowProvider, useReactFlow,
   type Node, type Edge, type Connection, type NodeChange, type EdgeChange,
-  Handle, Position, ConnectionLineType, MarkerType, BackgroundVariant, Panel
+  Handle, Position, ConnectionLineType, MarkerType, BackgroundVariant
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { useWorkflowStore } from '@/stores/workflow-store'
@@ -381,7 +381,6 @@ function VisualEditorInner() {
     const GAP_X = 80
     const GAP_Y = 40
 
-    const nodesMap = new Map(current.nodes.map(n => [n.id, n]))
     const edgesArr = current.edges
 
     // Build adjacency & inDegree
