@@ -248,7 +248,9 @@ export function actionsToWorkflow(actions: RecordedAction[]): {
         break
       case 'scroll': {
         let scrollData = { direction: 'down', amount: 300 }
-        try { scrollData = JSON.parse(action.value || '{}') } catch {}
+        try { scrollData = JSON.parse(action.value || '{}') } catch {
+          // action.value không phải JSON hợp lệ — giữ giá trị mặc định
+        }
         config = { direction: scrollData.direction || 'down', amount: scrollData.amount || 300 }
         break
       }
