@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Cloud, Download, Trash2, RefreshCw, HardDrive, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
-import type { BackupStatusItem } from '@shared/types'
 
 const api = window.api
 
