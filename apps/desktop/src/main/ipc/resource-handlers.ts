@@ -25,7 +25,7 @@ export function registerResourceHandlers(ipcMain: IpcMain) {
     return importProxies(lines, (type as any) || 'http')
   })
 
-  ipcMain.handle('proxy:importFile', async (event) => {
+  ipcMain.handle('proxy:importFile', async () => {
     const result = await dialog.showOpenDialog({
       properties: ['openFile'],
       filters: [{ name: 'Text files', extensions: ['txt', 'csv'] }]
