@@ -85,7 +85,7 @@ export interface CreateProfileInput {
   proxyId?: string | null
 }
 
-export interface UpdateProfileInput extends Partial<CreateProfileInput> {}
+export type UpdateProfileInput = Partial<CreateProfileInput>
 
 // Proxy
 export interface Proxy {
@@ -113,7 +113,7 @@ export interface CreateProxyInput {
   country?: string
 }
 
-export interface UpdateProxyInput extends Partial<CreateProxyInput> {}
+export type UpdateProxyInput = Partial<CreateProxyInput>
 
 // Email / Account
 export interface EmailAccount {
@@ -140,7 +140,7 @@ export interface CreateEmailInput {
   profileId?: string | null
 }
 
-export interface UpdateEmailInput extends Partial<CreateEmailInput> {}
+export type UpdateEmailInput = Partial<CreateEmailInput>
 
 // Cookie
 export interface CookieEntry {
@@ -183,7 +183,7 @@ export interface CreateCookieInput {
   notes?: string
 }
 
-export interface UpdateCookieInput extends Partial<CreateCookieInput> {}
+export type UpdateCookieInput = Partial<CreateCookieInput>
 
 // ── Automation / Workflow ────────────────────────────────
 
