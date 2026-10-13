@@ -282,7 +282,9 @@ async function runParallel(
 
       try {
         await runTaskWithRetry(task, exec, sender, state)
-      } catch {}
+      } catch {
+        // lỗi đã được ghi vào task.result bởi runTaskWithRetry, chỉ cần tiếp tục vòng lặp
+      }
 
       if (exec.stopOnError && task.result.status === 'error') {
         state.aborted = true
