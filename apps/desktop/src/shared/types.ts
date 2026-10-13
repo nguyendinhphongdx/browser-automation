@@ -192,7 +192,7 @@ export type WorkflowMode = 'visual' | 'code'
 export type WorkflowStatus = 'draft' | 'ready' | 'running' | 'completed' | 'error'
 
 // Node categories
-export type NodeCategory = 'browser' | 'interaction' | 'data' | 'flow' | 'integration'
+export type NodeCategory = 'browser' | 'interaction' | 'data' | 'flow' | 'integration' | 'ai'
 
 // Canonical node-type registry shape — moved here (from
 // main/automation/node-definitions.ts, which re-exports these) so it's

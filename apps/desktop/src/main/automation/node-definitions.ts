@@ -3,9 +3,51 @@
 // every existing `import type { NodeDefinition } from './node-definitions'`
 // keeps working unchanged.
 import type { NodeCategory, NodeDefinition, ConfigField } from '../../shared/types'
+// Tái dùng đúng danh sách provider/aspect-ratio của Video Studio (ADR-0012) —
+// 1 nguồn duy nhất cho cả 2 module, tránh lệch danh sách model theo thời gian.
+import { IMAGE_PROVIDER_OPTIONS, VIDEO_PROVIDER_OPTIONS, ASPECT_RATIO_OPTIONS } from '../video-studio/node-definitions'
 export type { NodeDefinition, ConfigField }
 
 export const NODE_DEFINITIONS: NodeDefinition[] = [
+  // ── AI / Generate ────────────────────────────
+  {
+    type: 'generate-image',
+    label: 'Tạo ảnh',
+    category: 'ai',
+    icon: 'ImagePlus',
+    description: 'Tạo ảnh bằng AI (FLUX/OpenAI/Kling/Runway/Gemini...) và lưu vào Thư viện — provider nào chưa cấu hình key sẽ báo lỗi khi chạy.',
+    inputs: 1,
+    outputs: 1,
+    configSchema: [
+      { key: 'provider', label: 'Provider', type: 'select', options: IMAGE_PROVIDER_OPTIONS, defaultValue: 'flux', required: true },
+      { key: 'prompt', label: 'Prompt', type: 'text', placeholder: '{{sceneDescription}} hoặc mô tả trực tiếp', required: true },
+      { key: 'aspectRatio', label: 'Tỉ lệ khung hình', type: 'select', options: ASPECT_RATIO_OPTIONS, defaultValue: '16:9' },
+      { key: 'name', label: 'Tên hiển thị', type: 'text' },
+      { key: 'parentId', label: 'Thư mục đích (tuỳ chọn)', type: 'resource-select', resourceKind: 'folder' },
+      { key: 'tags', label: 'Tags (phân cách bởi dấu phẩy)', type: 'text' },
+      { key: 'variable', label: 'Lưu id resource vào biến', type: 'text', placeholder: 'generatedImageId' }
+    ]
+  },
+  {
+    type: 'generate-video',
+    label: 'Tạo video',
+    category: 'ai',
+    icon: 'Film',
+    description: 'Tạo video bằng AI (Kling/Runway/ComfyUI/Gemini...) và lưu vào Thư viện — provider nào chưa cấu hình key sẽ báo lỗi khi chạy.',
+    inputs: 1,
+    outputs: 1,
+    configSchema: [
+      { key: 'provider', label: 'Provider', type: 'select', options: VIDEO_PROVIDER_OPTIONS, defaultValue: 'kling', required: true },
+      { key: 'prompt', label: 'Prompt', type: 'text', required: true },
+      { key: 'durationSec', label: 'Thời lượng (giây)', type: 'number', defaultValue: 5 },
+      { key: 'aspectRatio', label: 'Tỉ lệ khung hình', type: 'select', options: ASPECT_RATIO_OPTIONS, defaultValue: '16:9' },
+      { key: 'name', label: 'Tên hiển thị', type: 'text' },
+      { key: 'parentId', label: 'Thư mục đích (tuỳ chọn)', type: 'resource-select', resourceKind: 'folder' },
+      { key: 'tags', label: 'Tags (phân cách bởi dấu phẩy)', type: 'text' },
+      { key: 'variable', label: 'Lưu id resource vào biến', type: 'text', placeholder: 'generatedVideoId' }
+    ]
+  },
+
   // ── Browser ──────────────────────────────────
   {
     type: 'open-page',
@@ -769,7 +811,8 @@ export const NODE_CATEGORIES: { key: NodeCategory; label: string; color: string;
   { key: 'interaction', label: 'Tương tác', color: '#10B981', icon: 'MousePointerClick' },
   { key: 'data', label: 'Dữ liệu', color: '#F59E0B', icon: 'Database' },
   { key: 'flow', label: 'Luồng điều khiển', color: '#8B5CF6', icon: 'GitBranch' },
-  { key: 'integration', label: 'Tích hợp', color: '#EF4444', icon: 'Zap' }
+  { key: 'integration', label: 'Tích hợp', color: '#EF4444', icon: 'Zap' },
+  { key: 'ai', label: 'Tạo nội dung AI', color: '#EC4899', icon: 'Sparkles' }
 ]
 
 export function getNodeDefinition(type: string): NodeDefinition | undefined {

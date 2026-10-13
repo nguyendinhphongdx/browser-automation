@@ -1,20 +1,25 @@
 import type { VideoNodeDefinition } from '../../shared/types'
 
-const VIDEO_PROVIDER_OPTIONS = [
+// Export để Automation's node-definitions.ts import lại đúng danh sách này —
+// 1 nguồn duy nhất cho cả 2 module (ADR-0012), tránh danh sách model lệch
+// nhau theo thời gian.
+export const VIDEO_PROVIDER_OPTIONS = [
   { label: 'Kling', value: 'kling' },
   { label: 'Runway', value: 'runway' },
-  { label: 'ComfyUI (local)', value: 'comfyui' }
+  { label: 'ComfyUI (local)', value: 'comfyui' },
+  { label: 'Gemini (omni)', value: 'gemini-omni' }
 ]
 
 // Tách riêng khỏi VIDEO_PROVIDER_OPTIONS — FLUX/OpenAI Image là model tạo
 // ảnh chuyên dụng (không tạo video), phổ biến hơn hẳn so với chỉ mượn tạm
 // endpoint ảnh phụ của Kling/Runway.
-const IMAGE_PROVIDER_OPTIONS = [
+export const IMAGE_PROVIDER_OPTIONS = [
   { label: 'FLUX', value: 'flux' },
   { label: 'OpenAI (gpt-image-1)', value: 'openai-image' },
   { label: 'Kling', value: 'kling' },
   { label: 'Runway', value: 'runway' },
-  { label: 'ComfyUI (local)', value: 'comfyui' }
+  { label: 'ComfyUI (local)', value: 'comfyui' },
+  { label: 'Gemini (omni)', value: 'gemini-omni' }
 ]
 
 const TTS_PROVIDER_OPTIONS = [
@@ -23,7 +28,7 @@ const TTS_PROVIDER_OPTIONS = [
   { label: 'Google', value: 'google-tts' }
 ]
 
-const ASPECT_RATIO_OPTIONS = [
+export const ASPECT_RATIO_OPTIONS = [
   { label: '16:9 (ngang)', value: '16:9' },
   { label: '9:16 (dọc)', value: '9:16' },
   { label: '1:1 (vuông)', value: '1:1' }

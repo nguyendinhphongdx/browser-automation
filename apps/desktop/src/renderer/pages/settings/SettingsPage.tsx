@@ -391,6 +391,7 @@ const VIDEO_STUDIO_KEYS = {
   comfyuiBaseUrl: 'videoStudio.comfyui.baseUrl',
   openaiImageApiKey: 'videoStudio.openaiImage.apiKey',
   fluxApiKey: 'videoStudio.flux.apiKey',
+  geminiOmniApiKey: 'videoStudio.geminiOmni.apiKey',
   elevenlabsApiKey: 'videoStudio.elevenlabs.apiKey',
   googleTtsApiKey: 'videoStudio.googleTts.apiKey',
   openaiTtsApiKey: 'videoStudio.openaiTts.apiKey'
@@ -431,6 +432,11 @@ function VideoStudioProvidersSection() {
             label="OpenAI Image — API Key (để trống nếu dùng chung key AI Provider ở trên)"
             value={values[VIDEO_STUDIO_KEYS.openaiImageApiKey] || ''}
             onChange={v => set(VIDEO_STUDIO_KEYS.openaiImageApiKey, v)}
+          />
+          <MaskedKeyField
+            label="Gemini (omni) — API Key (dùng chung cho cả Tạo ảnh và Tạo video)"
+            value={values[VIDEO_STUDIO_KEYS.geminiOmniApiKey] || ''}
+            onChange={v => set(VIDEO_STUDIO_KEYS.geminiOmniApiKey, v)}
           />
         </div>
       </div>

@@ -16,6 +16,8 @@ import { RunWorkflowNode } from './sub-workflow'
 import { PaginateNode, ExportDataNode, MapDataNode, FilterDataNode, ReduceDataNode, SortDataNode } from './data-pipeline'
 // Parallel
 import { ParallelForkNode, ParallelJoinNode } from './parallel'
+// Generate media (AI)
+import { GenerateImageNode, GenerateVideoNode } from './generate-media'
 
 type NodeClass = new (ctx: ExecutionContext, input: NodeInput) => BaseNode
 
@@ -84,6 +86,10 @@ const NODE_REGISTRY: Record<string, NodeClass> = {
   // Parallel
   'parallel-fork': ParallelForkNode,
   'parallel-join': ParallelJoinNode,
+
+  // Generate media (AI)
+  'generate-image': GenerateImageNode,
+  'generate-video': GenerateVideoNode,
 }
 
 export function createNode(type: string, ctx: ExecutionContext, input: NodeInput): BaseNode | null {

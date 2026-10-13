@@ -4,6 +4,7 @@ import { createRunwayProvider } from './runway-provider'
 import { createComfyUIProvider } from './comfyui-provider'
 import { createOpenAIImageProvider } from './openai-image-provider'
 import { createFluxProvider } from './flux-provider'
+import { createGeminiOmniProvider } from './gemini-omni-provider'
 import { createElevenLabsProvider } from './elevenlabs-provider'
 import { createOpenAITTSProvider } from './openai-tts-provider'
 import { createGoogleTTSProvider } from './google-tts-provider'
@@ -38,6 +39,11 @@ export function getVideoProvider(name: string): VideoProvider {
       const apiKey = getSetting('videoStudio.flux.apiKey')
       if (!apiKey) throw new Error('Chưa cấu hình FLUX API Key trong Cài đặt')
       return createFluxProvider(apiKey)
+    }
+    case 'gemini-omni': {
+      const apiKey = getSetting('videoStudio.geminiOmni.apiKey')
+      if (!apiKey) throw new Error('Chưa cấu hình Gemini API Key trong Cài đặt')
+      return createGeminiOmniProvider(apiKey)
     }
     default:
       throw new Error(`Video provider không hợp lệ: "${name}"`)

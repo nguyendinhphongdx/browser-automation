@@ -10,7 +10,7 @@ import {
   GitBranch, Repeat, ListOrdered, Clock, Timer, ShieldAlert, LogOut, HelpCircle,
   Send, Cookie, Database, Bell, FileText, Zap, Boxes,
   ChevronsRight, Download, Sparkles, Filter, Sigma, ArrowUpDown,
-  GitFork, GitMerge
+  GitFork, GitMerge, ImagePlus, Film
 } from 'lucide-react'
 
 export const ICON_MAP: Record<string, any> = {
@@ -21,7 +21,7 @@ export const ICON_MAP: Record<string, any> = {
   GitBranch, Repeat, ListOrdered, Clock, Timer, ShieldAlert, LogOut, HelpCircle,
   Send, Cookie, Database, Bell, FileText, Zap, Workflow: Boxes,
   ChevronsRight, Download, Sparkles, Filter, Sigma, ArrowUpDown,
-  GitFork, GitMerge
+  GitFork, GitMerge, ImagePlus, Film
 }
 
 export const CATEGORY_COLORS: Record<string, string> = {
@@ -29,7 +29,8 @@ export const CATEGORY_COLORS: Record<string, string> = {
   interaction: '#10B981',
   data: '#F59E0B',
   flow: '#8B5CF6',
-  integration: '#EF4444'
+  integration: '#EF4444',
+  ai: '#EC4899'
 }
 
 const CATEGORY_BG: Record<string, string> = {
@@ -37,7 +38,8 @@ const CATEGORY_BG: Record<string, string> = {
   interaction: 'bg-emerald-50 dark:bg-emerald-950/30',
   data: 'bg-amber-50 dark:bg-amber-950/30',
   flow: 'bg-violet-50 dark:bg-violet-950/30',
-  integration: 'bg-red-50 dark:bg-red-950/30'
+  integration: 'bg-red-50 dark:bg-red-950/30',
+  ai: 'bg-pink-50 dark:bg-pink-950/30'
 }
 
 interface NodeDrawerProps {

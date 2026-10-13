@@ -67,6 +67,7 @@
     "@ai-sdk/openai-compatible": "^3.0.54",
     "@browser-automation/fingerprint": "workspace:*",
     "@browser-automation/shared-types": "workspace:*",
+    "@google/genai": "^2.29.1",
     "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-dropdown-menu": "^2.1.6",
