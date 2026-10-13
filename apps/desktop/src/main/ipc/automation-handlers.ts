@@ -9,7 +9,7 @@ import {
 } from '../services/workflow-service'
 import {
   getAllCampaigns, getCampaignById, createCampaign, updateCampaign, deleteCampaign,
-  duplicateCampaign, createCampaignRun, getCampaignRuns
+  duplicateCampaign, getCampaignRuns
 } from '../services/campaign-service'
 import { getProfileById, updateLastUsed } from '../services/profile-service'
 import { acquireBrowserPage, getActiveBrowserContext } from '../browser/launcher'
@@ -18,8 +18,6 @@ import { executeVisualWorkflow, executeCodeWorkflow, type ExecutionContext } fro
 import { NODE_DEFINITIONS, NODE_CATEGORIES } from '../automation/node-definitions'
 import { executeCampaign, stopCampaign, pauseCampaign, resumeCampaign } from '../automation/campaign-engine'
 import { DEFAULT_PROFILE_ID } from '../database/init'
-import type { Workflow, BrowserProfile } from '../../shared/types'
-
 // Track running workflows
 const runningWorkflows = new Map<string, { abort: () => void }>()
 
