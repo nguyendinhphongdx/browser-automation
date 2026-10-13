@@ -30,7 +30,8 @@ Quy tắc bắt buộc:
 8. Có 1 Thư viện tài nguyên (resource library) lưu ảnh, prompt mẫu, data export, file — dùng list_resources để xem đang có gì (duyệt theo thư mục qua "parentId", hoặc tìm theo tên/tag qua "query"), get_resource để đọc nội dung/đường dẫn 1 tài nguyên cụ thể, save_resource để lưu lại 1 kết quả cho lần sau (dùng "sourceUrl" nếu kết quả đang ở 1 URL — KHÔNG tự đọc/encode base64), create_library_folder để tạo thư mục mới gom nhóm nhiều resource liên quan trước khi lưu từng cái vào đó qua "parentId". Khi cần 1 file có sẵn (vd để upload qua input[type=file]), LUÔN kiểm tra thư viện trước bằng list_resources/get_resource thay vì hỏi người dùng đường dẫn hay tự bịa 1 đường dẫn không có thật.
 9. Quản lý thư viện: move_resource để di chuyển sang thư mục khác, update_resource_metadata để đổi tên/tag/category/ghi chú, delete_resource để xoá hẳn (cần người dùng duyệt trước, không có thùng rác/hoàn tác — chỉ dùng khi người dùng rõ ràng muốn xoá, không tự ý dọn dẹp).
 10. Tin nhắn người dùng có thể chứa "[resource:<id> "<tên>"]" — đây là 1 resource họ đã đính kèm từ Thư viện (qua nút đính kèm trên giao diện chat, không phải văn bản họ tự gõ) — LUÔN gọi get_resource(id) để đọc nội dung/đường dẫn thật trước khi dùng tới nó, đừng coi cụm đó là văn bản thường hay bỏ qua.
-11. Khi làm việc thuộc 1 "project" cụ thể (sản phẩm dài hơi nhiều phần, vd phim nhiều tập — yêu cầu dạng "viết kịch bản tập 3 của project X", "tạo task mới cho project Y"), LUÔN gọi get_project_context(projectId) ĐẦU TIÊN trước khi làm bất kỳ gì khác trong project đó — đừng tự đoán cấu trúc thư mục hay giả định đã biết nội dung các tập trước, mỗi project không có cấu trúc cố định. Dùng create_project để bắt đầu project mới, create_task/list_project_tasks/update_task_status/move_task để quản lý tiến độ. Sau khi hoàn thành 1 task quan trọng (vd xong 1 tập), gọi update_project_notebook để TÓM TẮT (không dán nguyên văn) phần cần nhớ cho các task sau — đây là cách duy nhất để task sau biết ngữ cảnh mà không phải đọc lại toàn bộ nội dung cũ.`
+11. Khi làm việc thuộc 1 "project" cụ thể (sản phẩm dài hơi nhiều phần, vd phim nhiều tập — yêu cầu dạng "viết kịch bản tập 3 của project X", "tạo task mới cho project Y"), LUÔN gọi get_project_context(projectId) ĐẦU TIÊN trước khi làm bất kỳ gì khác trong project đó — đừng tự đoán cấu trúc thư mục hay giả định đã biết nội dung các tập trước, mỗi project không có cấu trúc cố định. Dùng create_project để bắt đầu project mới, create_task/list_project_tasks/update_task_status/move_task để quản lý tiến độ. Sau khi hoàn thành 1 task quan trọng (vd xong 1 tập), gọi update_project_notebook để TÓM TẮT (không dán nguyên văn) phần cần nhớ cho các task sau — đây là cách duy nhất để task sau biết ngữ cảnh mà không phải đọc lại toàn bộ nội dung cũ.
+12. propose_workflow_change/propose_destructive_workflow_change/propose_code_change CHỈ thiết kế/lưu workflow — KHÔNG tự chạy ra kết quả thật. Nếu người dùng muốn có kết quả thật (không chỉ xem/sửa workflow), dùng run_workflow(workflowId) SAU KHI đã propose xong — tool này mở/dùng browser thật và chạy node thật (bao gồm generate-image/generate-video, tốn tiền/thời gian thật) nên luôn cần người dùng duyệt. Đừng báo "đã xong" nếu chỉ mới propose mà chưa thật sự run_workflow thành công.`
 
 // System prompt riêng cho domain 'video-studio' — hoàn toàn khác AGENT_INSTRUCTIONS
 // ở trên (không có khái niệm browser/trang web). Dạy model quy ước dựng
@@ -86,8 +87,8 @@ Quy tắc bắt buộc:
    Bạn CÓ ĐẦY ĐỦ tool để tự làm hết, ngay trong cuộc chat này — không cần bảo người dùng mở trang khác hay tự copy/paste prompt đi đâu:
    - kind="script"/"other": làm trực tiếp bằng văn bản, lưu qua save_resource.
    - kind="image"/"video": dùng delegate_to_video_studio để DỰNG pipeline (dùng list_pipelines nếu cần tra id pipeline đã có), SAU ĐÓ bắt buộc dùng run_video_pipeline(videoPipelineId) để CHẠY THẬT ra ảnh/video — dựng xong mà chưa chạy thì chưa có gì thật cả, đừng bảo người dùng tự làm nốt phần này.
-   - kind="automation": dùng delegate_to_automation (dùng list_workflows nếu cần tra id workflow).
-   run_video_pipeline/delegate_to_automation/delegate_to_video_studio đều cần người dùng duyệt trước khi chạy thật (tốn tiền/thời gian) — đó là xác nhận bình thường trong CHÍNH cuộc chat này, không phải lý do để từ chối làm hay đẩy việc sang chỗ khác. Nếu 1 tool trả lỗi, báo lại người dùng và GIỮ NGUYÊN trạng thái task (đừng đổi sang "done") — không đánh dấu Xong cho việc chưa thật sự làm xong.`
+   - kind="automation": dùng delegate_to_automation để DỰNG workflow (dùng list_workflows nếu cần tra id workflow đã có), SAU ĐÓ bắt buộc dùng run_workflow(workflowId) để CHẠY THẬT — dựng xong mà chưa chạy thì chưa có gì thật cả, đừng bảo người dùng tự làm nốt phần này.
+   run_video_pipeline/run_workflow/delegate_to_automation/delegate_to_video_studio đều cần người dùng duyệt trước khi chạy thật (tốn tiền/thời gian) — đó là xác nhận bình thường trong CHÍNH cuộc chat này, không phải lý do để từ chối làm hay đẩy việc sang chỗ khác. Nếu 1 tool trả lỗi, báo lại người dùng và GIỮ NGUYÊN trạng thái task (đừng đổi sang "done") — không đánh dấu Xong cho việc chưa thật sự làm xong.`
 
 // System prompt cho domain 'general' (ADR-0006) — trợ lý chung mount ở
 // Layout.tsx, dùng được từ MỌI trang (không chỉ Project). KHÁC
@@ -111,16 +112,22 @@ Quy tắc bắt buộc:
     - kind="script": viết kịch bản/lời thoại — làm trực tiếp bằng văn bản, lưu qua save_resource.
     - kind="image": tạo ảnh nhân vật/tài nguyên hình ảnh — dùng delegate_to_video_studio để DỰNG pipeline (character-reference/generate-image), SAU ĐÓ bắt buộc dùng run_video_pipeline(videoPipelineId) để CHẠY THẬT ra ảnh — dựng xong mà chưa chạy thì chưa có ảnh nào thật cả.
     - kind="video": dựng cảnh/video hoàn chỉnh — tương tự: delegate_to_video_studio để dựng pipeline đầy đủ, rồi run_video_pipeline để chạy thật.
-    - kind="automation": crawl/tải tài nguyên có sẵn từ web — dùng delegate_to_automation.
+    - kind="automation": crawl/tải tài nguyên có sẵn từ web — dùng delegate_to_automation để DỰNG workflow (dùng list_workflows nếu cần tra id workflow đã có), SAU ĐÓ bắt buộc dùng run_workflow(workflowId) để CHẠY THẬT — dựng xong mà chưa chạy thì chưa có gì thật cả.
     - kind="other": việc không thuộc 4 loại trên.
-    Sau khi chia xong, có thể tự thực hiện lần lượt theo đúng kind (dùng đúng delegate_to_* + run_video_pipeline cho image/video, delegate_to_automation cho automation, tự làm trực tiếp cho script/other), hoặc hỏi người dùng muốn làm task nào trước — không tự ý làm hết nếu người dùng chỉ muốn lên kế hoạch.
-11. TUYỆT ĐỐI KHÔNG gọi update_task_status(..., "done") nếu bạn chưa thật sự tạo ra output (resource thật trong Thư viện — qua save_resource, qua run_video_pipeline chạy thành công, hoặc qua delegate_to_automation; riêng delegate_to_video_studio MỘT MÌNH KHÔNG đủ — nó chỉ thiết kế, phải run_video_pipeline mới có output thật) — đánh dấu "Xong" cho 1 việc chưa thật sự làm là báo cáo sai, kể cả khi bạn chỉ "nói" là đã làm xong trong câu trả lời. Nếu delegate_to_*/run_video_pipeline trả lỗi hay không tạo được gì, GIỮ NGUYÊN trạng thái và báo lại cho người dùng.`
+    Sau khi chia xong, có thể tự thực hiện lần lượt theo đúng kind (dùng đúng delegate_to_* + run_video_pipeline/run_workflow cho image/video/automation, tự làm trực tiếp cho script/other), hoặc hỏi người dùng muốn làm task nào trước — không tự ý làm hết nếu người dùng chỉ muốn lên kế hoạch.
+11. TUYỆT ĐỐI KHÔNG gọi update_task_status(..., "done") nếu bạn chưa thật sự tạo ra output (resource thật trong Thư viện — qua save_resource, qua run_video_pipeline/run_workflow chạy thành công; riêng delegate_to_video_studio/delegate_to_automation MỘT MÌNH KHÔNG đủ — chúng chỉ thiết kế, phải run_video_pipeline/run_workflow mới có output thật) — đánh dấu "Xong" cho 1 việc chưa thật sự làm là báo cáo sai, kể cả khi bạn chỉ "nói" là đã làm xong trong câu trả lời. Nếu delegate_to_*/run_video_pipeline/run_workflow trả lỗi hay không tạo được gì, GIỮ NGUYÊN trạng thái và báo lại cho người dùng.`
 
 export const AGENT_DOMAINS: Record<AgentDomain, AgentDomainConfig> = {
   automation: {
     instructions: AGENT_INSTRUCTIONS,
     buildToolset: buildAutomationToolset,
-    approvalGatedTools: ['run_js', 'propose_destructive_workflow_change', 'propose_code_change', 'delete_resource']
+    // run_workflow mở/dùng browser thật và chạy node thật (tốn tiền/thời
+    // gian thật nếu có node generate-image/generate-video) — khác
+    // propose_workflow_change (chỉ thiết kế, không gate). Khi gọi qua
+    // delegate_to_automation's sub-agent, auto-deny của runSubAgent
+    // (ADR-0007) tự chặn chạy ngầm không ai duyệt được; chỉ chat trực tiếp
+    // ở domain này mới duyệt được thật.
+    approvalGatedTools: ['run_js', 'propose_destructive_workflow_change', 'propose_code_change', 'delete_resource', 'run_workflow']
   },
   'video-studio': {
     instructions: VIDEO_AGENT_INSTRUCTIONS,
@@ -135,11 +142,11 @@ export const AGENT_DOMAINS: Record<AgentDomain, AgentDomainConfig> = {
   project: {
     instructions: PROJECT_AGENT_INSTRUCTIONS,
     buildToolset: buildProjectToolset,
-    // delegate_to_automation/delegate_to_video_studio/run_video_pipeline
-    // (ADR-0007/0011) nay có thẳng trong domain này — gate giống hệt domain
-    // 'general' vì cùng rủi ro (ghi thẳng DB bỏ qua re-validate renderer,
-    // hoặc gọi thật provider tốn tiền/thời gian).
-    approvalGatedTools: ['delete_resource', 'delegate_to_automation', 'delegate_to_video_studio', 'run_video_pipeline']
+    // delegate_to_automation/delegate_to_video_studio/run_video_pipeline/
+    // run_workflow (ADR-0007/0011/0012) nay có thẳng trong domain này — gate
+    // giống hệt domain 'general' vì cùng rủi ro (ghi thẳng DB bỏ qua
+    // re-validate renderer, hoặc gọi thật provider/browser tốn tiền/thời gian).
+    approvalGatedTools: ['delete_resource', 'delegate_to_automation', 'delegate_to_video_studio', 'run_video_pipeline', 'run_workflow']
   },
   general: {
     instructions: GENERAL_AGENT_INSTRUCTIONS,
@@ -161,7 +168,8 @@ export const AGENT_DOMAINS: Record<AgentDomain, AgentDomainConfig> = {
       'delete_email',
       'delete_profile',
       'check_proxy',
-      'run_video_pipeline'
+      'run_video_pipeline',
+      'run_workflow'
     ]
   }
 }

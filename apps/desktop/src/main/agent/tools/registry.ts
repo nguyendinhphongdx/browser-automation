@@ -11,6 +11,7 @@ import { createGetWorkflowStateTool } from './get-workflow-state'
 import { createGetNodeCatalogTool } from './get-node-catalog'
 import { createGetExecutionLogsTool } from './get-execution-logs'
 import { createProposeWorkflowChangeTool } from './propose-workflow-change'
+import { createRunWorkflowTool } from './run-workflow'
 import { createProposeDestructiveWorkflowChangeTool } from './propose-destructive-workflow-change'
 import { createProposeCodeChangeTool } from './propose-code-change'
 import { createListResourcesTool } from './list-resources'
@@ -83,6 +84,7 @@ export function buildAutomationToolset(ctx: AgentToolContext): ToolSet {
     get_node_catalog: createGetNodeCatalogTool(ctx),
     get_execution_logs: createGetExecutionLogsTool(ctx),
     propose_workflow_change: createProposeWorkflowChangeTool(ctx),
+    run_workflow: createRunWorkflowTool(ctx),
     propose_destructive_workflow_change: createProposeDestructiveWorkflowChangeTool(ctx),
     propose_code_change: createProposeCodeChangeTool(ctx),
     list_resources: createListResourcesTool(ctx),
@@ -158,6 +160,7 @@ export function buildProjectToolset(ctx: AgentToolContext): ToolSet {
     move_task: createMoveTaskTool(ctx),
     list_workflows: createListWorkflowsTool(ctx),
     list_pipelines: createListPipelinesTool(ctx),
+    run_workflow: createRunWorkflowTool(ctx),
     run_video_pipeline: createRunVideoPipelineTool(ctx),
     delegate_to_automation: createDelegateToAutomationTool(ctx),
     delegate_to_video_studio: createDelegateToVideoStudioTool(ctx)
