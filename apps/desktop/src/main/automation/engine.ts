@@ -43,9 +43,6 @@ function getStartNodes(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNo
   return nodes.filter(n => !targets.has(n.id))
 }
 
-// ── Branching node types (handled by orchestrator, not by node class) ──
-const BRANCHING_TYPES = new Set(['if-else', 'loop', 'loop-each', 'element-exists', 'try-catch', 'break-loop', 'parallel-fork', 'parallel-join'])
-
 // ── Execute a single node via registry ─────────
 
 async function runNode(node: WorkflowNode, ctx: ExecutionContext): Promise<void> {
