@@ -136,10 +136,6 @@ export async function checkProxy(id: string): Promise<Proxy | null> {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 10000)
 
-    const proxyUrl = proxy.username
-      ? `${proxy.type}://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`
-      : `${proxy.type}://${proxy.host}:${proxy.port}`
-
     // Simple connectivity check via fetch with proxy env
     // Note: Node.js fetch doesn't natively support proxies,
     // so we test TCP connectivity instead
