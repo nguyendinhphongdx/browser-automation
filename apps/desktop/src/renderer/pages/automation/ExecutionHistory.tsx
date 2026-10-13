@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Activity, CheckCircle2, XCircle, Clock, Image } from 'lucide-react'
+import { Activity, CheckCircle2, XCircle, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface HistoryItem {
