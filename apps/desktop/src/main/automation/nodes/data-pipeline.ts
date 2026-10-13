@@ -145,7 +145,9 @@ export class ReduceDataNode extends BaseNode {
     const fn = new Function('acc', 'item', 'index', `return ${expression}`)
 
     let parsed: unknown = initialValue
-    try { parsed = JSON.parse(initialValue) } catch {}
+    try { parsed = JSON.parse(initialValue) } catch {
+      // initialValue không phải JSON hợp lệ — giữ nguyên dạng chuỗi gốc
+    }
 
     const result = source.reduce((acc, item, index) => fn(acc, item, index), parsed)
     this.setVar(this.config.outputVariable || 'result', result)
