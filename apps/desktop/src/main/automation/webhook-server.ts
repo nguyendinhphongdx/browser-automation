@@ -44,14 +44,9 @@ export function startWebhookServer(port = 9876): number {
       return
     }
 
-    // Parse body (optional — available as variables)
-    let body: any = {}
-    try {
-      const chunks: Buffer[] = []
-      for await (const chunk of req) chunks.push(chunk as Buffer)
-      const raw = Buffer.concat(chunks).toString()
-      if (raw) body = JSON.parse(raw)
-    } catch { /* ignore parse errors */ }
+    // Drain request body — nội dung không được dùng ở bước trigger hiện tại,
+    // nhưng vẫn cần đọc hết stream trước khi trả response.
+    req.resume()
 
     console.log(`[Webhook] Triggered: ${schedule.name}`)
 
