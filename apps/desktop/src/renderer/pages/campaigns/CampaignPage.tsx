@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
-  Plus, Trash2, Play, Square, Copy, Rocket, Settings2,
-  Users, GitBranch, ChevronRight, Clock, CheckCircle2, XCircle, Loader2
+  Plus, Trash2, Play, Copy, Rocket, Settings2,
+  Users, GitBranch, Clock, CheckCircle2, XCircle, Loader2
 } from 'lucide-react'
 import { useCampaignStore, DEFAULT_EXECUTION } from '@/stores/campaign-store'
 import { useWorkflowStore } from '@/stores/workflow-store'
@@ -72,7 +72,7 @@ function CreateCampaignDialog({ onClose }: { onClose: () => void }) {
 
 export function CampaignPage() {
   const {
-    campaigns, activeCampaign, isRunning, loading,
+    campaigns, activeCampaign, loading,
     fetchCampaigns, setCampaign, deleteCampaign, duplicateCampaign
   } = useCampaignStore()
   const { fetchWorkflows } = useWorkflowStore()
