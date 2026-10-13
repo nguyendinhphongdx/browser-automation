@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Sun, Moon, Monitor, Globe, Info, Keyboard, Shield, Database, Copy, Check, Brain, Eye, EyeOff, CheckCircle, XCircle, Loader2, Clapperboard } from 'lucide-react'
 import { useThemeStore } from '@/stores/theme-store'
-import { useI18n, type Locale } from '@/lib/i18n'
+import { useI18n } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 type Theme = 'light' | 'dark' | 'system'
