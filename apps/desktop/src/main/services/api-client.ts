@@ -100,13 +100,13 @@ async function rawRequest<T = any>(
       data,
       error: response.ok ? undefined : (data?.message || data?.error || `HTTP ${response.status}`)
     }
-  } catch (err: any) {
+  } catch (err) {
     clearTimeout(timer)
 
-    if (err.name === 'AbortError') {
+    if (err instanceof Error && err.name === 'AbortError') {
       return { ok: false, status: 0, data: null, error: 'Request timeout' }
     }
-    return { ok: false, status: 0, data: null, error: err.message || 'Network error' }
+    return { ok: false, status: 0, data: null, error: err instanceof Error ? err.message : 'Network error' }
   }
 }
 
@@ -176,7 +176,7 @@ export async function testConnection(): Promise<ApiResponse> {
     const res = await fetch(`${baseUrl}/api/health`, { signal: controller.signal })
     clearTimeout(timer)
     return { ok: res.ok, status: res.status, data: { connected: res.ok } }
-  } catch (err: any) {
-    return { ok: false, status: 0, data: null, error: err.message || 'Cannot connect' }
+  } catch (err) {
+    return { ok: false, status: 0, data: null, error: err instanceof Error ? err.message : 'Cannot connect' }
   }
 }

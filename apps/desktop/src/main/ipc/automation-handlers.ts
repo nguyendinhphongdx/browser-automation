@@ -134,18 +134,19 @@ export function registerAutomationHandlers(ipcMain: IpcMain) {
 
       // Giữ browser mở — không đóng
       return { logId: log.id, status: 'completed', logs: ctx.logs }
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
       ctx.logs.push({
         timestamp: new Date().toISOString(),
         level: 'error',
-        message: err.message
+        message
       })
       updateWorkflowLog(log.id, 'error', JSON.stringify(ctx.logs))
 
       const sender = event.sender
-      sender.send('workflow:status', { logId: log.id, status: 'error', workflowId, profileId, error: err.message })
+      sender.send('workflow:status', { logId: log.id, status: 'error', workflowId, profileId, error: message })
 
-      return { logId: log.id, status: 'error', logs: ctx.logs, error: err.message }
+      return { logId: log.id, status: 'error', logs: ctx.logs, error: message }
     } finally {
       runningWorkflows.delete(log.id)
     }
