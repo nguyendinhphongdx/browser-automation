@@ -4,16 +4,33 @@ import { app } from 'electron'
 import { v4 as uuid } from 'uuid'
 import { getDatabase } from '../database/init'
 import { generateFingerprint } from '../browser/fingerprint'
-import type { BrowserProfile, CreateProfileInput, UpdateProfileInput } from '../../shared/types'
+import type { BrowserProfile, BrowserType, CreateProfileInput, UpdateProfileInput } from '../../shared/types'
 
-function rowToProfile(row: any): BrowserProfile {
+interface ProfileRow {
+  id: string
+  name: string
+  tags: string
+  folder: string | null
+  color: string | null
+  browser_type: string | null
+  browser_version: string | null
+  browser_executable_path: string | null
+  fingerprint: string
+  proxy_id: string | null
+  notes: string | null
+  last_used: string | null
+  created_at: string
+  updated_at: string
+}
+
+function rowToProfile(row: ProfileRow): BrowserProfile {
   return {
     id: row.id,
     name: row.name,
     tags: JSON.parse(row.tags || '[]'),
     folder: row.folder || '',
     color: row.color || '#3B82F6',
-    browserType: row.browser_type || 'chrome',
+    browserType: (row.browser_type || 'chrome') as BrowserType,
     browserVersion: row.browser_version || 'latest',
     browserExecutablePath: row.browser_executable_path || undefined,
     fingerprint: JSON.parse(row.fingerprint || '{}'),
@@ -27,13 +44,13 @@ function rowToProfile(row: any): BrowserProfile {
 
 export function getAllProfiles(): BrowserProfile[] {
   const db = getDatabase()
-  const rows = db.prepare('SELECT * FROM profiles ORDER BY updated_at DESC').all()
+  const rows = db.prepare('SELECT * FROM profiles ORDER BY updated_at DESC').all() as ProfileRow[]
   return rows.map(rowToProfile)
 }
 
 export function getProfileById(id: string): BrowserProfile | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM profiles WHERE id = ?').get(id)
+  const row = db.prepare('SELECT * FROM profiles WHERE id = ?').get(id) as ProfileRow | undefined
   return row ? rowToProfile(row) : null
 }
 
