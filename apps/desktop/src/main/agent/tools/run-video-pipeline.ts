@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getVideoPipelineById } from '../../services/video-pipeline-service'
 import { createVideoPipelineRun, updateVideoPipelineRun } from '../../services/video-job-service'
 import { executeVideoPipeline } from '../../video-studio/engine'
+import { assertPipelineRunnable } from '../../video-studio/assert-runnable'
 import type { AgentToolContext } from './types'
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- ctx unused: pipeline data is global, not scoped to this run
@@ -24,6 +25,7 @@ export function createRunVideoPipelineTool(ctx: AgentToolContext) {
       const logs: string[] = []
 
       try {
+        assertPipelineRunnable(pipeline.nodes)
         await executeVideoPipeline(pipeline.nodes, pipeline.edges, {
           runId: run.id,
           pipelineId: videoPipelineId,

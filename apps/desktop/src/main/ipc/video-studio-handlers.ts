@@ -5,6 +5,7 @@ import {
 import { createVideoPipelineRun, updateVideoPipelineRun } from '../services/video-job-service'
 import { VIDEO_NODE_DEFINITIONS } from '../video-studio/node-definitions'
 import { executeVideoPipeline } from '../video-studio/engine'
+import { assertPipelineRunnable } from '../video-studio/assert-runnable'
 import { buildNodeOutputPreview } from '../video-studio/build-node-preview'
 import type { VideoExecutionContext } from '../video-studio/nodes/base-node'
 import type { LogEntry } from '../../shared/types'
@@ -50,6 +51,7 @@ export function registerVideoStudioHandlers(ipcMain: IpcMain) {
     }
 
     try {
+      assertPipelineRunnable(pipeline.nodes)
       await executeVideoPipeline(pipeline.nodes, pipeline.edges, ctx)
       updateVideoPipelineRun(run.id, 'completed', JSON.stringify(logs), new Date().toISOString())
       sender.send('video-studio:status', { runId: run.id, pipelineId, status: 'completed' })

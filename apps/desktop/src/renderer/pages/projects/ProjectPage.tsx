@@ -296,13 +296,21 @@ function TaskDetailDrawer({ task, project, onClose, onEdit, onAskAI }: {
   }, [task.id])
 
   useEffect(() => {
-    const folderId = task.outputFolderId ?? project.libraryFolderId
+    // Task CHƯA có outputFolderId riêng — KHÔNG fallback hiện cả thư mục gốc
+    // project (chứa lẫn resource của mọi task khác + sổ tay/kịch bản), vì
+    // trông như "output của task này" nhưng thực ra không phải. Chỉ hiện khi
+    // task đã có folder riêng thật sự.
+    if (!task.outputFolderId) {
+      setOutputResources([])
+      setLoadingOutput(false)
+      return
+    }
     setLoadingOutput(true)
-    window.api.getLibraryChildren(folderId).then((rows: LibraryResource[]) => {
+    window.api.getLibraryChildren(task.outputFolderId).then((rows: LibraryResource[]) => {
       setOutputResources(rows)
       setLoadingOutput(false)
     })
-  }, [task.outputFolderId, project.libraryFolderId])
+  }, [task.outputFolderId])
 
   const handleSaveNotes = async () => {
     setSavingNotes(true)
@@ -437,7 +445,9 @@ function TaskDetailDrawer({ task, project, onClose, onEdit, onAskAI }: {
           {loadingOutput ? (
             <div className="text-center text-muted-foreground text-xs py-4">Đang tải...</div>
           ) : outputResources.length === 0 ? (
-            <div className="text-center text-muted-foreground text-xs py-4 border border-dashed rounded-lg">Chưa có output</div>
+            <div className="text-center text-muted-foreground text-xs py-4 border border-dashed rounded-lg">
+              {task.outputFolderId ? 'Chưa có output' : 'Task chưa có thư mục Output riêng — nhấn ✏️ Sửa để gán 1 thư mục trong Thư viện'}
+            </div>
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-2">
               {outputResources.map(r => (
