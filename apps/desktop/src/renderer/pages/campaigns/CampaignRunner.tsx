@@ -162,8 +162,8 @@ export function CampaignRunner() {
       setStartTime(Date.now())
       setElapsed(0)
       await window.api.runCampaign(activeCampaign.id)
-    } catch (err: any) {
-      alert(`Lỗi: ${err.message || err}`)
+    } catch (err) {
+      alert(`Lỗi: ${err instanceof Error ? err.message : String(err)}`)
       setRunning(false)
     }
   }

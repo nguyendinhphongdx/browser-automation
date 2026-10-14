@@ -15,9 +15,9 @@ export function registerBrowserHandlers(ipcMain: IpcMain) {
       await launchBrowser(profile)
       updateLastUsed(profileId)
       return { success: true }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[browser:launch]', err)
-      throw new Error(err.message || 'Không thể khởi chạy trình duyệt')
+      throw new Error(err instanceof Error ? err.message : 'Không thể khởi chạy trình duyệt')
     }
   })
 
@@ -26,16 +26,16 @@ export function registerBrowserHandlers(ipcMain: IpcMain) {
       await browserPreviewService.stop(profileId)
       await closeBrowser(profileId)
       return { success: true }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[browser:close]', err)
-      throw new Error(err.message || 'Không thể đóng trình duyệt')
+      throw new Error(err instanceof Error ? err.message : 'Không thể đóng trình duyệt')
     }
   })
 
   ipcMain.handle('browser:detect', () => {
     try {
       return detectInstalledBrowsers()
-    } catch (err: any) {
+    } catch (err) {
       console.error('[browser:detect]', err)
       return []
     }
