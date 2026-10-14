@@ -384,6 +384,23 @@ function MaskedKeyField({
   )
 }
 
+function PlainTextField({
+  label, value, onChange, placeholder
+}: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium mb-1.5">{label}</label>
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 border rounded-lg bg-background text-xs font-mono focus:outline-none focus:ring-2 focus:ring-ring"
+      />
+    </div>
+  )
+}
+
 const VIDEO_STUDIO_KEYS = {
   klingAccessKey: 'videoStudio.kling.accessKey',
   klingSecretKey: 'videoStudio.kling.secretKey',
@@ -392,6 +409,8 @@ const VIDEO_STUDIO_KEYS = {
   openaiImageApiKey: 'videoStudio.openaiImage.apiKey',
   fluxApiKey: 'videoStudio.flux.apiKey',
   geminiOmniApiKey: 'videoStudio.geminiOmni.apiKey',
+  geminiOmniImageModel: 'videoStudio.geminiOmni.imageModel',
+  geminiOmniVideoModel: 'videoStudio.geminiOmni.videoModel',
   elevenlabsApiKey: 'videoStudio.elevenlabs.apiKey',
   googleTtsApiKey: 'videoStudio.googleTts.apiKey',
   openaiTtsApiKey: 'videoStudio.openaiTts.apiKey'
@@ -438,6 +457,12 @@ function VideoStudioProvidersSection() {
             value={values[VIDEO_STUDIO_KEYS.geminiOmniApiKey] || ''}
             onChange={v => set(VIDEO_STUDIO_KEYS.geminiOmniApiKey, v)}
           />
+          <PlainTextField
+            label='Gemini (omni) — Tên model cho tạo ảnh (bắt buộc nếu dùng — "gemini-omni-1.1-flash" đã kiểm chứng KHÔNG sinh ảnh, chỉ sinh video)'
+            value={values[VIDEO_STUDIO_KEYS.geminiOmniImageModel] || ''}
+            onChange={v => set(VIDEO_STUDIO_KEYS.geminiOmniImageModel, v)}
+            placeholder="vd: gemini-3-pro-image (tự tra model ảnh thật trong tài liệu Google)"
+          />
         </div>
       </div>
 
@@ -458,6 +483,12 @@ function VideoStudioProvidersSection() {
             label="Runway — API Key"
             value={values[VIDEO_STUDIO_KEYS.runwayApiKey] || ''}
             onChange={v => set(VIDEO_STUDIO_KEYS.runwayApiKey, v)}
+          />
+          <PlainTextField
+            label="Gemini (omni) — Tên model cho tạo video (để trống = gemini-omni-1.1-flash, đã kiểm chứng hoạt động)"
+            value={values[VIDEO_STUDIO_KEYS.geminiOmniVideoModel] || ''}
+            onChange={v => set(VIDEO_STUDIO_KEYS.geminiOmniVideoModel, v)}
+            placeholder="gemini-omni-1.1-flash"
           />
           <div>
             <label className="block text-xs font-medium mb-1.5">ComfyUI — Địa chỉ (local)</label>

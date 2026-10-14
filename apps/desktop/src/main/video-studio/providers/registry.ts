@@ -43,7 +43,10 @@ export function getVideoProvider(name: string): VideoProvider {
     case 'gemini-omni': {
       const apiKey = getSetting('videoStudio.geminiOmni.apiKey')
       if (!apiKey) throw new Error('Chưa cấu hình Gemini API Key trong Cài đặt')
-      return createGeminiOmniProvider(apiKey)
+      return createGeminiOmniProvider(apiKey, {
+        videoModel: getSetting('videoStudio.geminiOmni.videoModel') || undefined,
+        imageModel: getSetting('videoStudio.geminiOmni.imageModel') || undefined
+      })
     }
     default:
       throw new Error(`Video provider không hợp lệ: "${name}"`)
