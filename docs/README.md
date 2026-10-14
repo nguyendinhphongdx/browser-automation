@@ -118,6 +118,7 @@ Architecture Decision Record — quyết định kiến trúc đã chốt + alte
 | 0013 | [AI tự chạy workflow Automation thật](adr/0013-run-workflow-tool.md) | Tool `run_workflow` gate approval, mirror `run_video_pipeline` (ADR-0011) — đóng giới hạn mà ADR-0011 từng để lại |
 | 0014 | [Chặn chạy pipeline rỗng + Task Output trung thực](adr/0014-pipeline-runnable-guard-and-task-output-honesty.md) | `assertPipelineRunnable` chặn "completed" giả cho pipeline rỗng/thiếu save-to-library; Task Detail không fallback hiện nhầm cả thư mục gốc project |
 | 0015 | ["Lưu vào Thư viện" nhận cả IMAGE/AUDIO](adr/0015-save-to-library-accepts-image-and-audio.md) | Input socket chấp nhận mảng type — pipeline chỉ-tạo-ảnh giờ nối và chạy được, không chỉ video |
+| 0016 | [Gemini (omni) — model ảnh/video cấu hình riêng](adr/0016-gemini-omni-configurable-model-per-media-type.md) | `gemini-omni-1.1-flash` chỉ sinh video (kiểm chứng thật) — tách 2 setting tên model riêng, không default cho ảnh |
 
 ## [development/](development/) — Đóng góp code
 
