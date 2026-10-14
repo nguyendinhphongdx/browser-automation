@@ -252,8 +252,8 @@ export const VIDEO_NODE_DEFINITIONS: VideoNodeDefinition[] = [
     label: 'Lưu vào Thư viện',
     category: 'output',
     icon: 'Save',
-    description: 'Lưu video hoàn chỉnh vào Thư viện tài nguyên.',
-    inputs: [{ name: 'media', type: 'VIDEO', required: true }],
+    description: 'Lưu kết quả (ảnh/video/âm thanh) vào Thư viện tài nguyên — tự nhận diện đúng loại từ file nhận được.',
+    inputs: [{ name: 'media', type: ['IMAGE', 'VIDEO', 'AUDIO'], required: true }],
     outputs: [],
     configSchema: [
       { key: 'name', label: 'Tên', type: 'text', required: true },

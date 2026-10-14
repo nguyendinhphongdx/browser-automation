@@ -490,7 +490,11 @@ export type VideoSocketType = 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'NUMBER' | 
 
 export interface VideoSocketDef {
   name: string
-  type: VideoSocketType
+  // Mảng = socket (luôn là INPUT) chấp nhận nhiều kiểu khác nhau, vd
+  // save-to-library's "media" nhận cả IMAGE lẫn VIDEO — 1 node tổng quát duy
+  // nhất cho mọi loại output cuối, thay vì cần 1 node lưu riêng cho mỗi loại
+  // media. Output socket luôn là 1 type đơn (nguồn chỉ phát ra đúng 1 kiểu).
+  type: VideoSocketType | VideoSocketType[]
   required: boolean
 }
 

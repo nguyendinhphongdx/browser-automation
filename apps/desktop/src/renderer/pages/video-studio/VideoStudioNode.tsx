@@ -20,6 +20,13 @@ export const SOCKET_COLORS: Record<VideoSocketType, string> = {
   BOOLEAN: '#10B981'
 }
 
+// socket.type có thể là mảng (vd save-to-library's "media" nhận cả
+// IMAGE/VIDEO/AUDIO) — chỉ cần 1 màu đại diện để vẽ handle, dùng màu của
+// type đầu tiên trong danh sách.
+function socketColor(type: VideoSocketType | VideoSocketType[]): string {
+  return SOCKET_COLORS[Array.isArray(type) ? type[0] : type]
+}
+
 const CATEGORY_COLORS: Record<string, string> = {
   input: '#10B981',
   generate: '#8B5CF6',
@@ -65,7 +72,7 @@ export function VideoStudioNode({ id, data, selected }: { id: string; data: Vide
               position={Position.Left}
               id={socket.name}
               className="!w-[9px] !h-[9px] !border-[2px] !relative !left-0 !top-0 !transform-none"
-              style={{ backgroundColor: SOCKET_COLORS[socket.type], borderColor: 'white' }}
+              style={{ backgroundColor: socketColor(socket.type), borderColor: 'white' }}
             />
             <span>
               {socket.name}
@@ -86,7 +93,7 @@ export function VideoStudioNode({ id, data, selected }: { id: string; data: Vide
               position={Position.Right}
               id={socket.name}
               className="!w-[9px] !h-[9px] !border-[2px] !relative !right-0 !top-0 !transform-none"
-              style={{ backgroundColor: SOCKET_COLORS[socket.type], borderColor: 'white' }}
+              style={{ backgroundColor: socketColor(socket.type), borderColor: 'white' }}
             />
           </div>
         ))}
