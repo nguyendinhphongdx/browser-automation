@@ -43,8 +43,8 @@ export function CloudProfilesTab() {
     try {
       const res = await api.apiRequest('GET', '/api/profiles/backup')
       setBackups(res.backups || [])
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải danh sách backup')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể tải danh sách backup')
     } finally {
       setLoading(false)
     }
@@ -60,8 +60,8 @@ export function CloudProfilesTab() {
       await api.downloadBackup(backupId)
       // Refresh local profiles
       window.dispatchEvent(new CustomEvent('profiles:refresh'))
-    } catch (err: any) {
-      setError(err.message || 'Download thất bại')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Download thất bại')
     } finally {
       setDownloading(null)
     }
@@ -72,8 +72,8 @@ export function CloudProfilesTab() {
     try {
       await api.apiRequest('DELETE', `/api/profiles/backup/${backupId}`)
       setBackups((prev) => prev.filter((b) => b.id !== backupId))
-    } catch (err: any) {
-      setError(err.message || 'Xóa thất bại')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Xóa thất bại')
     }
   }
 

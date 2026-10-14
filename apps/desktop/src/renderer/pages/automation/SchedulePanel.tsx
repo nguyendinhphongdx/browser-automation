@@ -46,8 +46,8 @@ export function SchedulePanel() {
     try {
       await window.api.triggerSchedule(id)
       alert('Đã trigger thành công!')
-    } catch (err: any) {
-      alert('Lỗi: ' + err.message)
+    } catch (err) {
+      alert('Lỗi: ' + (err instanceof Error ? err.message : String(err)))
     }
   }
 
@@ -169,8 +169,8 @@ function CreateScheduleDialog({ workflows, onClose, onCreated }: {
         chainOnStatus: type === 'chain' ? chainOnStatus : undefined,
       })
       onCreated()
-    } catch (err: any) {
-      alert('Lỗi: ' + err.message)
+    } catch (err) {
+      alert('Lỗi: ' + (err instanceof Error ? err.message : String(err)))
     } finally {
       setLoading(false)
     }
