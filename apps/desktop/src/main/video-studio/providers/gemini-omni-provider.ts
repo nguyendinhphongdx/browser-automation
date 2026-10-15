@@ -47,7 +47,10 @@ export function createGeminiOmniProvider(apiKey: string, models: GeminiOmniModel
         response_format: {
           type: isImage ? 'image' : 'video',
           aspect_ratio: params.aspectRatio,
-          ...(isImage ? {} : { resolution: '720p', duration: params.durationSec ? String(params.durationSec) : undefined })
+          // duration là chuỗi kiểu protobuf Duration ("5s"), KHÔNG phải số
+          // thuần ("5") — đã kiểm chứng thật: "5" → 400 Invalid input at
+          // 'response_format', "5s" → thành công.
+          ...(isImage ? {} : { resolution: '720p', duration: params.durationSec ? `${params.durationSec}s` : undefined })
         }
       })
 
