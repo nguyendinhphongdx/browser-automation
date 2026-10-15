@@ -4,7 +4,29 @@ import type {
   Campaign, CreateCampaignInput, UpdateCampaignInput, CampaignRun, CampaignStatus, CampaignProfileResult
 } from '../../shared/types'
 
-function rowToCampaign(row: any): Campaign {
+interface CampaignRow {
+  id: string
+  name: string
+  description: string | null
+  profile_ids: string | null
+  workflow_ids: string | null
+  execution: string | null
+  status: string | null
+  last_run_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface CampaignRunRow {
+  id: string
+  campaign_id: string
+  status: string
+  profile_results: string | null
+  started_at: string
+  finished_at: string | null
+}
+
+function rowToCampaign(row: CampaignRow): Campaign {
   return {
     id: row.id,
     name: row.name,
@@ -12,18 +34,18 @@ function rowToCampaign(row: any): Campaign {
     profileIds: JSON.parse(row.profile_ids || '[]'),
     workflowIds: JSON.parse(row.workflow_ids || '[]'),
     execution: JSON.parse(row.execution || '{}'),
-    status: row.status || 'draft',
+    status: (row.status || 'draft') as Campaign['status'],
     lastRunAt: row.last_run_at || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }
 }
 
-function rowToCampaignRun(row: any): CampaignRun {
+function rowToCampaignRun(row: CampaignRunRow): CampaignRun {
   return {
     id: row.id,
     campaignId: row.campaign_id,
-    status: row.status,
+    status: row.status as CampaignStatus,
     profileResults: JSON.parse(row.profile_results || '[]'),
     startedAt: row.started_at,
     finishedAt: row.finished_at || undefined
@@ -32,12 +54,12 @@ function rowToCampaignRun(row: any): CampaignRun {
 
 export function getAllCampaigns(): Campaign[] {
   const db = getDatabase()
-  return db.prepare('SELECT * FROM campaigns ORDER BY updated_at DESC').all().map(rowToCampaign)
+  return (db.prepare('SELECT * FROM campaigns ORDER BY updated_at DESC').all() as CampaignRow[]).map(rowToCampaign)
 }
 
 export function getCampaignById(id: string): Campaign | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(id)
+  const row = db.prepare('SELECT * FROM campaigns WHERE id = ?').get(id) as CampaignRow | undefined
   return row ? rowToCampaign(row) : null
 }
 
@@ -124,7 +146,7 @@ export function createCampaignRun(campaignId: string): CampaignRun {
   // Update campaign last_run_at
   db.prepare('UPDATE campaigns SET last_run_at = ?, updated_at = ? WHERE id = ?').run(now, now, campaignId)
 
-  return rowToCampaignRun(db.prepare('SELECT * FROM campaign_runs WHERE id = ?').get(id))
+  return rowToCampaignRun(db.prepare('SELECT * FROM campaign_runs WHERE id = ?').get(id) as CampaignRunRow)
 }
 
 export function updateCampaignRun(
@@ -141,7 +163,7 @@ export function updateCampaignRun(
 
 export function getCampaignRuns(campaignId: string): CampaignRun[] {
   const db = getDatabase()
-  return db.prepare(
+  return (db.prepare(
     'SELECT * FROM campaign_runs WHERE campaign_id = ? ORDER BY started_at DESC LIMIT 50'
-  ).all(campaignId).map(rowToCampaignRun)
+  ).all(campaignId) as CampaignRunRow[]).map(rowToCampaignRun)
 }
