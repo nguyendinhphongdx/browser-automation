@@ -1,4 +1,14 @@
-import { BrowserWindow, dialog } from 'electron'
+import { BrowserWindow, dialog, type MessageBoxReturnValue } from 'electron'
+
+interface UpdateInfo {
+  version: string
+}
+
+interface UpdateProgress {
+  percent: number
+  transferred: number
+  total: number
+}
 
 export function initAutoUpdater(mainWindow: BrowserWindow) {
   // Lazy import — electron-updater crash nếu import top-level trong dev
@@ -15,7 +25,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow) {
     autoUpdater.checkForUpdates().catch(() => {})
   }, 4 * 60 * 60 * 1000)
 
-  autoUpdater.on('update-available', (info: any) => {
+  autoUpdater.on('update-available', (info: UpdateInfo) => {
     dialog
       .showMessageBox(mainWindow, {
         type: 'info',
@@ -24,7 +34,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow) {
         buttons: ['Tải về', 'Để sau'],
         defaultId: 0,
       })
-      .then((result: any) => {
+      .then((result: MessageBoxReturnValue) => {
         if (result.response === 0) {
           autoUpdater.downloadUpdate()
           mainWindow.webContents.send('updater:downloading', info.version)
@@ -32,7 +42,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow) {
       })
   })
 
-  autoUpdater.on('update-downloaded', (info: any) => {
+  autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
     dialog
       .showMessageBox(mainWindow, {
         type: 'info',
@@ -41,14 +51,14 @@ export function initAutoUpdater(mainWindow: BrowserWindow) {
         buttons: ['Khởi động lại', 'Để sau'],
         defaultId: 0,
       })
-      .then((result: any) => {
+      .then((result: MessageBoxReturnValue) => {
         if (result.response === 0) {
           autoUpdater.quitAndInstall()
         }
       })
   })
 
-  autoUpdater.on('download-progress', (progress: any) => {
+  autoUpdater.on('download-progress', (progress: UpdateProgress) => {
     mainWindow.webContents.send('updater:progress', {
       percent: Math.round(progress.percent),
       transferred: progress.transferred,
@@ -56,7 +66,7 @@ export function initAutoUpdater(mainWindow: BrowserWindow) {
     })
   })
 
-  autoUpdater.on('error', (err: any) => {
+  autoUpdater.on('error', (err: Error) => {
     console.error('Auto-updater error:', err)
   })
 }
