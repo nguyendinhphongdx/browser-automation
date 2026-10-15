@@ -3,18 +3,36 @@ import { v4 as uuid } from 'uuid'
 import { getDatabase } from '../database/init'
 import type { Schedule, CreateScheduleInput } from '../../shared/types'
 
-function rowToSchedule(row: any): Schedule {
+interface ScheduleRow {
+  id: string
+  name: string
+  type: string
+  target_type: string
+  target_id: string
+  profile_id: string | null
+  cron_expression: string | null
+  webhook_secret: string | null
+  chain_source_id: string | null
+  chain_on_status: string | null
+  enabled: number
+  last_triggered_at: string | null
+  next_run_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+function rowToSchedule(row: ScheduleRow): Schedule {
   return {
     id: row.id,
     name: row.name,
-    type: row.type,
-    targetType: row.target_type,
+    type: row.type as Schedule['type'],
+    targetType: row.target_type as Schedule['targetType'],
     targetId: row.target_id,
     profileId: row.profile_id || undefined,
     cronExpression: row.cron_expression || undefined,
     webhookSecret: row.webhook_secret || undefined,
     chainSourceId: row.chain_source_id || undefined,
-    chainOnStatus: row.chain_on_status || 'completed',
+    chainOnStatus: (row.chain_on_status || 'completed') as Schedule['chainOnStatus'],
     enabled: !!row.enabled,
     lastTriggeredAt: row.last_triggered_at || undefined,
     nextRunAt: row.next_run_at || undefined,
@@ -25,12 +43,12 @@ function rowToSchedule(row: any): Schedule {
 
 export function getAllSchedules(): Schedule[] {
   const db = getDatabase()
-  return db.prepare('SELECT * FROM schedules ORDER BY created_at DESC').all().map(rowToSchedule)
+  return (db.prepare('SELECT * FROM schedules ORDER BY created_at DESC').all() as ScheduleRow[]).map(rowToSchedule)
 }
 
 export function getScheduleById(id: string): Schedule | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM schedules WHERE id = ?').get(id)
+  const row = db.prepare('SELECT * FROM schedules WHERE id = ?').get(id) as ScheduleRow | undefined
   return row ? rowToSchedule(row) : null
 }
 
@@ -107,23 +125,23 @@ export function markTriggered(id: string): void {
 
 export function getEnabledCronSchedules(): Schedule[] {
   const db = getDatabase()
-  return db.prepare(
+  return (db.prepare(
     "SELECT * FROM schedules WHERE type = 'cron' AND enabled = 1"
-  ).all().map(rowToSchedule)
+  ).all() as ScheduleRow[]).map(rowToSchedule)
 }
 
 export function getChainSchedules(sourceId: string, status: string): Schedule[] {
   const db = getDatabase()
-  return db.prepare(
+  return (db.prepare(
     "SELECT * FROM schedules WHERE type = 'chain' AND enabled = 1 AND chain_source_id = ? AND (chain_on_status = ? OR chain_on_status = 'any')"
-  ).all(sourceId, status).map(rowToSchedule)
+  ).all(sourceId, status) as ScheduleRow[]).map(rowToSchedule)
 }
 
 export function getScheduleByWebhookSecret(secret: string): Schedule | null {
   const db = getDatabase()
   const row = db.prepare(
     "SELECT * FROM schedules WHERE type = 'webhook' AND enabled = 1 AND webhook_secret = ?"
-  ).get(secret)
+  ).get(secret) as ScheduleRow | undefined
   return row ? rowToSchedule(row) : null
 }
 
