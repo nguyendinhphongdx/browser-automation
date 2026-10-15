@@ -1,6 +1,6 @@
 import { getSetting, setSetting, deleteSetting } from './settings-service'
 
-interface ApiResponse<T = any> {
+interface ApiResponse<T = unknown> {
   ok: boolean
   status: number
   data: T | null
@@ -52,10 +52,10 @@ export async function refreshToken(): Promise<boolean> {
   }
 }
 
-async function rawRequest<T = any>(
+async function rawRequest<T = unknown>(
   method: string,
   path: string,
-  body?: any,
+  body?: unknown,
   options?: { noAuth?: boolean }
 ): Promise<ApiResponse<T>> {
   const baseUrl = getBaseUrl()
@@ -87,18 +87,21 @@ async function rawRequest<T = any>(
     clearTimeout(timer)
 
     const contentType = response.headers.get('content-type')
-    let data: any
+    let data: unknown
     if (contentType?.includes('application/json')) {
       data = await response.json()
     } else {
       data = await response.text()
     }
 
+    const errorMessage = (data as { message?: string; error?: string } | null)?.message
+      || (data as { message?: string; error?: string } | null)?.error
+
     return {
       ok: response.ok,
       status: response.status,
-      data,
-      error: response.ok ? undefined : (data?.message || data?.error || `HTTP ${response.status}`)
+      data: data as T,
+      error: response.ok ? undefined : (errorMessage || `HTTP ${response.status}`)
     }
   } catch (err) {
     clearTimeout(timer)
@@ -110,10 +113,10 @@ async function rawRequest<T = any>(
   }
 }
 
-export async function apiRequest<T = any>(
+export async function apiRequest<T = unknown>(
   method: string,
   path: string,
-  body?: any,
+  body?: unknown,
   options?: { noAuth?: boolean }
 ): Promise<ApiResponse<T>> {
   const res = await rawRequest<T>(method, path, body, options)
@@ -131,8 +134,14 @@ export async function apiRequest<T = any>(
 
 // ── Auth ──────────────────────────────────────────
 
-export async function login(email: string, password: string): Promise<ApiResponse> {
-  const res = await apiRequest('POST', '/api/auth/login', { email, password }, { noAuth: true })
+interface AuthResponseData {
+  token?: string
+  refreshToken?: string
+  user?: { id?: string; email?: string; name?: string }
+}
+
+export async function login(email: string, password: string): Promise<ApiResponse<AuthResponseData>> {
+  const res = await apiRequest<AuthResponseData>('POST', '/api/auth/login', { email, password }, { noAuth: true })
   if (res.ok && res.data?.token) {
     setSetting('auth.token', res.data.token)
     if (res.data.refreshToken) setSetting('auth.refreshToken', res.data.refreshToken)
@@ -143,8 +152,8 @@ export async function login(email: string, password: string): Promise<ApiRespons
   return res
 }
 
-export async function register(name: string, email: string, password: string): Promise<ApiResponse> {
-  const res = await apiRequest('POST', '/api/auth/signup', { name, email, password }, { noAuth: true })
+export async function register(name: string, email: string, password: string): Promise<ApiResponse<AuthResponseData>> {
+  const res = await apiRequest<AuthResponseData>('POST', '/api/auth/signup', { name, email, password }, { noAuth: true })
   if (res.ok && res.data?.token) {
     setSetting('auth.token', res.data.token)
     if (res.data.user?.id) setSetting('auth.userId', res.data.user.id)
