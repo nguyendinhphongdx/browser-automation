@@ -277,7 +277,10 @@ export async function downloadBackup(backupId: string): Promise<BrowserProfile> 
   try {
     const body = dlRes.body
     if (!body) throw new Error('Empty response body')
-    const nodeStream = Readable.fromWeb(body as any)
+    // fetch()'s DOM-lib ReadableStream and Node's stream/web ReadableStream
+    // type are structurally identical at runtime but declared incompatible
+    // in TS's lib defs — the unknown round-trip is the standard way through.
+    const nodeStream = Readable.fromWeb(body as unknown as import('node:stream/web').ReadableStream<Uint8Array>)
     await pipeline(nodeStream, fs.createWriteStream(tempZip))
     return await importProfile(tempZip, { preserveId: true })
   } finally {
