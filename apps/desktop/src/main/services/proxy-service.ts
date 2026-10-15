@@ -3,17 +3,32 @@ import { getDatabase } from '../database/init'
 import { encrypt, decrypt } from './encryption'
 import type { Proxy, CreateProxyInput, UpdateProxyInput } from '../../shared/types'
 
-function rowToProxy(row: any): Proxy {
+interface ProxyRow {
+  id: string
+  name: string
+  type: string
+  host: string
+  port: number
+  username: string | null
+  password: string | null
+  country: string | null
+  status: string | null
+  speed: number | null
+  last_checked: string | null
+  created_at: string
+}
+
+function rowToProxy(row: ProxyRow): Proxy {
   return {
     id: row.id,
     name: row.name,
-    type: row.type,
+    type: row.type as Proxy['type'],
     host: row.host,
     port: row.port,
     username: row.username ? decrypt(row.username) : undefined,
     password: row.password ? decrypt(row.password) : undefined,
     country: row.country || undefined,
-    status: row.status || 'unknown',
+    status: (row.status || 'unknown') as Proxy['status'],
     speed: row.speed || undefined,
     lastChecked: row.last_checked || undefined,
     createdAt: row.created_at
@@ -22,13 +37,13 @@ function rowToProxy(row: any): Proxy {
 
 export function getAllProxies(): Proxy[] {
   const db = getDatabase()
-  const rows = db.prepare('SELECT * FROM proxies ORDER BY created_at DESC').all()
+  const rows = db.prepare('SELECT * FROM proxies ORDER BY created_at DESC').all() as ProxyRow[]
   return rows.map(rowToProxy)
 }
 
 export function getProxyById(id: string): Proxy | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM proxies WHERE id = ?').get(id)
+  const row = db.prepare('SELECT * FROM proxies WHERE id = ?').get(id) as ProxyRow | undefined
   return row ? rowToProxy(row) : null
 }
 
