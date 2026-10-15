@@ -120,6 +120,7 @@ Architecture Decision Record — quyết định kiến trúc đã chốt + alte
 | 0015 | ["Lưu vào Thư viện" nhận cả IMAGE/AUDIO](adr/0015-save-to-library-accepts-image-and-audio.md) | Input socket chấp nhận mảng type — pipeline chỉ-tạo-ảnh giờ nối và chạy được, không chỉ video |
 | 0016 | [Gemini (omni) — model ảnh/video cấu hình riêng](adr/0016-gemini-omni-configurable-model-per-media-type.md) | `gemini-omni-1.1-flash` chỉ sinh video (kiểm chứng thật) — tách 2 setting tên model riêng, không default cho ảnh |
 | 0017 | [AI xoá/thay toàn bộ pipeline Video Studio](adr/0017-video-pipeline-destructive-edit-tool.md) | Tool mới `propose_destructive_video_pipeline_change` — Video Studio trước đó hoàn toàn không có cách nào xoá node qua AI |
+| 0018 | [Video Studio: nút Dừng thật + Lịch sử/log chạy](adr/0018-video-studio-stop-and-run-history.md) | `ctx.aborted` chưa từng được đọc ở đâu cả dù hạ tầng có vẻ tồn tại; lịch sử chạy đã có ở service layer nhưng chưa expose qua IPC/UI |
 
 ## [development/](development/) — Đóng góp code
 
