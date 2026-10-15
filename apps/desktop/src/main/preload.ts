@@ -2,8 +2,13 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { ModelMessage } from 'ai'
 import type {
   WorkflowNode, WorkflowEdge, WorkflowMode, LibraryResourceKind, VideoNode, VideoEdge,
-  UpdateProjectInput, CreateTaskInput, UpdateTaskInput, TaskStatus
+  UpdateProjectInput, CreateTaskInput, UpdateTaskInput, TaskStatus,
+  CreateProfileInput, UpdateProfileInput, CreateProxyInput, UpdateProxyInput,
+  CreateEmailInput, UpdateEmailInput, CreateCookieInput, UpdateCookieInput,
+  CreateWorkflowInput, UpdateWorkflowInput, CreateScheduleInput,
+  CreateCampaignInput, UpdateCampaignInput
 } from '../shared/types'
+import type { UpdateVideoPipelineInput } from './services/video-pipeline-service'
 
 const ALLOWED_CHANNELS = new Set([
   'auth:deeplink-success',
@@ -27,8 +32,8 @@ const api = {
   // Profile
   getProfiles: () => ipcRenderer.invoke('profile:getAll'),
   getProfile: (id: string) => ipcRenderer.invoke('profile:get', id),
-  createProfile: (data: any) => ipcRenderer.invoke('profile:create', data),
-  updateProfile: (id: string, data: any) => ipcRenderer.invoke('profile:update', id, data),
+  createProfile: (data: CreateProfileInput) => ipcRenderer.invoke('profile:create', data),
+  updateProfile: (id: string, data: UpdateProfileInput) => ipcRenderer.invoke('profile:update', id, data),
   deleteProfile: (id: string) => ipcRenderer.invoke('profile:delete', id),
   duplicateProfile: (id: string) => ipcRenderer.invoke('profile:duplicate', id),
 
@@ -40,8 +45,8 @@ const api = {
   // Proxy
   getProxies: () => ipcRenderer.invoke('proxy:getAll'),
   getProxy: (id: string) => ipcRenderer.invoke('proxy:get', id),
-  createProxy: (data: any) => ipcRenderer.invoke('proxy:create', data),
-  updateProxy: (id: string, data: any) => ipcRenderer.invoke('proxy:update', id, data),
+  createProxy: (data: CreateProxyInput) => ipcRenderer.invoke('proxy:create', data),
+  updateProxy: (id: string, data: UpdateProxyInput) => ipcRenderer.invoke('proxy:update', id, data),
   deleteProxy: (id: string) => ipcRenderer.invoke('proxy:delete', id),
   checkProxy: (id: string) => ipcRenderer.invoke('proxy:check', id),
   importProxies: (lines: string[], type?: string) => ipcRenderer.invoke('proxy:import', lines, type),
@@ -50,8 +55,8 @@ const api = {
   // Email
   getEmails: () => ipcRenderer.invoke('email:getAll'),
   getEmail: (id: string) => ipcRenderer.invoke('email:get', id),
-  createEmail: (data: any) => ipcRenderer.invoke('email:create', data),
-  updateEmail: (id: string, data: any) => ipcRenderer.invoke('email:update', id, data),
+  createEmail: (data: CreateEmailInput) => ipcRenderer.invoke('email:create', data),
+  updateEmail: (id: string, data: UpdateEmailInput) => ipcRenderer.invoke('email:update', id, data),
   deleteEmail: (id: string) => ipcRenderer.invoke('email:delete', id),
   importEmailsCSV: (csvContent?: string) => ipcRenderer.invoke('email:importCSV', csvContent),
 
@@ -59,8 +64,8 @@ const api = {
   getCookies: () => ipcRenderer.invoke('cookie:getAll'),
   getCookie: (id: string) => ipcRenderer.invoke('cookie:get', id),
   getCookiesByProfile: (profileId: string) => ipcRenderer.invoke('cookie:getByProfile', profileId),
-  createCookie: (data: any) => ipcRenderer.invoke('cookie:create', data),
-  updateCookie: (id: string, data: any) => ipcRenderer.invoke('cookie:update', id, data),
+  createCookie: (data: CreateCookieInput) => ipcRenderer.invoke('cookie:create', data),
+  updateCookie: (id: string, data: UpdateCookieInput) => ipcRenderer.invoke('cookie:update', id, data),
   deleteCookie: (id: string) => ipcRenderer.invoke('cookie:delete', id),
   importCookie: (name: string, profileId?: string) => ipcRenderer.invoke('cookie:import', name, profileId),
   exportCookie: (id: string) => ipcRenderer.invoke('cookie:export', id),
@@ -71,8 +76,8 @@ const api = {
   exportWorkflow: (id: string) => ipcRenderer.invoke('workflow:export', id),
   importWorkflow: () => ipcRenderer.invoke('workflow:import'),
   getWorkflow: (id: string) => ipcRenderer.invoke('workflow:get', id),
-  createWorkflow: (data: any) => ipcRenderer.invoke('workflow:create', data),
-  updateWorkflow: (id: string, data: any) => ipcRenderer.invoke('workflow:update', id, data),
+  createWorkflow: (data: CreateWorkflowInput) => ipcRenderer.invoke('workflow:create', data),
+  updateWorkflow: (id: string, data: UpdateWorkflowInput) => ipcRenderer.invoke('workflow:update', id, data),
   deleteWorkflow: (id: string) => ipcRenderer.invoke('workflow:delete', id),
   getWorkflowLogs: (workflowId: string) => ipcRenderer.invoke('workflow:getLogs', workflowId),
   runWorkflow: (workflowId: string, profileId: string) => ipcRenderer.invoke('workflow:run', workflowId, profileId),
@@ -83,8 +88,8 @@ const api = {
   // Schedules
   getSchedules: () => ipcRenderer.invoke('schedule:getAll'),
   getSchedule: (id: string) => ipcRenderer.invoke('schedule:get', id),
-  createSchedule: (data: any) => ipcRenderer.invoke('schedule:create', data),
-  updateSchedule: (id: string, data: any) => ipcRenderer.invoke('schedule:update', id, data),
+  createSchedule: (data: CreateScheduleInput) => ipcRenderer.invoke('schedule:create', data),
+  updateSchedule: (id: string, data: Partial<CreateScheduleInput> & { enabled?: boolean }) => ipcRenderer.invoke('schedule:update', id, data),
   deleteSchedule: (id: string) => ipcRenderer.invoke('schedule:delete', id),
   toggleSchedule: (id: string, enabled: boolean) => ipcRenderer.invoke('schedule:toggle', id, enabled),
   triggerSchedule: (id: string) => ipcRenderer.invoke('schedule:trigger', id),
@@ -93,7 +98,8 @@ const api = {
   // Metrics
   getNodeStats: (workflowId: string) => ipcRenderer.invoke('metrics:nodeStats', workflowId),
   getNodeInstanceStats: (workflowId: string, nodeId: string) => ipcRenderer.invoke('metrics:nodeInstanceStats', workflowId, nodeId),
-  getExecutionHistory: (opts?: any) => ipcRenderer.invoke('metrics:executionHistory', opts),
+  getExecutionHistory: (opts?: { workflowId?: string; status?: string; limit?: number; offset?: number }) =>
+    ipcRenderer.invoke('metrics:executionHistory', opts),
   cleanupMetrics: (retentionDays?: number) => ipcRenderer.invoke('metrics:cleanup', retentionDays),
 
   // Workflow Versions
@@ -105,8 +111,8 @@ const api = {
   // Campaign
   getCampaigns: () => ipcRenderer.invoke('campaign:getAll'),
   getCampaign: (id: string) => ipcRenderer.invoke('campaign:get', id),
-  createCampaign: (data: any) => ipcRenderer.invoke('campaign:create', data),
-  updateCampaign: (id: string, data: any) => ipcRenderer.invoke('campaign:update', id, data),
+  createCampaign: (data: CreateCampaignInput) => ipcRenderer.invoke('campaign:create', data),
+  updateCampaign: (id: string, data: UpdateCampaignInput) => ipcRenderer.invoke('campaign:update', id, data),
   deleteCampaign: (id: string) => ipcRenderer.invoke('campaign:delete', id),
   duplicateCampaign: (id: string) => ipcRenderer.invoke('campaign:duplicate', id),
   getCampaignRuns: (campaignId: string) => ipcRenderer.invoke('campaign:getRuns', campaignId),
@@ -119,7 +125,10 @@ const api = {
   startRecording: (profileId: string) => ipcRenderer.invoke('recorder:start', profileId),
   stopRecording: () => ipcRenderer.invoke('recorder:stop'),
   getRecorderStatus: () => ipcRenderer.invoke('recorder:status'),
-  actionsToWorkflow: (actions: any[]) => ipcRenderer.invoke('recorder:toWorkflow', actions),
+  // Renderer's local RecordedAction (RecorderPanel.tsx) has drifted slightly
+  // looser (type: string) than main's — accept unknown[] here rather than
+  // forcing an incompatible strict type across the IPC boundary.
+  actionsToWorkflow: (actions: unknown[]) => ipcRenderer.invoke('recorder:toWorkflow', actions),
 
   // App info
   getDbPath: () => ipcRenderer.invoke('app:getDbPath'),
@@ -139,7 +148,7 @@ const api = {
   openBrowserLogin: () => ipcRenderer.invoke('auth:openBrowser'),
 
   // API proxy (restricted to known safe paths)
-  apiRequest: (method: string, path: string, body?: any) => {
+  apiRequest: (method: string, path: string, body?: unknown) => {
     const allowedMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
     const allowedPrefixes = ['/api/profiles/', '/api/auth/']
     if (!allowedMethods.includes(method.toUpperCase())) {
@@ -208,7 +217,7 @@ const api = {
   getVideoPipelines: () => ipcRenderer.invoke('video-studio:getAll'),
   getVideoPipeline: (id: string) => ipcRenderer.invoke('video-studio:get', id),
   createVideoPipeline: (data: { name: string; description?: string }) => ipcRenderer.invoke('video-studio:create', data),
-  updateVideoPipeline: (id: string, data: any) => ipcRenderer.invoke('video-studio:update', id, data),
+  updateVideoPipeline: (id: string, data: UpdateVideoPipelineInput) => ipcRenderer.invoke('video-studio:update', id, data),
   deleteVideoPipeline: (id: string) => ipcRenderer.invoke('video-studio:delete', id),
   runVideoPipeline: (pipelineId: string) => ipcRenderer.invoke('video-studio:run', pipelineId),
   stopVideoPipeline: (runId: string) => ipcRenderer.invoke('video-studio:stop', runId),
@@ -246,12 +255,12 @@ const api = {
   // ipcRenderer listener on every unmount, so repeated mount/unmount cycles
   // (e.g. opening a drawer that mounts a subscribing component) accumulated
   // duplicate listeners, each firing the handler once more per event.
-  on: (channel: string, callback: (...args: any[]) => void) => {
+  on: <T = unknown>(channel: string, callback: (payload: T) => void) => {
     if (!ALLOWED_CHANNELS.has(channel)) {
       console.warn(`IPC channel "${channel}" is not in the allowlist`)
       return () => {}
     }
-    const wrappedCallback = (_event: any, ...args: any[]) => callback(...args)
+    const wrappedCallback = (_event: Electron.IpcRendererEvent, payload: T) => callback(payload)
     ipcRenderer.on(channel, wrappedCallback)
     return () => ipcRenderer.removeListener(channel, wrappedCallback)
   }
