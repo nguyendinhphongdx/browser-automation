@@ -2,7 +2,18 @@ import { v4 as uuid } from 'uuid'
 import { getDatabase } from '../database/init'
 import type { CookieEntry, CreateCookieInput, UpdateCookieInput } from '../../shared/types'
 
-function rowToCookie(row: any): CookieEntry {
+interface CookieRow {
+  id: string
+  name: string
+  profile_id: string | null
+  domain: string
+  cookies: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+function rowToCookie(row: CookieRow): CookieEntry {
   return {
     id: row.id,
     name: row.name,
@@ -17,19 +28,19 @@ function rowToCookie(row: any): CookieEntry {
 
 export function getAllCookies(): CookieEntry[] {
   const db = getDatabase()
-  const rows = db.prepare('SELECT * FROM cookies ORDER BY updated_at DESC').all()
+  const rows = db.prepare('SELECT * FROM cookies ORDER BY updated_at DESC').all() as CookieRow[]
   return rows.map(rowToCookie)
 }
 
 export function getCookieById(id: string): CookieEntry | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM cookies WHERE id = ?').get(id)
+  const row = db.prepare('SELECT * FROM cookies WHERE id = ?').get(id) as CookieRow | undefined
   return row ? rowToCookie(row) : null
 }
 
 export function getCookiesByProfileId(profileId: string): CookieEntry[] {
   const db = getDatabase()
-  const rows = db.prepare('SELECT * FROM cookies WHERE profile_id = ? ORDER BY updated_at DESC').all(profileId)
+  const rows = db.prepare('SELECT * FROM cookies WHERE profile_id = ? ORDER BY updated_at DESC').all(profileId) as CookieRow[]
   return rows.map(rowToCookie)
 }
 
@@ -93,7 +104,7 @@ export function deleteCookie(id: string): boolean {
 
 export function importCookiesJSON(jsonContent: string, name: string, profileId?: string): CookieEntry {
   // Parse and validate
-  let parsed: any
+  let parsed: unknown
   try {
     parsed = JSON.parse(jsonContent)
   } catch {
@@ -101,8 +112,9 @@ export function importCookiesJSON(jsonContent: string, name: string, profileId?:
   }
 
   // Extract domain from cookies
-  const cookieArray = Array.isArray(parsed) ? parsed : (parsed.cookies || [parsed])
-  const domain = cookieArray[0]?.domain || cookieArray[0]?.Domain || 'unknown'
+  const parsedObj = parsed as { cookies?: unknown[] } & Record<string, unknown>
+  const cookieArray = (Array.isArray(parsed) ? parsed : (parsedObj.cookies || [parsed])) as Record<string, unknown>[]
+  const domain = (cookieArray[0]?.domain || cookieArray[0]?.Domain || 'unknown') as string
 
   return createCookie({
     name,
