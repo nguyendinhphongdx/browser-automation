@@ -3,15 +3,28 @@ import { getDatabase } from '../database/init'
 import { encrypt, decrypt } from './encryption'
 import type { EmailAccount, CreateEmailInput, UpdateEmailInput } from '../../shared/types'
 
-function rowToEmail(row: any): EmailAccount {
+interface EmailRow {
+  id: string
+  email: string
+  password: string
+  recovery_email: string | null
+  phone: string | null
+  provider: string | null
+  status: string | null
+  notes: string | null
+  profile_id: string | null
+  created_at: string
+}
+
+function rowToEmail(row: EmailRow): EmailAccount {
   return {
     id: row.id,
     email: row.email,
     password: decrypt(row.password),
     recoveryEmail: row.recovery_email || undefined,
     phone: row.phone || undefined,
-    provider: row.provider || 'other',
-    status: row.status || 'unknown',
+    provider: (row.provider || 'other') as EmailAccount['provider'],
+    status: (row.status || 'unknown') as EmailAccount['status'],
     notes: row.notes || '',
     profileId: row.profile_id || null,
     createdAt: row.created_at
@@ -29,13 +42,13 @@ function detectProvider(email: string): EmailAccount['provider'] {
 
 export function getAllEmails(): EmailAccount[] {
   const db = getDatabase()
-  const rows = db.prepare('SELECT * FROM emails ORDER BY created_at DESC').all()
+  const rows = db.prepare('SELECT * FROM emails ORDER BY created_at DESC').all() as EmailRow[]
   return rows.map(rowToEmail)
 }
 
 export function getEmailById(id: string): EmailAccount | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM emails WHERE id = ?').get(id)
+  const row = db.prepare('SELECT * FROM emails WHERE id = ?').get(id) as EmailRow | undefined
   return row ? rowToEmail(row) : null
 }
 
