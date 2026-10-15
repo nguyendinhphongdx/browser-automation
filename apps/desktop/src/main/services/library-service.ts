@@ -52,7 +52,25 @@ export function defaultExtensionForKind(kind: LibraryResourceKind): string {
   return DEFAULT_EXTENSION_BY_KIND[kind] || 'bin'
 }
 
-function rowToResource(row: any): LibraryResource {
+interface ResourceRow {
+  id: string
+  parent_id: string | null
+  name: string
+  kind: string
+  mime_type: string
+  original_filename: string | null
+  extension: string | null
+  size_bytes: number | null
+  tags: string | null
+  category: string | null
+  object_type: string
+  object_id: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+function rowToResource(row: ResourceRow): LibraryResource {
   let tags: string[] = []
   try {
     tags = JSON.parse(row.tags || '[]')
@@ -63,14 +81,14 @@ function rowToResource(row: any): LibraryResource {
     id: row.id,
     parentId: row.parent_id || null,
     name: row.name,
-    kind: row.kind,
+    kind: row.kind as LibraryResourceKind,
     mimeType: row.mime_type,
     originalFilename: row.original_filename || null,
     extension: row.extension || '',
     sizeBytes: row.size_bytes || 0,
     tags,
     category: row.category || '',
-    objectType: row.object_type,
+    objectType: row.object_type as LibraryResourceObjectType,
     objectId: row.object_id || null,
     notes: row.notes || '',
     createdAt: row.created_at,
@@ -85,28 +103,28 @@ export function resourceFilePath(id: string, extension: string): string {
 
 export function getAllResources(): LibraryResource[] {
   const db = getDatabase()
-  const rows = db.prepare('SELECT * FROM resources ORDER BY kind != \'folder\', updated_at DESC').all()
+  const rows = db.prepare('SELECT * FROM resources ORDER BY kind != \'folder\', updated_at DESC').all() as ResourceRow[]
   return rows.map(rowToResource)
 }
 
 export function getResourceById(id: string): LibraryResource | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM resources WHERE id = ?').get(id)
+  const row = db.prepare('SELECT * FROM resources WHERE id = ?').get(id) as ResourceRow | undefined
   return row ? rowToResource(row) : null
 }
 
 export function getResourcesByKind(kind: LibraryResourceKind): LibraryResource[] {
   const db = getDatabase()
-  const rows = db.prepare('SELECT * FROM resources WHERE kind = ? ORDER BY updated_at DESC').all(kind)
+  const rows = db.prepare('SELECT * FROM resources WHERE kind = ? ORDER BY updated_at DESC').all(kind) as ResourceRow[]
   return rows.map(rowToResource)
 }
 
 /** Danh sách con trực tiếp của 1 folder — dùng cho điều hướng dạng cây. `parentId: null` = gốc thư viện. */
 export function getChildren(parentId: string | null): LibraryResource[] {
   const db = getDatabase()
-  const rows = parentId
+  const rows = (parentId
     ? db.prepare('SELECT * FROM resources WHERE parent_id = ? ORDER BY kind != \'folder\', name COLLATE NOCASE').all(parentId)
-    : db.prepare('SELECT * FROM resources WHERE parent_id IS NULL ORDER BY kind != \'folder\', name COLLATE NOCASE').all()
+    : db.prepare('SELECT * FROM resources WHERE parent_id IS NULL ORDER BY kind != \'folder\', name COLLATE NOCASE').all()) as ResourceRow[]
   return rows.map(rowToResource)
 }
 
@@ -116,7 +134,7 @@ export function searchResources(query: string): LibraryResource[] {
   const like = `%${query}%`
   const rows = db
     .prepare('SELECT * FROM resources WHERE kind != \'folder\' AND (name LIKE ? OR tags LIKE ?) ORDER BY updated_at DESC')
-    .all(like, like)
+    .all(like, like) as ResourceRow[]
   return rows.map(rowToResource)
 }
 
