@@ -86,13 +86,20 @@ export function getNodeStats(workflowId: string): NodeStats[] {
     WHERE workflow_id = ?
     GROUP BY node_type
     ORDER BY total_runs DESC
-  `).all(workflowId) as any[]
+  `).all(workflowId) as {
+    node_type: string
+    total_runs: number
+    success_count: number
+    fail_count: number
+    avg_time: number | null
+    last_run_at: string
+  }[]
 
   return rows.map(r => {
     // Calculate p95 separately
     const times = db.prepare(
       'SELECT execution_time_ms FROM node_metrics WHERE workflow_id = ? AND node_type = ? ORDER BY execution_time_ms ASC'
-    ).all(workflowId, r.node_type) as any[]
+    ).all(workflowId, r.node_type) as { execution_time_ms: number }[]
     const p95Index = Math.floor(times.length * 0.95)
     const p95 = times[p95Index]?.execution_time_ms || 0
 
