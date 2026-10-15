@@ -5,29 +5,54 @@ import type {
   Workflow, CreateWorkflowInput, UpdateWorkflowInput, WorkflowLog, WorkflowVersion
 } from '../../shared/types'
 
-function rowToWorkflow(row: any): Workflow {
+interface WorkflowRow {
+  id: string
+  name: string
+  description: string | null
+  version: string | null
+  mode: string | null
+  nodes: string | null
+  edges: string | null
+  code: string | null
+  variables: string | null
+  status: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface WorkflowLogRow {
+  id: string
+  workflow_id: string
+  profile_id: string
+  status: string
+  logs: string | null
+  started_at: string
+  finished_at: string | null
+}
+
+function rowToWorkflow(row: WorkflowRow): Workflow {
   return {
     id: row.id,
     name: row.name,
     description: row.description || '',
     version: row.version || '1.0.0',
-    mode: row.mode || 'visual',
+    mode: (row.mode || 'visual') as Workflow['mode'],
     nodes: JSON.parse(row.nodes || '[]'),
     edges: JSON.parse(row.edges || '[]'),
     code: row.code || '',
     variables: JSON.parse(row.variables || '[]'),
-    status: row.status || 'draft',
+    status: (row.status || 'draft') as Workflow['status'],
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }
 }
 
-function rowToLog(row: any): WorkflowLog {
+function rowToLog(row: WorkflowLogRow): WorkflowLog {
   return {
     id: row.id,
     workflowId: row.workflow_id,
     profileId: row.profile_id,
-    status: row.status,
+    status: row.status as WorkflowLog['status'],
     logs: row.logs || '[]',
     startedAt: row.started_at,
     finishedAt: row.finished_at || undefined
@@ -36,12 +61,12 @@ function rowToLog(row: any): WorkflowLog {
 
 export function getAllWorkflows(): Workflow[] {
   const db = getDatabase()
-  return db.prepare('SELECT * FROM workflows ORDER BY updated_at DESC').all().map(rowToWorkflow)
+  return (db.prepare('SELECT * FROM workflows ORDER BY updated_at DESC').all() as WorkflowRow[]).map(rowToWorkflow)
 }
 
 export function getWorkflowById(id: string): Workflow | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM workflows WHERE id = ?').get(id)
+  const row = db.prepare('SELECT * FROM workflows WHERE id = ?').get(id) as WorkflowRow | undefined
   return row ? rowToWorkflow(row) : null
 }
 
@@ -86,8 +111,8 @@ export function updateWorkflow(id: string, input: UpdateWorkflowInput): Workflow
   if (oldHash !== newHash) {
     const lastVersion = db.prepare(
       'SELECT MAX(version_number) as maxV FROM workflow_versions WHERE workflow_id = ?'
-    ).get(id) as any
-    const nextVersion = ((lastVersion?.maxV as number) || 0) + 1
+    ).get(id) as { maxV: number | null } | undefined
+    const nextVersion = (lastVersion?.maxV || 0) + 1
 
     db.prepare(`
       INSERT INTO workflow_versions (id, workflow_id, version_number, nodes, edges, code, variables)
@@ -145,7 +170,7 @@ export function createWorkflowLog(workflowId: string, profileId: string): Workfl
     VALUES (?, ?, ?, 'running', ?)
   `).run(id, workflowId, profileId, now)
 
-  return rowToLog(db.prepare('SELECT * FROM workflow_logs WHERE id = ?').get(id))
+  return rowToLog(db.prepare('SELECT * FROM workflow_logs WHERE id = ?').get(id) as WorkflowLogRow)
 }
 
 export function updateWorkflowLog(
@@ -162,9 +187,9 @@ export function updateWorkflowLog(
 
 export function getWorkflowLogs(workflowId: string): WorkflowLog[] {
   const db = getDatabase()
-  return db.prepare(
+  return (db.prepare(
     'SELECT * FROM workflow_logs WHERE workflow_id = ? ORDER BY started_at DESC LIMIT 50'
-  ).all(workflowId).map(rowToLog)
+  ).all(workflowId) as WorkflowLogRow[]).map(rowToLog)
 }
 
 // ── Export / Import ─────────────────────────────────
@@ -187,8 +212,19 @@ export function exportWorkflow(id: string): string | null {
   }, null, 2)
 }
 
+interface WorkflowExportFile {
+  _format: string
+  name?: string
+  description?: string
+  mode?: Workflow['mode']
+  nodes?: Workflow['nodes']
+  edges?: Workflow['edges']
+  code?: string
+  variables?: Workflow['variables']
+}
+
 export function importWorkflow(jsonContent: string): Workflow {
-  let data: any
+  let data: WorkflowExportFile
   try {
     data = JSON.parse(jsonContent)
   } catch {
@@ -215,7 +251,19 @@ export function importWorkflow(jsonContent: string): Workflow {
 
 // ── Workflow Versions ──────────────────────────────
 
-function rowToVersion(row: any): WorkflowVersion {
+interface WorkflowVersionRow {
+  id: string
+  workflow_id: string
+  version_number: number
+  label: string | null
+  nodes: string | null
+  edges: string | null
+  code: string | null
+  variables: string | null
+  created_at: string
+}
+
+function rowToVersion(row: WorkflowVersionRow): WorkflowVersion {
   return {
     id: row.id,
     workflowId: row.workflow_id,
@@ -231,15 +279,15 @@ function rowToVersion(row: any): WorkflowVersion {
 
 export function getWorkflowVersions(workflowId: string): WorkflowVersion[] {
   const db = getDatabase()
-  return db
+  return (db
     .prepare('SELECT * FROM workflow_versions WHERE workflow_id = ? ORDER BY version_number DESC LIMIT 50')
-    .all(workflowId)
+    .all(workflowId) as WorkflowVersionRow[])
     .map(rowToVersion)
 }
 
 export function getWorkflowVersion(versionId: string): WorkflowVersion | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM workflow_versions WHERE id = ?').get(versionId)
+  const row = db.prepare('SELECT * FROM workflow_versions WHERE id = ?').get(versionId) as WorkflowVersionRow | undefined
   return row ? rowToVersion(row) : null
 }
 
