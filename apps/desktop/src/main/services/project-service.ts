@@ -7,11 +7,31 @@ import type {
   TaskComment, LibraryResource
 } from '../../shared/types'
 
-// row: any — better-sqlite3's .get()/.all() return unknown/{}, not a typed
-// row; casting at every call site would just relocate the same escape hatch,
-// not remove it. Matches every other rowToX() mapper in this codebase
-// (campaign-service.ts, library-service.ts, ...).
-function rowToProject(row: any): Project {
+interface ProjectRow {
+  id: string
+  name: string
+  description: string | null
+  library_folder_id: string
+  notebook_resource_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface TaskRow {
+  id: string
+  project_id: string
+  title: string
+  status: string
+  kind: string | null
+  parent_task_id: string | null
+  sequence: number
+  output_folder_id: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+function rowToProject(row: ProjectRow): Project {
   return {
     id: row.id,
     name: row.name,
@@ -23,13 +43,13 @@ function rowToProject(row: any): Project {
   }
 }
 
-function rowToTask(row: any): Task {
+function rowToTask(row: TaskRow): Task {
   return {
     id: row.id,
     projectId: row.project_id,
     title: row.title,
-    status: row.status,
-    kind: row.kind || 'other',
+    status: row.status as TaskStatus,
+    kind: (row.kind || 'other') as Task['kind'],
     parentTaskId: row.parent_task_id || null,
     sequence: row.sequence,
     outputFolderId: row.output_folder_id || null,
@@ -41,12 +61,12 @@ function rowToTask(row: any): Task {
 
 export function getAllProjects(): Project[] {
   const db = getDatabase()
-  return db.prepare('SELECT * FROM projects ORDER BY updated_at DESC').all().map(rowToProject)
+  return (db.prepare('SELECT * FROM projects ORDER BY updated_at DESC').all() as ProjectRow[]).map(rowToProject)
 }
 
 export function getProjectById(id: string): Project | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM projects WHERE id = ?').get(id)
+  const row = db.prepare('SELECT * FROM projects WHERE id = ?').get(id) as ProjectRow | undefined
   return row ? rowToProject(row) : null
 }
 
@@ -94,13 +114,13 @@ export function deleteProject(id: string): boolean {
 
 export function getTasksByProject(projectId: string): Task[] {
   const db = getDatabase()
-  return db.prepare('SELECT * FROM tasks WHERE project_id = ? ORDER BY sequence ASC, created_at ASC')
-    .all(projectId).map(rowToTask)
+  return (db.prepare('SELECT * FROM tasks WHERE project_id = ? ORDER BY sequence ASC, created_at ASC')
+    .all(projectId) as TaskRow[]).map(rowToTask)
 }
 
 export function getTaskById(id: string): Task | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id)
+  const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as TaskRow | undefined
   return row ? rowToTask(row) : null
 }
 
@@ -234,7 +254,15 @@ export function detachResourceFromTask(taskId: string, resourceId: string): bool
 
 // ── Task comments (ADR-0010) ────────────────────────────
 
-function rowToTaskComment(row: any): TaskComment {
+interface TaskCommentRow {
+  id: string
+  task_id: string
+  author: string
+  text: string
+  created_at: string
+}
+
+function rowToTaskComment(row: TaskCommentRow): TaskComment {
   return {
     id: row.id,
     taskId: row.task_id,
@@ -246,8 +274,8 @@ function rowToTaskComment(row: any): TaskComment {
 
 export function getTaskComments(taskId: string): TaskComment[] {
   const db = getDatabase()
-  return db.prepare('SELECT * FROM task_comments WHERE task_id = ? ORDER BY created_at ASC')
-    .all(taskId).map(rowToTaskComment)
+  return (db.prepare('SELECT * FROM task_comments WHERE task_id = ? ORDER BY created_at ASC')
+    .all(taskId) as TaskCommentRow[]).map(rowToTaskComment)
 }
 
 export function addTaskComment(taskId: string, text: string, author = 'user'): TaskComment {
@@ -256,7 +284,7 @@ export function addTaskComment(taskId: string, text: string, author = 'user'): T
   const now = new Date().toISOString()
   db.prepare('INSERT INTO task_comments (id, task_id, author, text, created_at) VALUES (?, ?, ?, ?, ?)')
     .run(id, taskId, author, text, now)
-  return rowToTaskComment(db.prepare('SELECT * FROM task_comments WHERE id = ?').get(id))
+  return rowToTaskComment(db.prepare('SELECT * FROM task_comments WHERE id = ?').get(id) as TaskCommentRow)
 }
 
 export function deleteTaskComment(id: string): boolean {
