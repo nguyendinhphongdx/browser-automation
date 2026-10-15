@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "film-studio": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["scratch/omni/src/server.js"]
+    }
+  }
+}

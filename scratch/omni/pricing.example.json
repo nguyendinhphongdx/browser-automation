@@ -1,0 +1,10 @@
+{
+  "_note": "Copy thành pricing.json rồi điền đơn giá theo https://ai.google.dev/gemini-api/docs/pricing. Bỏ trống = không tính. Đơn giá áp theo model: per_image (mỗi ảnh), per_video_sec (mỗi giây video), per_audio_sec (mỗi giây âm thanh), per_1m_input_tokens / per_1m_output_tokens (mỗi 1 triệu token). Model nào tính theo token thì điền token, tính theo đơn vị thì điền đơn vị.",
+  "currency": "USD",
+  "models": {
+    "gemini-3.1-flash-image": { "per_image": null, "per_1m_input_tokens": null, "per_1m_output_tokens": null },
+    "gemini-omni-1.1-flash": { "per_video_sec": null, "per_1m_input_tokens": null },
+    "gemini-3.8-flash-tts": { "per_1m_input_tokens": null, "per_1m_output_tokens": null },
+    "lyria-3.5": { "per_audio_sec": null }
+  }
+}

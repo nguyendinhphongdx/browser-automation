@@ -1,0 +1,22 @@
+{
+  "name": "film-studio-mcp",
+  "version": "0.1.0",
+  "description": "MCP server: kịch bản → phân cảnh ảnh → video → âm thanh → phim hoàn chỉnh (Gemini omni + ffmpeg)",
+  "type": "module",
+  "bin": {
+    "film-studio-mcp": "src/server.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "inspect": "npx @modelcontextprotocol/inspector node src/server.js",
+    "smoke": "node test/smoke-assemble.js"
+  },
+  "license": "ISC",
+  "packageManager": "pnpm@10.17.1",
+  "dependencies": {
+    "@google/genai": "2.29.1",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "undici": "6.21.3",
+    "zod": "3.25.76"
+  }
+}
