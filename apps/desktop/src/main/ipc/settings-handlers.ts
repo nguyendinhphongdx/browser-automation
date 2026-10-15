@@ -29,7 +29,7 @@ export function registerSettingsHandlers(ipcMain: IpcMain) {
   ipcMain.handle('auth:testConnection', async () => testConnection())
 
   // ── Generic API proxy (for renderer to call server) ──
-  ipcMain.handle('api:request', async (_e, method: string, path: string, body?: any) => {
+  ipcMain.handle('api:request', async (_e, method: string, path: string, body?: unknown) => {
     return apiRequest(method, path, body)
   })
 
