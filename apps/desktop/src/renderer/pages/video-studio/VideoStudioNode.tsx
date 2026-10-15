@@ -3,7 +3,7 @@ import type { VideoNodeData, VideoNodeDefinition, VideoSocketType } from '@share
 import { useVideoStudioStore, type NodeOutputPreview } from '@/stores/video-studio-store'
 import {
   UserSquare, FileText, ImagePlus, Film, Crop, MessageSquare, Mic, Captions, Link,
-  AudioLines, Clapperboard, Save, Zap
+  AudioLines, Clapperboard, Save, Zap, Loader2
 } from 'lucide-react'
 
 const ICON_MAP: Record<string, any> = {
@@ -40,6 +40,7 @@ const HANDLE_START = 36
 export function VideoStudioNode({ id, data, selected }: { id: string; data: VideoNodeData; selected: boolean }) {
   const nodeDefinitions = useVideoStudioStore((s) => s.nodeDefinitions)
   const preview = useVideoStudioStore((s) => s.nodePreview[id])
+  const status = useVideoStudioStore((s) => s.nodeProgress[id])
   const def: VideoNodeDefinition | undefined = nodeDefinitions.find((d) => d.type === data.nodeType)
   const Icon = ICON_MAP[data.icon || ''] || Zap
   const color = CATEGORY_COLORS[def?.category || ''] || '#6B7280'
@@ -50,9 +51,18 @@ export function VideoStudioNode({ id, data, selected }: { id: string; data: Vide
 
   return (
     <div
-      className="rounded-xl border bg-card shadow-sm"
+      className="relative rounded-xl border bg-card shadow-sm"
       style={{ width: 200, minHeight: bodyHeight, borderColor: selected ? 'hsl(221.2, 83.2%, 53.3%)' : color + '60' }}
     >
+      {status === 'running' && (
+        <div
+          className="absolute -top-2 -right-2 z-10 w-5 h-5 rounded-full bg-amber-500 shadow flex items-center justify-center"
+          title="Đang chạy"
+        >
+          <Loader2 className="h-3 w-3 text-white animate-spin" />
+        </div>
+      )}
+
       <div className="flex items-center gap-2 px-3 py-2 border-b rounded-t-xl" style={{ backgroundColor: color + '12' }}>
         <Icon className="h-3.5 w-3.5 shrink-0" style={{ color }} />
         <span className="text-xs font-medium truncate">{data.label}</span>
