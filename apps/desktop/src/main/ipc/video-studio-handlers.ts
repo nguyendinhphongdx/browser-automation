@@ -2,7 +2,7 @@ import type { IpcMain } from 'electron'
 import {
   getAllVideoPipelines, getVideoPipelineById, createVideoPipeline, updateVideoPipeline, deleteVideoPipeline
 } from '../services/video-pipeline-service'
-import { createVideoPipelineRun, updateVideoPipelineRun } from '../services/video-job-service'
+import { createVideoPipelineRun, updateVideoPipelineRun, getVideoPipelineRuns } from '../services/video-job-service'
 import { VIDEO_NODE_DEFINITIONS } from '../video-studio/node-definitions'
 import { executeVideoPipeline } from '../video-studio/engine'
 import { assertPipelineRunnable } from '../video-studio/assert-runnable'
@@ -10,7 +10,7 @@ import { buildNodeOutputPreview } from '../video-studio/build-node-preview'
 import type { VideoExecutionContext } from '../video-studio/nodes/base-node'
 import type { LogEntry } from '../../shared/types'
 
-const runningRuns = new Map<string, { aborted: boolean }>()
+const runningRuns = new Map<string, { abort: () => void }>()
 
 export function registerVideoStudioHandlers(ipcMain: IpcMain) {
   ipcMain.handle('video-studio:getNodeDefinitions', () => VIDEO_NODE_DEFINITIONS)
@@ -26,7 +26,6 @@ export function registerVideoStudioHandlers(ipcMain: IpcMain) {
     if (!pipeline) throw new Error('Không tìm thấy pipeline')
 
     const run = createVideoPipelineRun(pipelineId)
-    runningRuns.set(run.id, { aborted: false })
     const logs: LogEntry[] = []
     const sender = event.sender
 
@@ -35,6 +34,7 @@ export function registerVideoStudioHandlers(ipcMain: IpcMain) {
     const ctx: VideoExecutionContext = {
       runId: run.id,
       pipelineId,
+      aborted: false,
       log: (message: string) => {
         logs.push({ timestamp: new Date().toISOString(), level: 'info', message })
       },
@@ -49,6 +49,8 @@ export function registerVideoStudioHandlers(ipcMain: IpcMain) {
       onNodeError: (nodeId, error) =>
         sender.send('video-studio:node-progress', { runId: run.id, nodeId, status: 'error', error })
     }
+
+    runningRuns.set(run.id, { abort: () => { ctx.aborted = true } })
 
     try {
       assertPipelineRunnable(pipeline.nodes)
@@ -66,4 +68,16 @@ export function registerVideoStudioHandlers(ipcMain: IpcMain) {
       runningRuns.delete(run.id)
     }
   })
+
+  ipcMain.handle('video-studio:stop', (_e, runId: string) => {
+    const running = runningRuns.get(runId)
+    if (running) {
+      running.abort()
+      runningRuns.delete(runId)
+      return { success: true }
+    }
+    return { success: false }
+  })
+
+  ipcMain.handle('video-studio:getRuns', (_e, pipelineId: string) => getVideoPipelineRuns(pipelineId))
 }

@@ -127,6 +127,23 @@ describe('executeVideoPipeline', () => {
     expect(maxConcurrentObserved).toBe(2)
   })
 
+  it('does not execute any node when ctx.aborted is already true (Dừng bấm trước khi kịp chạy)', async () => {
+    executionLog.length = 0
+    const nodes: VideoNode[] = [node('a', 'source', { value: 'x' })]
+    await executeVideoPipeline(nodes, [], makeCtx({ aborted: true }))
+    expect(executionLog).toEqual([])
+  })
+
+  it('stops before starting the NEXT level when aborted mid-run, without cancelling the level already in flight', async () => {
+    executionLog.length = 0
+    const ctx = makeCtx()
+    ctx.onNodeDone = () => { ctx.aborted = true }
+    const nodes: VideoNode[] = [node('a', 'source', { value: 'x' }), node('b', 'concat')]
+    const edges: VideoEdge[] = [{ id: 'e1', source: 'a', target: 'b', sourceHandle: 'out', targetHandle: 'a' }]
+    await executeVideoPipeline(nodes, edges, ctx)
+    expect(executionLog).toEqual(['a'])
+  })
+
   it('still waits a full level out before moving on, and only fails sequentially-dependent downstream work', async () => {
     // 1 node độc lập lỗi trong cùng tầng với 1 node độc lập khác đang chạy —
     // node kia vẫn phải chạy xong (allSettled), không bị huỷ ngang.

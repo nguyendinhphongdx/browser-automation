@@ -34,6 +34,7 @@ interface VideoStudioStore {
   setSelectedNode: (id: string | null) => void
 
   runPipeline: () => Promise<void>
+  stopPipeline: () => Promise<void>
 }
 
 export const useVideoStudioStore = create<VideoStudioStore>((set, get) => ({
@@ -144,18 +145,32 @@ export const useVideoStudioStore = create<VideoStudioStore>((set, get) => ({
     const onJobProgress = (data: { runId: string; nodeId: string; percent: number }) => {
       set({ nodeProgressPercent: { ...get().nodeProgressPercent, [data.nodeId]: data.percent } })
     }
+    // runningRunId PHẢI có ngay khi run bắt đầu, không phải đợi
+    // runVideoPipeline() resolve (resolve = đã chạy XONG — lúc đó Dừng không
+    // còn ý nghĩa gì nữa) — 'video-studio:status' gửi đúng runId thật ngay
+    // khi bắt đầu, trước khi handler IPC chạy xong.
+    const onStatus = (data: { runId: string; pipelineId: string; status: string }) => {
+      if (data.status === 'running') set({ runningRunId: data.runId })
+    }
     const unsubscribeNode = window.api.on('video-studio:node-progress', onNodeProgress)
     const unsubscribeJob = window.api.on('video-studio:job-progress', onJobProgress)
+    const unsubscribeStatus = window.api.on('video-studio:status', onStatus)
 
     try {
       const result = await window.api.runVideoPipeline(activePipeline.id)
-      set({ runningRunId: result.runId })
       if (result.status === 'error') set({ runError: result.error || 'Pipeline chạy thất bại' })
     } finally {
       unsubscribeNode()
       unsubscribeJob()
+      unsubscribeStatus()
       set({ isRunning: false, runningRunId: null })
       setTimeout(() => set({ nodeProgress: {}, nodeProgressPercent: {} }), 2000)
     }
+  },
+
+  stopPipeline: async () => {
+    const { runningRunId } = get()
+    if (runningRunId) await window.api.stopVideoPipeline(runningRunId)
+    set({ isRunning: false, runningRunId: null })
   }
 }))

@@ -3,6 +3,8 @@ export type VideoSocketValue = string | number | boolean | undefined
 export interface VideoExecutionContext {
   runId: string
   pipelineId: string
+  /** Set true khi người dùng bấm Dừng (video-studio:stop) — kiểm tra trước khi khởi động tầng/node mới, không huỷ ngang node đang chạy dở. */
+  aborted?: boolean
   onNodeStart?: (nodeId: string) => void
   onNodeProgress?: (nodeId: string, percent: number) => void
   onNodeDone?: (nodeId: string, outputs: Record<string, VideoSocketValue>) => void

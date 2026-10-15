@@ -9,6 +9,7 @@ async function executeNode(
   ctx: VideoExecutionContext,
   outputCache: Map<string, Record<string, VideoSocketValue>>
 ): Promise<void> {
+  if (ctx.aborted) return
   ctx.onNodeStart?.(node.id)
   ctx.log(`Bắt đầu node "${node.data.label}" (${node.data.nodeType})`)
 
@@ -42,6 +43,7 @@ export async function executeVideoPipeline(
   const outputCache = new Map<string, Record<string, VideoSocketValue>>()
 
   for (const level of levels) {
+    if (ctx.aborted) break
     // allSettled (không phải all) — 1 node lỗi không huỷ ngang các node khác
     // ĐANG CHẠY cùng tầng: chúng thường là lệnh gọi API trả phí đã submit
     // rồi, bỏ dở giữa chừng là job mồ côi không ai track được kết quả/tiền đã
