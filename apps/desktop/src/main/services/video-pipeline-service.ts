@@ -2,14 +2,25 @@ import { v4 as uuid } from 'uuid'
 import { getDatabase } from '../database/init'
 import type { VideoPipeline, VideoNode, VideoEdge } from '../../shared/types'
 
-function rowToPipeline(row: any): VideoPipeline {
+interface VideoPipelineRow {
+  id: string
+  name: string
+  description: string | null
+  nodes: string | null
+  edges: string | null
+  status: string | null
+  created_at: string
+  updated_at: string
+}
+
+function rowToPipeline(row: VideoPipelineRow): VideoPipeline {
   return {
     id: row.id,
     name: row.name,
     description: row.description || '',
     nodes: JSON.parse(row.nodes || '[]'),
     edges: JSON.parse(row.edges || '[]'),
-    status: row.status || 'draft',
+    status: (row.status || 'draft') as VideoPipeline['status'],
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }
@@ -17,12 +28,12 @@ function rowToPipeline(row: any): VideoPipeline {
 
 export function getAllVideoPipelines(): VideoPipeline[] {
   const db = getDatabase()
-  return db.prepare('SELECT * FROM video_pipelines ORDER BY updated_at DESC').all().map(rowToPipeline)
+  return (db.prepare('SELECT * FROM video_pipelines ORDER BY updated_at DESC').all() as VideoPipelineRow[]).map(rowToPipeline)
 }
 
 export function getVideoPipelineById(id: string): VideoPipeline | null {
   const db = getDatabase()
-  const row = db.prepare('SELECT * FROM video_pipelines WHERE id = ?').get(id)
+  const row = db.prepare('SELECT * FROM video_pipelines WHERE id = ?').get(id) as VideoPipelineRow | undefined
   return row ? rowToPipeline(row) : null
 }
 
