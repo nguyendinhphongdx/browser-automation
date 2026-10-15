@@ -62,7 +62,7 @@ export function validateVideoPipelinePatch(
   const defsByType = new Map(nodeDefinitions.map((d) => [d.type, d]))
   const existingById = new Map(existingNodes.map((n) => [n.id, n]))
 
-  if (act.type === 'add_nodes') {
+  if (act.type === 'add_nodes' || act.type === 'replace_all') {
     const actionNodes = (Array.isArray(act.nodes) ? act.nodes : []) as ActionNodeLike[]
     const actionEdges = (Array.isArray(act.edges) ? act.edges : []) as ActionEdgeLike[]
     const localIds = new Set<string>()
@@ -78,7 +78,10 @@ export function validateVideoPipelinePatch(
       }
     })
 
-    const resolvable = (ref: unknown) => typeof ref === 'string' && (localIds.has(ref) || existingById.has(ref))
+    // replace_all xoá sạch canvas — chỉ id trong CHÍNH patch này mới hợp lệ,
+    // khác add_nodes (vẫn có thể nối sang node đã có sẵn trên canvas).
+    const resolvable = (ref: unknown) =>
+      typeof ref === 'string' && (localIds.has(ref) || (act.type === 'add_nodes' && existingById.has(ref)))
     const typeOf = (ref: unknown) =>
       typeof ref === 'string' ? localTypeById.get(ref) || existingById.get(ref)?.nodeType : undefined
 
@@ -128,6 +131,15 @@ export function validateVideoPipelinePatch(
       errors.push(`update_node: không tìm thấy node "${nodeId}"`)
     } else if (act.config && typeof act.config === 'object') {
       validateConfig(nodeId, existing.nodeType || '', act.config as Record<string, unknown>, defsByType.get(existing.nodeType || ''), errors)
+    }
+  }
+
+  if (act.type === 'remove_nodes') {
+    const nodeIds = Array.isArray(act.nodeIds) ? (act.nodeIds as unknown[]) : []
+    for (const id of nodeIds) {
+      if (typeof id !== 'string' || !existingById.has(id)) {
+        errors.push(`remove_nodes: không tìm thấy node "${String(id)}"`)
+      }
     }
   }
 

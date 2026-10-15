@@ -18,6 +18,8 @@ interface PatchEdgeInput {
 export type VideoPipelineChangePatch =
   | { type: 'add_nodes'; nodes: PatchNodeInput[]; edges?: PatchEdgeInput[] }
   | { type: 'update_node'; nodeId: string; label?: string; config?: Record<string, unknown> }
+  | { type: 'remove_nodes'; nodeIds: string[] }
+  | { type: 'replace_all'; nodes: PatchNodeInput[]; edges?: PatchEdgeInput[] }
 
 export interface ApplyVideoPipelinePatchResult {
   ok: boolean
@@ -53,11 +55,20 @@ export function applyVideoPipelinePatch(
     return { ok: true, nodes, edges: current.edges }
   }
 
+  if (patch.type === 'remove_nodes') {
+    const idsToRemove = new Set(patch.nodeIds)
+    const nodes = current.nodes.filter((n) => !idsToRemove.has(n.id))
+    const edges = current.edges.filter((e) => !idsToRemove.has(e.source) && !idsToRemove.has(e.target))
+    return { ok: true, nodes, edges }
+  }
+
   const defsByType = new Map(nodeDefinitions.map((d) => [d.type, d]))
+  const baseNodes = patch.type === 'replace_all' ? [] : current.nodes
+  const baseEdges = patch.type === 'replace_all' ? [] : current.edges
   try {
-    const { nodes: newNodes, idMap } = buildNodes(patch.nodes, patch.edges, defsByType, current.nodes)
+    const { nodes: newNodes, idMap } = buildNodes(patch.nodes, patch.edges, defsByType, baseNodes)
     const newEdges = buildEdges(patch.edges, idMap)
-    return { ok: true, nodes: [...current.nodes, ...newNodes], edges: [...current.edges, ...newEdges] }
+    return { ok: true, nodes: [...baseNodes, ...newNodes], edges: [...baseEdges, ...newEdges] }
   } catch (err) {
     // topologicalLevels (dùng để xếp layout) ném lỗi nếu patch tự tạo ra 1
     // đồ thị có vòng lặp — validateVideoPipelinePatch ở trên không bắt case

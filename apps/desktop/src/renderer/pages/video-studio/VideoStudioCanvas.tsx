@@ -51,7 +51,10 @@ function VideoStudioCanvasInner() {
 
   const handleAgentToolResult = useCallback(
     (toolName: string, resultText: string, ok: boolean) => {
-      if (!ok || toolName !== 'propose_video_pipeline_change') return
+      if (
+        !ok ||
+        (toolName !== 'propose_video_pipeline_change' && toolName !== 'propose_destructive_video_pipeline_change')
+      ) return
       const current = useVideoStudioStore.getState().activePipeline
       if (!current) return
       let patch: VideoPipelineChangePatch

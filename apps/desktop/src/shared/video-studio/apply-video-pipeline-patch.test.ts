@@ -118,3 +118,50 @@ describe('applyVideoPipelinePatch — layout', () => {
     expect(result.errors?.join(' ')).toMatch(/vòng lặp/)
   })
 })
+
+describe('applyVideoPipelinePatch — remove_nodes / replace_all (ADR-0017)', () => {
+  const existing: { nodes: VideoNode[]; edges: VideoEdge[] } = {
+    nodes: [
+      { id: 'a', type: 'videoStudioNode', position: { x: 0, y: 0 }, data: { label: 'Cảnh 1', nodeType: 'scene-prompt', config: { prompt: 'x' } } },
+      { id: 'b', type: 'videoStudioNode', position: { x: 260, y: 0 }, data: { label: 'Ảnh 1', nodeType: 'generate-image', config: {} } }
+    ],
+    edges: [{ id: 'e1', source: 'a', target: 'b', sourceHandle: 'text', targetHandle: 'prompt' }]
+  }
+
+  it('remove_nodes deletes the node and any edge touching it, leaves the rest untouched', () => {
+    const patch: VideoPipelineChangePatch = { type: 'remove_nodes', nodeIds: ['b'] }
+    const result = applyVideoPipelinePatch(patch, NODE_DEFS, existing)
+    expect(result.ok).toBe(true)
+    expect(result.nodes!.map((n) => n.id)).toEqual(['a'])
+    expect(result.edges).toEqual([])
+  })
+
+  it('remove_nodes fails validation for an id that does not exist on the canvas', () => {
+    const patch: VideoPipelineChangePatch = { type: 'remove_nodes', nodeIds: ['does-not-exist'] }
+    const result = applyVideoPipelinePatch(patch, NODE_DEFS, existing)
+    expect(result.ok).toBe(false)
+    expect(result.errors?.join(' ')).toMatch(/remove_nodes/)
+  })
+
+  it('replace_all wipes the existing canvas and builds only the new nodes/edges', () => {
+    const patch: VideoPipelineChangePatch = {
+      type: 'replace_all',
+      nodes: [{ id: 'n1', nodeType: 'scene-prompt', label: 'Cảnh mới', config: { prompt: 'y' } }]
+    }
+    const result = applyVideoPipelinePatch(patch, NODE_DEFS, existing)
+    expect(result.ok).toBe(true)
+    expect(result.nodes).toHaveLength(1)
+    expect(result.nodes![0].data.label).toBe('Cảnh mới')
+    expect(result.edges).toEqual([])
+  })
+
+  it('replace_all rejects an edge referencing an id from the OLD canvas (it no longer exists after the wipe)', () => {
+    const patch: VideoPipelineChangePatch = {
+      type: 'replace_all',
+      nodes: [{ id: 'n1', nodeType: 'generate-image', label: 'Ảnh mới' }],
+      edges: [{ source: 'a', target: 'n1', sourceHandle: 'text', targetHandle: 'prompt' }]
+    }
+    const result = applyVideoPipelinePatch(patch, NODE_DEFS, existing)
+    expect(result.ok).toBe(false)
+  })
+})

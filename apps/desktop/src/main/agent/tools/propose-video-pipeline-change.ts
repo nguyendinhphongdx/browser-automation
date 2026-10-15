@@ -23,10 +23,14 @@ function toExistingNodeRefs(ctx: AgentToolContext): ExistingVideoNodeRef[] {
 }
 
 /**
- * Mirror propose-workflow-change.ts cho đồ thị Video Studio. Không hỗ trợ
- * remove_nodes/replace_all/update_code ở v1 — AI chủ yếu DỰNG MỚI 1 pipeline
- * nhiều cảnh từ 1 câu brief, chỉnh sửa/xoá thì người dùng tự thao tác tay
- * trên canvas (đã đủ UI cho việc đó).
+ * Mirror propose-workflow-change.ts cho đồ thị Video Studio — chỉ 2 thao tác
+ * KHÔNG phá huỷ (thêm node mới, sửa config node có sẵn). remove_nodes/
+ * replace_all (phá huỷ, cần duyệt) nằm ở tool riêng
+ * propose-destructive-video-pipeline-change.ts (ADR-0017) — tách THEO ĐÚNG lý
+ * do propose-destructive-workflow-change.ts đã tách khỏi
+ * propose-workflow-change.ts: gating đơn giản là 1 entry tĩnh theo tên tool.
+ * Không hỗ trợ update_code — Video Studio không có chế độ "viết code" như
+ * Automation.
  */
 export function createProposeVideoPipelineChangeTool(ctx: AgentToolContext) {
   return tool({

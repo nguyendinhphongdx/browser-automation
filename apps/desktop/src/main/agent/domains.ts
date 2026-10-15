@@ -62,6 +62,7 @@ Quy tắc bắt buộc:
 3. Tách rõ vai trò 2 track TTS: lời thoại nhân vật dùng tts-dialogue, giọng kể/narrator dùng tts-narration — không dùng lẫn.
 4. Pipeline PHẢI kết thúc bằng đúng 1 node save-to-library — không được thiếu.
 5. Dùng propose_video_pipeline_change để dựng TOÀN BỘ pipeline nhiều cảnh chỉ trong 1 lần gọi (gửi hết nodes+edges cùng lúc, dùng id tạm như "n1" để nối trong cùng patch) — không hỏi lại người dùng từng bước nếu đã hiểu rõ yêu cầu.
+5b. Khi người dùng yêu cầu SỬA một node ĐÃ CÓ trên canvas (vd "sửa lại prompt cảnh 2", "đổi provider node tạo ảnh đó") — dùng update_node đúng nodeId đó để chỉnh config/label TẠI CHỖ, KHÔNG add_nodes thêm 1 node mới cạnh node cũ còn nguyên (gây trùng lặp/rác trên canvas). Nếu cần đổi hẳn loại node (nodeType) chứ không chỉ sửa config, dùng propose_destructive_video_pipeline_change's remove_nodes để xoá đúng node cũ TRƯỚC, rồi propose_video_pipeline_change's add_nodes tạo node mới thay thế (nối lại đúng các edge cũ từng nối tới nó) — không để cả node cũ lẫn mới cùng tồn tại. replace_all (cũng trong propose_destructive_video_pipeline_change) chỉ dùng khi người dùng muốn DỰNG LẠI TOÀN BỘ pipeline từ đầu, không phải sửa 1 phần.
 6. Có thể dùng list_resources/get_resource để tìm ảnh/prompt mẫu có sẵn trong Thư viện trước khi đề xuất pipeline, save_resource (dùng "sourceUrl" cho ảnh/file ở 1 URL) để lưu riêng 1 kết quả nếu người dùng yêu cầu, và create_library_folder để tạo thư mục gom nhóm asset của 1 pipeline (vd mọi ảnh nhân vật của cùng 1 video) trước khi lưu từng cái vào đó. move_resource/update_resource_metadata để sắp xếp lại/đổi tên, delete_resource để xoá hẳn (cần người dùng duyệt trước, không hoàn tác được).
 7. Khi có nhiều việc KHÔNG phụ thuộc lẫn nhau (không cần continuity frame giữa chúng, không dùng chung input/output) — vd nhiều nhân vật/phụ kiện cần vẽ riêng, nhiều cảnh B-roll không liên quan tới mạch continuity chính, nhiều biến thể ảnh của cùng 1 nhân vật — tạo chúng thành các NHÁNH ĐỘC LẬP (không nối edge giữa chúng) thay vì luôn nối chuỗi tuần tự. Vì engine chạy song song mọi node không phụ thuộc nhau, tách nhánh đúng chỗ giúp pipeline chạy nhanh hơn thật, không chỉ đúng hơn về mặt đồ thị. Chỉ giữ nối tuần tự khi THẬT SỰ cần (continuity giữa các cảnh liên tiếp theo quy tắc 2, hoặc 1 node cần input là output của node khác).
 8. Khi làm việc thuộc 1 "project" cụ thể (phim nhiều tập — yêu cầu dạng "dựng pipeline tập 3 của project X"), LUÔN gọi get_project_context(projectId) ĐẦU TIÊN để biết sổ tay dự án (nhân vật/mạch truyện/văn phong các tập trước), cây thư mục thật, và danh sách task — đừng tự đoán đã biết nội dung tập trước. Dùng create_task/list_project_tasks/update_task_status/move_task để quản lý tiến độ. Sau khi dựng xong 1 tập, gọi update_project_notebook để TÓM TẮT (không dán nguyên văn script/lời thoại đầy đủ) phần cần nhớ cho các tập sau.
@@ -135,10 +136,13 @@ export const AGENT_DOMAINS: Record<AgentDomain, AgentDomainConfig> = {
     buildToolset: buildVideoToolset,
     // run_video_pipeline (ADR-0011) gọi thật provider tạo ảnh/video, tốn
     // tiền/thời gian thật — khác propose_video_pipeline_change (chỉ thiết
-    // kế, không gate). Khi gọi qua delegate_to_video_studio's sub-agent,
-    // cơ chế auto-deny của runSubAgent (ADR-0007) tự chặn chạy ngầm không
-    // ai duyệt được; chỉ chat trực tiếp ở domain này mới duyệt được thật.
-    approvalGatedTools: ['delete_resource', 'run_video_pipeline']
+    // kế, không gate). propose_destructive_video_pipeline_change (ADR-0017)
+    // xoá/thay toàn bộ pipeline — phá huỷ, gate giống hệt lý do
+    // propose_destructive_workflow_change bị gate ở domain automation. Khi
+    // gọi qua delegate_to_video_studio's sub-agent, cơ chế auto-deny của
+    // runSubAgent (ADR-0007) tự chặn chạy ngầm không ai duyệt được; chỉ chat
+    // trực tiếp ở domain này mới duyệt được thật.
+    approvalGatedTools: ['delete_resource', 'run_video_pipeline', 'propose_destructive_video_pipeline_change']
   },
   project: {
     instructions: PROJECT_AGENT_INSTRUCTIONS,

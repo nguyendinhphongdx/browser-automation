@@ -191,4 +191,44 @@ describe('validateVideoPipelinePatch', () => {
     )
     expect(errors).toEqual([])
   })
+
+  it('remove_nodes: rejects an id that does not exist on the canvas', () => {
+    const { errors } = validateVideoPipelinePatch(
+      { type: 'remove_nodes', nodeIds: ['ghost'] },
+      NODE_DEFS,
+      [{ id: 'existing-1', nodeType: 'scene-prompt' }]
+    )
+    expect(errors.some((e) => e.includes('remove_nodes'))).toBe(true)
+  })
+
+  it('remove_nodes: accepts ids that exist on the canvas', () => {
+    const { errors } = validateVideoPipelinePatch(
+      { type: 'remove_nodes', nodeIds: ['existing-1'] },
+      NODE_DEFS,
+      [{ id: 'existing-1', nodeType: 'scene-prompt' }]
+    )
+    expect(errors).toEqual([])
+  })
+
+  it('replace_all: validates nodes/edges the same way add_nodes does (unknown nodeType still rejected)', () => {
+    const { errors } = validateVideoPipelinePatch(
+      { type: 'replace_all', nodes: [{ id: 'n1', nodeType: 'not-real', label: 'X', config: {} }] },
+      NODE_DEFS,
+      [{ id: 'existing-1', nodeType: 'scene-prompt' }]
+    )
+    expect(errors.some((e) => e.includes('not-real'))).toBe(true)
+  })
+
+  it('replace_all: an edge may NOT reference a node from the OLD canvas (only local patch ids are valid)', () => {
+    const { errors } = validateVideoPipelinePatch(
+      {
+        type: 'replace_all',
+        nodes: [{ id: 'n1', nodeType: 'generate-video', label: 'Video 1', config: { provider: 'kling' } }],
+        edges: [{ source: 'existing-1', target: 'n1', sourceHandle: 'text', targetHandle: 'prompt' }]
+      },
+      NODE_DEFS,
+      [{ id: 'existing-1', nodeType: 'scene-prompt' }]
+    )
+    expect(errors.some((e) => e.includes('không tồn tại'))).toBe(true)
+  })
 })

@@ -35,7 +35,11 @@ export function createDelegateToVideoStudioTool(ctx: AgentToolContext) {
         toolContext: subContext,
         task,
         onToolResult: (toolName, resultText, ok) => {
-          if (!ok || persistError || toolName !== 'propose_video_pipeline_change') return
+          if (
+            !ok ||
+            persistError ||
+            (toolName !== 'propose_video_pipeline_change' && toolName !== 'propose_destructive_video_pipeline_change')
+          ) return
           try {
             const parsed = JSON.parse(resultText) as { patch?: unknown }
             if (!parsed.patch || typeof parsed.patch !== 'object') return
