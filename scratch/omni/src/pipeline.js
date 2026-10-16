@@ -109,13 +109,17 @@ function locationNote(project, scene) {
 
 // ───────────────────────── Character sheet + bối cảnh ─────────────────────────
 
-function characterSheetPrompt(project, c) {
+function characterSheetPrompt(project, c, { fromBase = false } = {}) {
+  // Look có sheet gốc đính kèm: chỉ đổi những gì mô tả look nói, còn lại giữ y nguyên người trong ảnh.
+  const base = fromBase
+    ? ' The attached reference image is this SAME person in their original look: keep the exact same face, facial features, body shape, height and SKIN TONE (do not lighten or darken the skin) — change only the hair, clothing, makeup and accessories as described below. Do not copy the original outfit.'
+    : ''
   const props = c.accessories?.length
     ? ` Show every accessory clearly — worn/held by the character AND as separate isolated item drawings (pictures only, unlabeled): ${c.accessories.map((a) => `${a.name}${a.description ? ` (${a.description})` : ''}`).join('; ')}.`
     : ' The character carries NO weapons, bags or props.'
   return (
     `Character design sheet for an animated/cinematic series. ${project.style ? `Visual style: ${project.style}. ` : ''}` +
-    `Single image on a plain light-grey background: full-body turnaround (front, 3/4, side, back) plus a face close-up showing a typical expression.` +
+    `Single image on a plain light-grey background: full-body turnaround (front, 3/4, side, back) plus a face close-up showing a typical expression.${base}` +
     `${props} Character: ${c.name}${c.role ? ` (${c.role})` : ''}${c.look ? `, look "${c.look}"` : ''} — ${c.appearance}.` +
     `${c.personality ? ` Pose and expression convey personality: ${c.personality}.` : ''} Consistent proportions and colors across all views. Do NOT invent any extra accessories, weapons or props beyond those listed. ` +
     `Absolutely NO written text anywhere in the image: no labels, captions, annotations, notes, names, view titles or arrows — pictures only. No watermark.`
@@ -131,17 +135,22 @@ export async function generateReferences(projectId, { ids, force } = {}, log) {
   const todo = items.filter(({ item }) => force || !exists(projectId, item.reference_image))
   const tick = () => log.progress?.({ step: 'references', total: todo.length, done: done.length, failed: failed.length })
   tick()
-  await mapLimit(todo, config.concurrency, async ({ kind, id, item, owner }) => {
+  const work = async ({ kind, id, item, owner }) => {
     try {
       log(`${kind} ${id}: sinh ảnh tham chiếu`)
       const dir = ensureDir(path.join(projectDir(projectId), kind === 'location' ? 'locations' : 'characters'))
+      // Look vẽ lại từ chữ hay lệch mặt/màu da so với dáng gốc → gửi kèm sheet gốc (đã sinh ở lượt trước) làm tham chiếu.
+      const baseSheet = kind === 'look' ? abs(projectId, findCharacter(loadProject(projectId), owner.id)?.reference_image) : null
+      const withBase = baseSheet && fs.existsSync(baseSheet)
+      if (kind === 'look' && !withBase) log(`${kind} ${id}: chưa có sheet gốc của ${owner.id} — sinh look không có ảnh tham chiếu`)
       const prompt =
         kind === 'location'
           ? `Environment concept art, establishing wide shot, no people. ${project.style ? `Visual style: ${project.style}. ` : ''}${item.name} — ${item.description}. No text, no watermark.`
-          : characterSheetPrompt(project, kind === 'look' ? characterAs(owner, item.id) : item)
+          : characterSheetPrompt(project, kind === 'look' ? characterAs(owner, item.id) : item, { fromBase: withBase })
       const file = await gemini.generateImage({
         prompt,
         aspectRatio: '16:9',
+        references: withBase ? [baseSheet] : [],
         outBase: path.join(dir, kind === 'look' ? `${owner.id}--${item.id}` : item.id),
         usage: { projectId, purpose: kind === 'location' ? 'location_reference' : 'character_sheet', target: id }
       })
@@ -161,7 +170,10 @@ export async function generateReferences(projectId, { ids, force } = {}, log) {
       tick()
       log(`${kind} ${id}: LỖI — ${err.message}`)
     }
-  })
+  }
+  // Sheet gốc + bối cảnh trước, look sau — để look có sheet gốc mới nhất làm tham chiếu.
+  await mapLimit(todo.filter((r) => r.kind !== 'look'), config.concurrency, work)
+  await mapLimit(todo.filter((r) => r.kind === 'look'), config.concurrency, work)
   return { done, failed }
 }
 

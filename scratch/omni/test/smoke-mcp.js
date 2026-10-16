@@ -151,5 +151,15 @@ console.log('project next_steps:', overview.next_steps)
   const st2 = await call('project_get', { project_id })
   if (!st2.next_steps.some((s) => s.includes('mi-nuong:co-dau'))) throw new Error('next_steps phải nhắc sinh sheet cho look')
   console.log('  ✓ look có sheet riêng, giữ/bỏ sheet đúng khi characters_save')
+
+  // Sinh sheet look phải gửi kèm sheet gốc làm ảnh tham chiếu (giữ mặt + màu da). Không có API key → lệnh gọi lỗi,
+  // nhưng sổ quota vẫn ghi request.references nên kiểm được mà không tốn quota.
+  await call('asset_import', { project_id, kind: 'reference', target: 'mi-nuong', file_path: img })
+  const gen = await call('characters_generate', { project_id, ids: ['mi-nuong:co-dau'], force: true, wait_sec: 30 })
+  const usage = fs.readFileSync(path.join(dir, project_id, 'usage.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l))
+  const lookCall = usage.findLast((u) => u.target === 'mi-nuong:co-dau')
+  if (!lookCall || lookCall.request?.references !== 1) throw new Error(`sheet look phải gửi 1 ảnh tham chiếu (sheet gốc), nhận: ${JSON.stringify(lookCall?.request)}`)
+  if (usage.some((u) => u.target === 'mi-nuong' && u.ts > lookCall.ts)) throw new Error('chỉ sinh look thì không được sinh lại sheet gốc')
+  console.log('  ✓ sheet look gửi kèm sheet gốc làm tham chiếu', gen.status)
 }
 await client.close()
