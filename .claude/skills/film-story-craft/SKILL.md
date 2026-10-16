@@ -47,7 +47,7 @@ Kèm **đề xuất của bạn + 1 câu lý do**. Hỏi user (dùng AskUserQues
 ### 3. Phát triển bible
 Theo story-craft.md §2–§6, viết nháp đầy đủ:
 - `logline`, `central_question`, `ending` (kết cục đã định để gieo cài cắm), `premise`, `themes` (chủ đề dạng *lập luận*), `world` (+ 2–4 luật của thế giới), `tone`, `audience`, `story_arc` (đường cong leo thang cả series).
-- Nhân vật (3–5 là đủ cho phim ngắn): `appearance` **cụ thể về hình** (tuổi, dáng, tóc, trang phục, 1–2 màu chủ đạo — các nhân vật phải khác bóng dáng và bảng màu), `personality`, `want`, `need`, `flaw`, `backstory`, `arc`, `speech_style` (xưng hô cụ thể!), `relationships`, ≤3 `accessories` đặc trưng, `voice` hợp tone (danh sách giọng trong `story_context.voices` / studio_guide).
+- Nhân vật (3–5 là đủ cho phim ngắn): `appearance` **cụ thể về hình** (tuổi, dáng, tóc, trang phục, 1–2 màu chủ đạo — các nhân vật phải khác bóng dáng và bảng màu), `personality`, `want`, `need`, `flaw`, `backstory`, `arc`, `speech_style` (xưng hô cụ thể!), `relationships`, ≤3 `accessories` đặc trưng (đồ mang theo ở MỌI cảnh), `looks` nếu nhân vật đổi ngoại hình giữa phim (trước/sau make-up, đồ cưới, bị thương — mỗi look `appearance` đầy đủ, giữ nguyên mặt/màu da), `voice` hợp tone (danh sách giọng trong `story_context.voices` / studio_guide).
 - 2–5 bối cảnh lặp lại, mô tả bằng hình (kiến trúc, màu, ánh sáng, đồ vật đặc trưng).
 - Dàn ý từng tập: `title`, `synopsis`, `hook`, `beats` (5–7 nhịp), `cliffhanger` — theo bảng "động cơ tập" ở story-craft.md §4.
 - **Sổ cài cắm**: liệt kê setup → tập payoff (ghi vào `notes` của bible).
@@ -64,10 +64,14 @@ Logline · câu hỏi trung tâm · bảng nhân vật (tên | vai | want→need
 `project_create`(title, logline, aspect_ratio, resolution, language, style, audio_mode, episode_duration_min)
 → `series_bible_save`(mọi trường ở bước 3, `music` chủ đề, `narrator_voice`, `episodes`[])
 → `characters_save`(characters đầy đủ trường kịch tính, locations).
-Kết: báo project_id và đề xuất bước tiếp — `/film-write <project_id> e01` (viết kịch bản tập 1), hoặc `/film-make` để sinh character sheet.
+Kết: báo project_id rồi hỏi duyệt bước kế tiếp: **viết kịch bản tập 1** (skill `film-scene-writing`, miễn phí). User đồng ý → viết luôn.
+
+## Kết mỗi bước
+Theo [references/pipeline.md](references/pipeline.md): tóm tắt → đề xuất bước kế + chi phí → hỏi duyệt (AskUserQuestion: Làm tiếp / Sửa trước / Dừng) → đồng ý thì làm luôn trong lượt. Không kết bằng một dòng lệnh `/film-…` trơ.
 
 ## Anti-pattern
 
+- ❌ Sửa code server (`scratch/omni/src/**`) để chứa ý tưởng (vd. thêm kiểu nhân vật mới) — dừng, nói với user cái gì thiếu, đề xuất việc phát triển riêng ([references/pipeline.md](references/pipeline.md)).
 - ❌ Hỏi 6 câu trước khi đưa ra bất kỳ ý tưởng nào.
 - ❌ 3 concept chỉ khác tên/bối cảnh, cùng một xung đột.
 - ❌ Nhân vật chính hoàn hảo, không flaw; phản diện ác vì ác.
