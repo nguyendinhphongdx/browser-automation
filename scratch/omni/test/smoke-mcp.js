@@ -79,6 +79,10 @@ console.log('  ✓ story_context:', sc.focus.scene_budget, '| prev', sc.focus.pr
 const pv = await call('prompt_preview', { project_id, episode_id: 'e01', scene_id: 's02' })
 console.log('preview image_prompt:', pv.image_prompt)
 console.log('preview video_prompt:', pv.video_prompt, '| dur', pv.video_duration_sec)
+// s03: Thủy Tinh nói ngoài khung hình → không được mô tả (vẽ) trong ảnh/video
+const off = await call('prompt_preview', { project_id, episode_id: 'e01', scene_id: 's03' })
+if (/giáp vảy cá/.test(off.image_prompt) || /giáp vảy cá/.test(off.video_prompt)) throw new Error('người nói ngoài khung bị đưa vào prompt ảnh/video')
+console.log('  ✓ người nói ngoài khung không bị vẽ vào cảnh')
 
 await expectError('episode_script_save', { project_id, episode_id: 'e01', mode: 'append', scenes: [{ image_prompt: 'x', lines: [{ speaker: 'Mị Nương', text: 'hi' }] }] }, /Mị Nương/)
 await expectError('episode_videos_generate', { project_id, episode_id: 'e01', wait_sec: 5 }, /.*/).catch(async () => {

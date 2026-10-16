@@ -16,10 +16,12 @@ Thước đo nghề: `.claude/skills/film-story-craft/references/story-craft.md`
 
 **Bible series**: logline cụ thể & có cái giá · câu hỏi trung tâm + kết cục tất yếu · nhân vật (want≠need, flaw có hậu quả, đối trọng có lý lẽ, khác nhau về hình & giọng) · leo thang qua các tập · hook/cliffhanger từng tập · cài cắm–trả · hợp khán giả/nền tảng · khả thi với model (≤3 nhân vật/khung, không phụ thuộc chữ trong hình, hành động vừa 4–10s).
 
-**Kịch bản tập**: hook ≤5s · mục tiêu của tập rõ trong 15% đầu · ≥2 leo thang + điểm ngoặt · cao trào do nhân vật chính tự quyết · cliffhanger/payoff · liên tục với recap/cliffhanger tập trước · thoại (đúng speech_style, ẩn ý, ngắn, đọc to được) · kể bằng hình (đa dạng cỡ cảnh, video_prompt 1 hành động + 1 chuyển động máy, liên tục hướng nhìn/chuyển động) · `characters` đúng người trong khung · độ dài ước tính vs mục tiêu · cảnh thừa.
+**Đọc như người xem lần đầu (làm TRƯỚC khi chấm)**: bỏ qua `description`/`script`, chỉ đọc theo thứ tự `image_prompt` + `lines` của từng cảnh, như khán giả chỉ thấy hình và nghe thoại. Liệt kê mọi câu có xưng hô/từ quan hệ (mẹ, chị, anh, vợ…) hoặc gọi người vắng mặt, kèm "người xem sẽ hiểu là ai" (theo cảnh ngay trước/sau). Hiểu sai so với ý định → **CRITICAL**. Ví dụ đã xảy ra: Cò gọi "Mẹ ơi!" rồi cắt sang Mị Nương ⇒ người xem tưởng Mị Nương là mẹ Cò. Kiểm thêm: nhân vật mới có được định danh trong ≤2 cảnh không; vai quần chúng lặp lại (mẹ Cò…) có mô tả giống nhau ở mọi cảnh không.
+
+**Kịch bản tập**: rõ ai là ai với người xem lần đầu · hook ≤5s · mục tiêu của tập rõ trong 15% đầu · ≥2 leo thang + điểm ngoặt · cao trào do nhân vật chính tự quyết · cliffhanger/payoff · liên tục với recap/cliffhanger tập trước · thoại (đúng speech_style, ẩn ý, ngắn, đọc to được) · kể bằng hình (đa dạng cỡ cảnh, video_prompt 1 hành động + 1 chuyển động máy, liên tục hướng nhìn/chuyển động) · `characters` đúng người trong khung · độ dài ước tính vs mục tiêu · cảnh thừa.
 
 ## Mức độ
-- **CRITICAL** — truyện gãy: không có xung đột/mục tiêu, cao trào không do nhân vật chính, mâu thuẫn với tập trước, vi phạm khán giả, lệch độ dài >15%.
+- **CRITICAL** — truyện gãy: không có xung đột/mục tiêu, cao trào không do nhân vật chính, mâu thuẫn với tập trước, vi phạm khán giả, lệch độ dài >15%, **người xem lần đầu hiểu sai ai là ai / quan hệ giữa nhân vật**.
 - **MAJOR** — làm phim nhạt rõ: hook yếu, thoại giải thích, nhân vật nói giống nhau, cảnh không đẩy truyện, sáo mòn §9, cảnh vượt khả năng model.
 - **MINOR** — đánh bóng: cỡ cảnh lặp, chuyển cảnh chưa có chủ đích, style thoại chung chung.
 

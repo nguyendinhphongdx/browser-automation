@@ -69,8 +69,13 @@ async function eachScene(projectId, episodeId, scenes, kind, log, work) {
   return { done, failed }
 }
 
+/**
+ * Nhân vật CÓ MẶT trong khung hình — quyết định ảnh tham chiếu + mô tả ngoại hình gửi model.
+ * Người nói ngoài khung (TTS) không được tính, nếu không model sẽ vẽ họ vào cảnh.
+ * Chỉ khi cảnh không khai báo `characters` mới suy từ người nói (tương thích kịch bản cũ).
+ */
 function charactersIn(project, scene) {
-  const ids = [...(scene.characters || []), ...(scene.lines || []).map((l) => l.speaker)]
+  const ids = scene.characters?.length ? scene.characters : (scene.lines || []).map((l) => l.speaker)
   const chars = ids.map((id) => findCharacter(project, id)).filter(Boolean)
   return chars.filter((c, i) => chars.findIndex((x) => x.id === c.id) === i)
 }

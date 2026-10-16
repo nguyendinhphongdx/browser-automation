@@ -27,10 +27,12 @@ Phân số cảnh theo `scene_budget` cho từng nhịp (nhịp cao trào nhiề
 - `lines` = 1–3 câu, đúng speech_style, `style` thẻ cảm xúc **tiếng Anh**, `speaker: "narrator"` cho lời dẫn.
 - `transition` có chủ đích; `duration_sec` cho cảnh không lời.
 
-### 4. Ba lượt sửa (bắt buộc, trước khi lưu)
+### 4. Bốn lượt sửa (bắt buộc, trước khi lưu)
 1. **Truyện**: mỗi cảnh đẩy truyện hoặc lộ nhân vật? Không → cắt/gộp. Cao trào do nhân vật chính tự quyết?
 2. **Thoại**: đọc to từng nhân vật — ai cũng nói giống nhau? câu nào nói thẳng cảm xúc → đổi thành hành động/ẩn ý; câu > ~12 ký tự × thời lượng cảnh → tách cảnh.
 3. **Hình**: đa dạng cỡ cảnh (không 3 cảnh liền cùng cỡ), giữ hướng nhìn/hướng chuyển động, cảnh sau "bắt" khung cảnh trước, ≤3 nhân vật/khung.
+4. **Người xem lần đầu** ([story-craft §7b](../film-story-craft/references/story-craft.md)): quên kịch bản đi, chỉ đọc chuỗi *hình + câu nói* theo thứ tự như khán giả. Với **mỗi** câu có xưng hô/từ quan hệ hoặc câu gọi người vắng mặt, ghi ra: "người xem sẽ nghĩ câu này nói về/với ai?" (dựa vào cảnh ngay trước và ngay sau). Nếu khác ý định → sửa bằng hình (cho thấy đúng người được gọi, chèn cảnh trung gian, đổi thứ tự), không vá bằng lời dẫn. Ghi kết quả lượt này vào báo cáo cho user.
+   Lỗi thật đã gặp: "Mẹ ơi!" (Cò) → cắt sang Mị Nương ⇒ người xem tưởng nàng là mẹ Cò.
 
 ### 5. Lưu & cân độ dài
 `episode_script_save(project_id, episode_id, duration, title, synopsis, script, scenes, hook, beats, cliffhanger, recap, mode="replace")`.
@@ -54,3 +56,5 @@ Beat sheet (bảng mốc | nhịp) · số cảnh · độ dài ước tính / m
 - ❌ `characters` liệt kê cả người chỉ được nhắc tên mà không có trong khung.
 - ❌ `style` thoại bằng tiếng Việt (server từ chối — TTS sẽ đọc to).
 - ❌ Lưu mà không kiểm tra `duration.estimated` so với target.
+- ❌ Câu gọi người vắng mặt ("Mẹ ơi!", "Anh ở đâu?") rồi cắt sang một nhân vật khác — người xem sẽ gán quan hệ sai.
+- ❌ Phát hiện hiểu nhầm sau khi đã sinh video rồi vá bằng lời dẫn giải thích — sửa ở kịch bản, bằng hình, trước khi tốn quota.

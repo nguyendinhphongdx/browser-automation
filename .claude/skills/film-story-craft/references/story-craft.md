@@ -80,6 +80,21 @@ Mỗi tập là 1 truyện trọn có mục tiêu riêng, đồng thời đẩy 
 - **Mỗi câu làm ≥1 việc**: đẩy truyện, lộ nhân vật, gây cười, cài cắm. Câu chỉ để "giải thích cốt truyện" → chuyển thành hình.
 - **Đọc to**: TTS đọc đúng từng chữ — tránh viết tắt, ký hiệu, số dạng "2h" (viết "hai giờ").
 
+## §7b. Người xem chỉ biết những gì họ thấy (chống hiểu nhầm)
+
+Người xem không đọc kịch bản. Họ tự nối nghĩa từ hai cảnh liền nhau (hiệu ứng Kuleshov): câu nói ở cảnh trước + khuôn mặt ở cảnh sau = "câu đó nói về/với người này".
+
+**Lỗi thật đã gặp** (Sơn Tinh tập 3): Cò gọi "Mẹ ơi! Mẹ ở đâu?" → cắt sang Mị Nương trên đỉnh núi; sau đó Mị Nương nhìn xuống → Cò lại gọi "Mẹ ơi!". Người xem tưởng Mị Nương là mẹ Cò, trong khi Cò gọi nàng là "chị".
+
+| Quy tắc | Cách làm |
+|---|---|
+| **Xưng hô = khẳng định quan hệ** | Mọi từ quan hệ (mẹ, cha, chị, anh, thầy, vợ, chồng…) gọi một người **phải có người đó trong khung** khi gọi, hoặc đã được giới thiệu bằng hình trước đó |
+| **Gọi người vắng mặt → cho thấy người đó** | Nhân vật gọi một người không có trong cảnh (mẹ lạc, người yêu đi xa): trước hoặc ngay sau câu gọi phải có hình của **chính người được gọi**. Ví dụ: một người phụ nữ áo nâu trên mái nhà khác bị nước cuốn xa dần. Tuyệt đối không cắt sang một nhân vật khác cùng giới/tuổi phù hợp |
+| **Không cắt câu gọi sang người sai** | Cảnh sau một câu gọi/hỏi/than mặc định được hiểu là câu trả lời hoặc người được nhắc tới. Muốn cắt sang người khác thì chèn cảnh trung gian (toàn cảnh, đổi địa điểm) hoặc lời dẫn đổi chủ thể |
+| **Nhân vật mới vào khung phải được định danh** | Lần đầu xuất hiện: tên (qua thoại/lời dẫn) + quan hệ với nhân vật đã biết, trong ≤2 cảnh |
+| **Vai quần chúng không có sheet** (mẹ Cò, lính gác…) | Mô tả ngắn **giống hệt nhau** ở mọi image_prompt (vd "người phụ nữ nông dân áo nâu, khăn mỏ quạ") để người xem nhận ra cùng một người ở setup và payoff |
+| **Show, đừng vá bằng lời dẫn** | Sửa hiểu nhầm bằng hình (thêm/đổi cảnh) thay vì thêm một câu lời dẫn giải thích |
+
 ## §8. Checklist trước khi lưu
 
 - [ ] Logline có đủ nhân vật–mục tiêu–trở ngại–cái giá, và không áp được cho phim khác
@@ -90,6 +105,8 @@ Mỗi tập là 1 truyện trọn có mục tiêu riêng, đồng thời đẩy 
 - [ ] Mọi setup có payoff; không tuyến nào treo vô thời hạn
 - [ ] Nhân vật khác nhau về hình (bóng dáng, màu) và về giọng nói (speech_style, voice)
 - [ ] Phù hợp khán giả (thiếu nhi: không bạo lực đáng sợ; có bài học không giảng đạo)
+- [ ] Đọc lượt "người xem lần đầu" (§7b): không câu gọi/xưng hô nào bị cắt sang người sai; người được gọi vắng mặt đã được cho thấy bằng hình; nhân vật mới được định danh
+- [ ] An toàn với bộ lọc model: trẻ em, người ở mép vực/giữa lũ không mô tả kiểu đang gặp nguy hiểm cận kề (khóc thét, sắp rơi, sóng đập vào người); gợi nguy hiểm bằng cảnh rộng hoặc phản ứng của người khác
 
 ## §9. Sáo mòn cần tránh (trừ khi cố ý lật)
 

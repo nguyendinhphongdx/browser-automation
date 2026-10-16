@@ -30,6 +30,8 @@ Kịch bản phải có trước (skill `film-scene-writing`). Mọi bước sin
 - Khung hình kể được nhịp truyện không cần thoại?
 - Liên tục giữa cảnh liền nhau (hướng nhìn, vị trí, ánh sáng, thời gian trong ngày)?
 - Có chữ/watermark lạ → sinh lại cảnh đó.
+- **Ai là ai** (chốt chặn cuối trước khi tốn tiền video): xem dãy ảnh theo thứ tự kèm thoại. Câu gọi/xưng hô nào bị cắt sang người khác người được gọi không? Người được gọi vắng mặt đã xuất hiện bằng hình chưa? Có → quay lại `film-scene-writing` sửa kịch bản ([story-craft §7b](../film-story-craft/references/story-craft.md)), đừng vá bằng lời dẫn.
+- Cảnh có trẻ em/người ở chỗ nguy hiểm (mép vực, giữa lũ) dễ bị bộ lọc an toàn của model video chặn: mô tả tư thế vững vàng, gợi nguy hiểm bằng cảnh rộng.
 
 ## Xử lý lỗi
 
