@@ -23,7 +23,8 @@ const server = new McpServer(
       'Film Studio — làm phim truyện nhiều tập từ kịch bản tới mp4 đăng được ngay. Gọi `studio_guide` TRƯỚC khi bắt đầu. ' +
       'Quy trình: brainstorm với người dùng → project_create → series_bible_save → characters_save → characters_generate (character sheet + phụ kiện) → ' +
       'mỗi tập: episode_script_save → episode_audio_generate → storyboard_generate → storyboard_review/approve → episode_videos_generate → music_generate → episode_assemble. ' +
-      'Bước sinh chạy nền, trả job_id → theo dõi bằng job_status(wait_sec). project_get / episode_get luôn chỉ ra bước tiếp theo.'
+      'Bước sinh chạy nền, trả job_id → theo dõi bằng job_status(wait_sec). project_get / episode_get luôn chỉ ra bước tiếp theo. ' +
+      'Viết/sửa truyện: gọi story_context trước (hồ sơ nhân vật, dàn ý, recap tập trước) và lưu recap sau mỗi tập để giữ liên tục.'
   }
 )
 
@@ -153,11 +154,87 @@ server.registerTool(
   })
 )
 
+server.registerTool(
+  'story_context',
+  {
+    title: 'Bối cảnh truyện để viết tiếp',
+    description:
+      'Gói gọn mọi thứ cần để VIẾT TRUYỆN: logline, bible, hồ sơ kịch tính nhân vật (want/need/flaw/arc/cách nói), bối cảnh, dàn ý + recap từng tập. ' +
+      'Có episode_id → kèm đoạn kết + recap của tập trước và số cảnh cần cho độ dài mục tiêu. Gọi TRƯỚC khi viết/sửa dàn ý hay kịch bản tập (thay cho project_get full).',
+    inputSchema: { project_id: projectId, episode_id: episodeId.optional().describe('Tập sắp viết') },
+    annotations: { readOnlyHint: true }
+  },
+  safe(async ({ project_id, episode_id }) => {
+    const p = loadProject(project_id)
+    const pick = (o, keys) => definedOnly(Object.fromEntries(keys.map((k) => [k, o[k]])))
+    const ctx = {
+      project: {
+        ...pick(p, ['id', 'title', 'logline', 'language', 'aspect_ratio', 'style', 'audio_mode', 'narrator_voice']),
+        episode_duration_min: (p.episode_duration_sec || EPISODE_DEFAULT_SEC) / 60
+      },
+      bible: p.bible,
+      characters: p.characters.map((c) => ({
+        ...pick(c, ['id', 'name', 'role', 'appearance', 'personality', 'want', 'need', 'flaw', 'backstory', 'arc', 'speech_style', 'relationships', 'voice']),
+        accessories: c.accessories?.map((a) => a.name)
+      })),
+      locations: (p.locations || []).map((l) => pick(l, ['id', 'name', 'description'])),
+      episodes: p.episodes.map((e) => ({
+        ...pick(e, ['id', 'title', 'synopsis', 'hook', 'beats', 'cliffhanger', 'recap']),
+        target_min: e.target_duration_sec ? e.target_duration_sec / 60 : null,
+        scenes: e.scenes.length,
+        has_script: !!e.script
+      })),
+      voices: VOICES.map((v) => `${v.name} (${v.tone})`)
+    }
+    if (episode_id) {
+      const ep = p.episodes.find((e) => e.id === episode_id)
+      const prev = [...p.episodes].filter((e) => e.number < (ep?.number ?? p.episodes.length + 1)).at(-1)
+      const targetSec = ep?.target_duration_sec || p.episode_duration_sec || EPISODE_DEFAULT_SEC
+      ctx.focus = {
+        episode: episode_id,
+        exists: !!ep,
+        target_min: targetSec / 60,
+        target_confirmed: !!ep?.target_duration_sec,
+        scene_budget: `${Math.round(targetSec / 8)}–${Math.round(targetSec / 6)} cảnh (6–8s/cảnh, ~12 ký tự thoại/giây)`,
+        previous: prev
+          ? {
+              id: prev.id,
+              title: prev.title,
+              cliffhanger: prev.cliffhanger,
+              recap: prev.recap || '(chưa có recap — tự tóm tắt từ kịch bản rồi lưu recap cho tập đó)',
+              last_scenes: prev.scenes.slice(-3).map((s) => ({
+                ...pick(s, ['id', 'description', 'location', 'characters']),
+                lines: s.lines?.map((l) => `${l.speaker}: ${l.text}`)
+              }))
+            }
+          : null,
+        missing_recaps: p.episodes.filter((e) => e.number < (ep?.number ?? Infinity) && e.scenes.length && !e.recap).map((e) => e.id)
+      }
+    }
+    return json(ctx)
+  })
+)
+
 // ═══════════════ Series bible + nhân vật ═══════════════
 
 const musicSchema = z.object({
   prompt: z.string().describe('Thể loại, nhạc cụ, cảm xúc, tempo. Ví dụ "nhạc dân tộc, sáo trúc, trống đồng, hùng tráng, 90 BPM"'),
   volume: z.number().min(0).max(1).optional().describe('Âm lượng nhạc nền dưới thoại, mặc định 0.25')
+})
+
+const definedOnly = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined))
+
+/** Khung kịch tính của 1 tập — dùng chung cho dàn ý series và kịch bản chi tiết. */
+const episodeStoryFields = {
+  hook: z.string().optional().describe('Hook 3–5 giây đầu: hình ảnh/câu hỏi khiến người xem ở lại'),
+  beats: z.array(z.string()).optional().describe('Các nhịp truyện theo thứ tự: mở → biến cố → leo thang → điểm ngoặt → cao trào → kết'),
+  cliffhanger: z.string().optional().describe('Câu hỏi/tình huống treo cuối tập kéo sang tập sau (tập cuối: payoff)')
+}
+
+const episodeOutlineSchema = z.object({
+  title: z.string(),
+  synopsis: z.string().describe('Tóm tắt nội dung tập'),
+  ...episodeStoryFields
 })
 
 server.registerTool(
@@ -179,15 +256,19 @@ server.registerTool(
       music: musicSchema.optional().describe('Nhạc chủ đề cả series (từng tập có thể ghi đè)'),
       narrator_voice: z.string().optional().describe('Giọng người dẫn chuyện, mặc định Charon'),
       episode_duration_min: episodeDurationMin.optional().describe('Đổi độ dài chuẩn mỗi tập (phút, 3–8) — chỉ áp cho tập chưa chốt độ dài'),
+      logline: z.string().optional().describe('Cập nhật logline: nhân vật + mục tiêu + trở ngại + cái giá, 1 câu'),
+      central_question: z.string().optional().describe('Câu hỏi kịch tính xuyên series mà tập cuối trả lời (vd "Liệu A có cứu được làng mà không đánh mất chính mình?")'),
+      ending: z.string().optional().describe('Kết cục đã định của series — để gieo cài cắm (setup/payoff) từ sớm. Có thể giữ kín với người xem'),
       episodes: z
-        .array(z.object({ title: z.string(), synopsis: z.string().describe('Tóm tắt nội dung tập') }))
+        .array(episodeOutlineSchema)
         .optional()
-        .describe('Dàn ý các tập theo thứ tự. Tập đã có (cùng vị trí) chỉ được cập nhật title/synopsis, không mất kịch bản/asset')
+        .describe('Dàn ý các tập theo thứ tự. Tập đã có (cùng vị trí) chỉ được cập nhật dàn ý, không mất kịch bản/asset')
     }
   },
-  safe(async ({ project_id, episodes, style, music, narrator_voice, episode_duration_min, ...bible }) => {
+  safe(async ({ project_id, episodes, style, music, narrator_voice, episode_duration_min, logline, ...bible }) => {
     const p = await updateProject(project_id, (p) => {
       p.bible = { ...p.bible, ...Object.fromEntries(Object.entries(bible).filter(([, v]) => v !== undefined)) }
+      if (logline) p.logline = logline
       if (style) p.style = style
       if (music) p.music = music
       if (narrator_voice) p.narrator_voice = narrator_voice
@@ -195,8 +276,8 @@ server.registerTool(
       episodes?.forEach((e, i) => {
         const id = `e${String(i + 1).padStart(2, '0')}`
         const existing = p.episodes.find((x) => x.id === id)
-        if (existing) Object.assign(existing, { title: e.title, synopsis: e.synopsis })
-        else p.episodes.push({ id, number: i + 1, title: e.title, synopsis: e.synopsis, script: '', scenes: [], music: null, output: null })
+        if (existing) Object.assign(existing, definedOnly(e))
+        else p.episodes.push({ id, number: i + 1, ...definedOnly(e), script: '', scenes: [], music: null, output: null })
       })
     })
     return json({ saved: true, status: audioMode(p) })
@@ -212,7 +293,15 @@ const characterSchema = z.object({
   appearance: z.string().describe('Ngoại hình CỐ ĐỊNH, càng cụ thể càng tốt: tuổi, giới, dáng, tóc, mắt, trang phục, màu sắc — dùng lại ở mọi cảnh'),
   personality: z.string().optional().describe('Tính cách — điều khiển biểu cảm, dáng điệu, cách nói'),
   accessories: z.array(accessorySchema).optional().describe('Phụ kiện/đạo cụ gắn liền nhân vật (vũ khí, mũ, thú cưng...) — xuất hiện trong character sheet và mọi cảnh'),
-  voice: z.string().optional().describe(`Giọng TTS: ${VOICES.map((v) => v.name).join(', ')}`)
+  voice: z.string().optional().describe(`Giọng TTS: ${VOICES.map((v) => v.name).join(', ')}`),
+  // Hồ sơ kịch tính — chỉ dùng để viết truyện/thoại nhất quán giữa các tập, KHÔNG gửi vào prompt ảnh/video.
+  want: z.string().optional().describe('Mục tiêu bên ngoài nhân vật theo đuổi (cái họ NGHĨ mình cần)'),
+  need: z.string().optional().describe('Nhu cầu bên trong / bài học (cái họ THẬT SỰ cần)'),
+  flaw: z.string().optional().describe('Khuyết điểm cản đường — nguồn xung đột'),
+  backstory: z.string().optional().describe('Quá khứ / vết thương định hình nhân vật (có thể giữ bí mật với khán giả)'),
+  arc: z.string().optional().describe('Nhân vật thay đổi thế nào qua series: đầu → giữa → cuối'),
+  speech_style: z.string().optional().describe('Cách nói: xưng hô (tôi/tớ/ta/bần đạo...), câu cửa miệng, nhịp câu, từ ngữ đặc trưng'),
+  relationships: z.string().optional().describe('Quan hệ với nhân vật khác và căng thẳng giữa họ')
 })
 
 const locationSchema = z.object({
@@ -240,8 +329,10 @@ server.registerTool(
       const upsert = (list, item, visualKey) => {
         const at = list.findIndex((x) => x.id === item.id)
         const prev = at >= 0 ? list[at] : null
-        const keepRef = prev && visualKey(prev) === visualKey(item) ? prev.reference_image : null
-        const value = { ...prev, ...item, reference_image: keepRef }
+        const merged = { ...prev, ...item }
+        // So với bản ĐÃ GỘP: chỉ sửa giọng/tính cách (không gửi lại accessories) thì không mất character sheet.
+        const keepRef = prev && visualKey(prev) === visualKey(merged) ? prev.reference_image : null
+        const value = { ...merged, reference_image: keepRef }
         if (at >= 0) list[at] = value
         else list.push(value)
       }
@@ -378,10 +469,15 @@ server.registerTool(
         .union([z.literal('default'), episodeMinutes])
         .optional()
         .describe('Độ dài mục tiêu của tập: "default" = độ dài chuẩn của dự án, hoặc số phút 3–8 người dùng chọn. BẮT BUỘC khi tập chưa chốt độ dài — phải hỏi người dùng trước'),
-      music: musicSchema.extend({ enabled: z.boolean().optional() }).optional().describe('Nhạc riêng cho tập (ghi đè nhạc series); enabled=false để tắt nhạc')
+      music: musicSchema.extend({ enabled: z.boolean().optional() }).optional().describe('Nhạc riêng cho tập (ghi đè nhạc series); enabled=false để tắt nhạc'),
+      ...episodeStoryFields,
+      recap: z
+        .string()
+        .optional()
+        .describe('Sổ liên tục SAU tập này: điều gì đã thay đổi (quan hệ, bí mật lộ ra, vật phẩm, vết thương), tuyến còn bỏ ngỏ — tập sau đọc qua story_context')
     }
   },
-  safe(async ({ project_id, episode_id, title, synopsis, script, scenes, mode = 'replace', duration, music }) => {
+  safe(async ({ project_id, episode_id, title, synopsis, script, scenes, mode = 'replace', duration, music, hook, beats, cliffhanger, recap }) => {
     let id = episode_id
     const p = await updateProject(project_id, (p) => {
       let ep = id ? p.episodes.find((e) => e.id === id) : null
@@ -404,6 +500,7 @@ server.registerTool(
       if (title) ep.title = title
       if (synopsis) ep.synopsis = synopsis
       if (script) ep.script = script
+      Object.assign(ep, definedOnly({ hook, beats, cliffhanger, recap }))
       if (music) ep.music = { ...ep.music, ...music, file: ep.music?.prompt === music.prompt ? ep.music?.file : null }
       if (scenes) {
         const base = mode === 'append' ? ep.scenes : []

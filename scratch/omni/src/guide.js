@@ -64,6 +64,23 @@ Các bước sinh là job nền: tool trả \`job_id\`, theo dõi bằng **job_s
 **prompt_preview** cho xem đúng prompt sẽ gửi tới model.
 **usage_report** cho xem lại quota đã dùng (theo loại, model, tập, cảnh, ngày), gồm cả số lần sinh lại và lỗi. Báo cho người dùng sau mỗi đợt sinh lớn.
 
+## Viết truyện (phần quyết định phim hay hay dở)
+
+Ảnh/video đẹp không cứu được truyện dở. Trước khi sinh bất cứ thứ gì tốn tiền, truyện phải qua được các mục dưới.
+
+- **Từ yêu cầu ngắn**: đừng hỏi dồn. Tự suy ra mặc định hợp lý (thể loại, khán giả, nền tảng, số tập, độ dài),
+  ghi rõ là GIẢ ĐỊNH, đưa 2–3 concept khác nhau thật sự (khác xung đột, không chỉ khác tên) để người dùng chọn.
+  Chỉ hỏi những gì không thể đoán: độ dài tập (bắt buộc), và điều gì người dùng đã ngầm muốn mà concept chưa thể hiện.
+- **Logline**: nhân vật (có nét riêng) + mục tiêu cụ thể + trở ngại/đối thủ + cái giá nếu thất bại. Lưu \`logline\`, \`central_question\`, \`ending\`.
+- **Nhân vật**: mỗi nhân vật chính có \`want\` (mục tiêu ngoài) ≠ \`need\` (bài học trong), \`flaw\` gây ra rắc rối,
+  \`arc\` thay đổi qua series, \`speech_style\` (xưng hô, câu cửa miệng) để thoại không ai giống ai. Phản diện có lý lẽ riêng.
+- **Mỗi tập là 1 truyện trọn**: \`hook\` 3–5 giây đầu → mục tiêu của tập → leo thang ít nhất 2 lần → điểm ngoặt → cao trào
+  do CHÍNH nhân vật chính quyết định → \`cliffhanger\` (hoặc payoff ở tập cuối). Lưu thành \`beats\`.
+- **Liên tục giữa các tập**: gọi **story_context**(episode_id) trước khi viết; viết xong lưu \`recap\` (cái gì đã đổi, tuyến còn treo).
+  Gieo cài cắm (setup) sớm, trả (payoff) muộn; không để tuyến nào treo mãi.
+- **Phim ngắn 3–8 phút**: không có chỗ cho cảnh thừa. Mỗi cảnh phải đẩy truyện hoặc lộ nhân vật — không thì cắt.
+  "Show, don't tell": để hành động và hình ảnh kể, lời dẫn chỉ dùng khi thật cần. Thoại ngắn, có ẩn ý, đúng xưng hô.
+
 ## Âm thanh: chọn nguồn tốt hơn cho từng cảnh (audio_mode)
 
 - **auto** (mặc định), quyết định theo từng cảnh:
@@ -131,21 +148,28 @@ export const BRAINSTORM_PROMPT = ({ idea, episodes, platform }) => `Chúng ta s�
 ${episodes ? `Số tập dự kiến: ${episodes}. ` : ''}Nơi đăng: ${platform || 'chưa chốt'}.
 
 Hãy làm như sau:
-1. Gọi studio_guide.
-2. BRAINSTORM CÙNG TÔI, đừng tự quyết hết. Mỗi lượt đưa 2–3 phương án ngắn gọn để tôi chọn hoặc góp ý:
-   chủ đề và thông điệp → thế giới và tông phim → phong cách hình ảnh → dàn nhân vật (ngoại hình, tính cách, phụ kiện đặc trưng, giọng)
-   → bối cảnh lặp lại → mạch truyện tổng quát → chia tập (tên + tóm tắt từng tập)
-   → độ dài chuẩn mỗi tập: hỏi tôi dùng mặc định ${DEF} phút hay chọn ${MIN}–${MAX} phút (truyền episode_duration_min khi project_create).
-3. Khi tôi chốt: project_create → series_bible_save → characters_save → characters_generate → references_review để duyệt cùng tôi.
-4. Sau đó viết kịch bản chi tiết tập 1 (episode_script_save) và hỏi tôi trước khi sinh storyboard.
+1. Gọi studio_guide, đọc kỹ mục "Viết truyện".
+2. Ý tưởng có thể rất ngắn — ĐỪNG hỏi dồn. Tự suy ra mặc định (thể loại, khán giả, nền tảng, số tập) và ghi rõ là giả định.
+   Đưa 2–3 CONCEPT khác nhau thật sự, mỗi concept: logline, xung đột trung tâm, nhân vật chính (want/need/flaw), tông + phong cách hình ảnh,
+   vì sao người xem sẽ xem tới cuối. Kèm đề xuất của bạn. Hỏi tôi chọn concept và độ dài mỗi tập
+   (mặc định ${DEF} phút hay ${MIN}–${MAX} phút — truyền episode_duration_min khi project_create).
+3. Khi tôi chọn: phát triển bible — logline, central_question, ending, thế giới + luật, mạch truyện, dàn nhân vật
+   (ngoại hình cố định, tính cách, want/need/flaw/arc, speech_style, phụ kiện, giọng), bối cảnh lặp lại,
+   dàn ý từng tập (hook, beats, cliffhanger). Tự soát: mỗi tập có leo thang + điểm ngoặt? nhân vật chính tự quyết cao trào? tuyến nào bị treo?
+4. Trình bày gọn cho tôi duyệt, rồi: project_create → series_bible_save → characters_save → characters_generate → references_review.
+5. Sau đó viết kịch bản chi tiết tập 1 (prompt write_episode) và hỏi tôi trước khi sinh storyboard.
 `
 
 export const EPISODE_PROMPT = ({ project_id, episode_id }) => `Viết kịch bản chi tiết cho tập ${episode_id} của dự án ${project_id} (MCP "film-studio").
-1. project_get(full=true) để đọc bible, nhân vật, bối cảnh, dàn ý các tập; episode_get với các tập trước để giữ liên tục.
-2. HỎI TÔI độ dài tập này: dùng độ dài chuẩn của dự án hay chọn ${MIN}–${MAX} phút. Số cảnh phải đủ phủ độ dài đó (~6–8s / cảnh).
-   Viết \`script\`: diễn biến chi tiết, hook trong 3–5 giây đầu, cao trào, kết (hoặc cliffhanger nếu còn tập sau).
-3. Chia phân cảnh 4–10s/cảnh: mỗi cảnh có location, characters (ai có mặt trong khung hình), image_prompt (cỡ cảnh, góc máy),
-   video_prompt (1 hành động + chuyển động máy), lines (thoại ngắn, tự nhiên), transition có chủ đích.
-   Đa dạng cỡ cảnh; cảnh sau nối mạch hình ảnh với cảnh trước.
-4. episode_script_save (kèm duration), xem duration.estimated so với target và chỉnh tới khi lệch dưới 15%, rồi tóm tắt cho tôi số cảnh, độ dài ước tính, cảnh nào dùng TTS / native, và hỏi trước khi sinh storyboard.
+1. story_context(project_id, episode_id) — đọc hồ sơ nhân vật, dàn ý, recap + đoạn kết tập trước, ngân sách số cảnh.
+   Tập trước thiếu recap thì tóm tắt và lưu recap cho tập đó trước.
+2. HỎI TÔI độ dài tập này nếu chưa chốt (target_confirmed=false): độ dài chuẩn của dự án hay ${MIN}–${MAX} phút.
+3. Beat sheet trước, cảnh sau: hook (3–5s đầu) → mục tiêu của tập → leo thang ×2+ → điểm ngoặt → cao trào do nhân vật chính quyết → cliffhanger/payoff.
+   Gán mỗi nhịp 1 khoảng thời gian; tổng = độ dài mục tiêu.
+4. \`script\`: kịch bản chi tiết dạng văn bản (để người đọc). Rồi chia phân cảnh 4–10s/cảnh: location, characters (ai có mặt trong khung hình),
+   image_prompt (cỡ cảnh, góc máy, bố cục, ánh sáng, biểu cảm), video_prompt (1 hành động + chuyển động máy),
+   lines (1–3 câu/cảnh, đúng speech_style của từng nhân vật, có ẩn ý), transition có chủ đích. Đa dạng cỡ cảnh; cảnh sau nối mạch hình ảnh cảnh trước.
+5. Tự soát trước khi lưu: cảnh nào không đẩy truyện thì cắt; thoại nào nói thẳng cảm xúc thì đổi thành hành động; nhân vật có nói đúng giọng không.
+6. episode_script_save (kèm duration, hook, beats, cliffhanger, recap), chỉnh tới khi duration.estimated lệch target dưới 15%,
+   rồi tóm tắt cho tôi: beat sheet, số cảnh, độ dài ước tính, cảnh TTS / native — và hỏi trước khi sinh storyboard.
 `

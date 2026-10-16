@@ -29,7 +29,7 @@ Mọi thứ nằm gọn trong repo:
 ## Kết nối agent
 
 **Claude Code**: đã khai báo sẵn trong `.mcp.json` ở gốc repo (scope project).
-Mở Claude Code tại thư mục repo, chấp nhận server `film-studio` khi được hỏi, rồi kiểm tra bằng `/mcp`.
+Mở Claude Code ở bất kỳ thư mục nào trong repo, chấp nhận server `film-studio` khi được hỏi, rồi kiểm tra bằng `/mcp`.
 API key lấy từ `scratch/omni/.env`, nên `.mcp.json` không chứa bí mật nào.
 
 Thêm thủ công cũng được, vẫn ở scope project và chạy từ gốc repo:
@@ -50,12 +50,24 @@ tool_timeout_sec = 120
 Kết nối xong, agent tự đọc `instructions` của server và tool `studio_guide` để hiểu toàn bộ quy trình.
 Nên bắt đầu bằng prompt có sẵn **`brainstorm_series`** (Claude Code: `/mcp__film-studio__brainstorm_series`).
 
+**Claude Code trong repo này** có sẵn skill + lệnh làm phim (khai báo ở `.claude/`, xem bảng trong `AGENTS.md`):
+
+| Lệnh | Việc |
+|---|---|
+| `/film-new <ý tưởng 1 câu>` | concept → series bible → nhân vật → dàn ý tập (skill `film-story-craft`) |
+| `/film-write <project> [tập]` | kịch bản chi tiết + phân cảnh, giữ liên tục (skill `film-scene-writing`) |
+| `/film-review <project> [tập]` | agent `script-doctor` chấm rubric + đề xuất sửa |
+| `/film-make <project> <tập>` | sinh asset tới mp4, hỏi trước bước tốn tiền (skill `film-production`) |
+| `/film-status [project]` | tiến độ + quota |
+
+`.mcp.json` chạy server qua `git rev-parse --show-toplevel`, nên mở Claude Code ở gốc repo hay ở `scratch/omni` đều kết nối được.
+
 ## Tool
 
 | Nhóm | Tool |
 |---|---|
 | Hướng dẫn | `studio_guide`, prompt `brainstorm_series`, prompt `write_episode` |
-| Dự án | `project_create`, `project_list`, `project_get` |
+| Dự án | `project_create`, `project_list`, `project_get`, `story_context` (gói ngữ cảnh để viết truyện: hồ sơ nhân vật, dàn ý, recap tập trước) |
 | Series | `series_bible_save` (chủ đề, thế giới, kịch bản tổng quát, dàn ý các tập, nhạc chủ đề) |
 | Nhân vật | `characters_save` (ngoại hình, tính cách, phụ kiện, giọng + bối cảnh lặp lại), `characters_generate` (character sheet), `references_review` |
 | Tập | `episode_script_save` (kịch bản chi tiết + phân cảnh), `episode_get`, `scene_update`, `prompt_preview` |
@@ -69,6 +81,8 @@ nên restart server không mất kết quả.
 
 ## Các quyết định thiết kế
 
+- **Truyện có trí nhớ.** Nhân vật lưu cả hồ sơ kịch tính (`want`, `need`, `flaw`, `backstory`, `arc`, `speech_style`, `relationships` — không gửi vào prompt ảnh/video),
+  bible có `logline`, `central_question`, `ending`; mỗi tập có `hook`, `beats`, `cliffhanger`, `recap`. `story_context` gom tất cả cho agent viết tập sau.
 - **Nhất quán nhân vật.** Mỗi nhân vật có 1 character sheet (nhiều góc + toàn bộ phụ kiện), mỗi bối cảnh có 1 ảnh tham chiếu.
   Các ảnh này được đính kèm khi sinh từng ảnh phân cảnh.
 - **Mọi tập dài như nhau.** Mặc định 3 phút, cho phép 3–8 phút.

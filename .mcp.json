@@ -2,8 +2,8 @@
   "mcpServers": {
     "film-studio": {
       "type": "stdio",
-      "command": "node",
-      "args": ["scratch/omni/src/server.js"]
+      "command": "sh",
+      "args": ["-c", "cd \"$(git rev-parse --show-toplevel)\" && exec node scratch/omni/src/server.js"]
     }
   }
 }

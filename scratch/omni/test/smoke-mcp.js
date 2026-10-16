@@ -39,6 +39,19 @@ await call('characters_save', {
   ],
   locations: [{ name: 'Đỉnh Tản Viên', description: 'đỉnh núi mây phủ, rừng thông' }]
 })
+// Hồ sơ kịch tính + sửa giọng không được làm mất character sheet
+{
+  const f = path.join(dir, project_id, 'project.json')
+  const m = JSON.parse(fs.readFileSync(f, 'utf8'))
+  m.characters.find((c) => c.id === 'son-tinh').reference_image = 'characters/son-tinh.jpg'
+  fs.writeFileSync(f, JSON.stringify(m))
+  await call('characters_save', { project_id, characters: [{ id: 'son-tinh', name: 'Sơn Tinh', appearance: 'thanh niên vạm vỡ, áo choàng xanh lá', want: 'cưới Mị Nương', flaw: 'quá nhẫn nhịn', speech_style: 'xưng ta, gọi người khác là ngươi' }] })
+  const after = JSON.parse(fs.readFileSync(f, 'utf8')).characters.find((c) => c.id === 'son-tinh')
+  if (after.reference_image !== 'characters/son-tinh.jpg') throw new Error('characters_save không đổi ngoại hình mà vẫn xoá character sheet')
+  if (after.want !== 'cưới Mị Nương' || after.accessories?.[0]?.name !== 'gậy thần') throw new Error('mất trường khi cập nhật nhân vật')
+  console.log('  ✓ characters_save giữ character sheet + lưu want/flaw/speech_style')
+}
+await call('series_bible_save', { project_id, logline: 'Hai thần tranh một người', central_question: 'Ai thắng?', episodes: [{ title: 'Kén rể', synopsis: 'Vua Hùng kén rể', hook: 'Núi mọc lên giữa đêm', beats: ['a', 'b'], cliffhanger: 'Thủy Tinh đến muộn' }] })
 await expectError('episode_script_save', { project_id, episode_id: 'e01', scenes: [{ image_prompt: 'x' }] }, /HỎI NGƯỜI DÙNG/)
 await expectError('episode_script_save', { project_id, episode_id: 'e01', duration: 10, scenes: [{ image_prompt: 'x' }] }, /8/)
 const ep = await call('episode_script_save', {
@@ -57,6 +70,12 @@ console.log('  ✓ e02 chọn 5 phút:', e2.episode.duration.target)
 console.log('e01 audio modes:', ep.episode.scenes.map((s) => `${s.id}=${s.audio_mode}`).join(' '), '| next:', ep.episode.next_steps)
 if (ep.episode.scenes.map((s) => s.audio_mode).join() !== 'tts,native,tts') throw new Error('auto audio mode sai')
 
+await call('episode_script_save', { project_id, episode_id: 'e01', recap: 'Sơn Tinh cưới được Mị Nương; Thủy Tinh thề trả thù' })
+const sc = await call('story_context', { project_id, episode_id: 'e02' })
+if (sc.project.logline !== 'Hai thần tranh một người' || sc.episodes[0].hook !== 'Núi mọc lên giữa đêm') throw new Error('story_context thiếu logline/hook')
+if (!/trả thù/.test(sc.focus.previous.recap) || sc.focus.previous.last_scenes.length !== 3) throw new Error('story_context thiếu recap/cảnh cuối tập trước')
+if (sc.characters.find((c) => c.id === 'son-tinh').flaw !== 'quá nhẫn nhịn') throw new Error('story_context thiếu hồ sơ nhân vật')
+console.log('  ✓ story_context:', sc.focus.scene_budget, '| prev', sc.focus.previous.id)
 const pv = await call('prompt_preview', { project_id, episode_id: 'e01', scene_id: 's02' })
 console.log('preview image_prompt:', pv.image_prompt)
 console.log('preview video_prompt:', pv.video_prompt, '| dur', pv.video_duration_sec)

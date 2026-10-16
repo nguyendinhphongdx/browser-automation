@@ -10,4 +10,6 @@ out/
 Thumbs.db
 .claude/*
 !.claude/skills
+!.claude/commands
+!.claude/agents
 .pnpm-store/
