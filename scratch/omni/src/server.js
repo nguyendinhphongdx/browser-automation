@@ -13,7 +13,7 @@ import * as publish from './publish.js'
 import { USAGE_GROUPS, usageReport } from './usage.js'
 import { startDashboard } from './dashboard/http.js'
 import {
-  abs, createProject, ensureDir, findCharacter, findEpisode, findLocation, findScene, listProjects, loadProject, projectDir,
+  abs, createProject, ensureDir, findCharacter, findEpisode, findLocation, findLook, findScene, listProjects, loadProject, projectDir, referenceItems,
   rel, sceneDir, slugify, summarize, summarizeEpisode, updateProject, EPISODE_DEFAULT_SEC, EPISODE_MAX_SEC, EPISODE_MIN_SEC
 } from './project.js'
 
@@ -176,7 +176,8 @@ server.registerTool(
       bible: p.bible,
       characters: p.characters.map((c) => ({
         ...pick(c, ['id', 'name', 'role', 'appearance', 'personality', 'want', 'need', 'flaw', 'backstory', 'arc', 'speech_style', 'relationships', 'voice']),
-        accessories: c.accessories?.map((a) => a.name)
+        accessories: c.accessories?.map((a) => a.name),
+        ...(c.looks?.length ? { looks: c.looks.map((l) => ({ id: l.id, name: l.name, appearance: l.appearance })) } : {})
       })),
       locations: (p.locations || []).map((l) => pick(l, ['id', 'name', 'description'])),
       episodes: p.episodes.map((e) => ({
@@ -287,6 +288,15 @@ server.registerTool(
 
 const accessorySchema = z.object({ name: z.string(), description: z.string().optional().describe('Hình dáng, màu, chất liệu, cách mang/cầm') })
 
+const lookSchema = z.object({
+  id: z.string().describe('ID ngắn không dấu, vd "sau", "dam-cuoi", "bi-thuong"'),
+  name: z.string().optional(),
+  appearance: z
+    .string()
+    .describe('Ngoại hình ĐẦY ĐỦ ở trạng thái này (thay hẳn appearance gốc khi cảnh chọn look): giữ nguyên mặt/vóc dáng/màu da, ghi rõ tóc, trang phục, trang điểm mới'),
+  accessories: z.array(accessorySchema).optional().describe('Phụ kiện ở trạng thái này; bỏ trống = giữ phụ kiện của dáng gốc, [] = không phụ kiện')
+})
+
 const characterSchema = z.object({
   id: z.string().optional().describe('ID ngắn không dấu; bỏ trống = tự tạo từ name'),
   name: z.string(),
@@ -294,6 +304,12 @@ const characterSchema = z.object({
   appearance: z.string().describe('Ngoại hình CỐ ĐỊNH, càng cụ thể càng tốt: tuổi, giới, dáng, tóc, mắt, trang phục, màu sắc — dùng lại ở mọi cảnh'),
   personality: z.string().optional().describe('Tính cách — điều khiển biểu cảm, dáng điệu, cách nói'),
   accessories: z.array(accessorySchema).optional().describe('Phụ kiện/đạo cụ gắn liền nhân vật (vũ khí, mũ, thú cưng...) — xuất hiện trong character sheet và mọi cảnh'),
+  looks: z
+    .array(lookSchema)
+    .optional()
+    .describe(
+      'Các trạng thái ngoại hình khác (trước/sau make-up, đổi trang phục, bị thương...), mỗi look 1 character sheet riêng. Cảnh chọn look bằng scene.looks; không chọn → dáng gốc. Gửi lại = thay cả danh sách'
+    ),
   voice: z.string().optional().describe(`Giọng TTS: ${VOICES.map((v) => v.name).join(', ')}`),
   // Hồ sơ kịch tính — chỉ dùng để viết truyện/thoại nhất quán giữa các tập, KHÔNG gửi vào prompt ảnh/video.
   want: z.string().optional().describe('Mục tiêu bên ngoài nhân vật theo đuổi (cái họ NGHĨ mình cần)'),
@@ -311,12 +327,23 @@ const locationSchema = z.object({
   description: z.string().describe('Mô tả bối cảnh lặp lại: kiến trúc, màu sắc, ánh sáng, đồ vật đặc trưng')
 })
 
+/** Look gửi lại không đổi hình (appearance + phụ kiện thực tế) → giữ character sheet đã sinh. */
+function mergeLooks(prev, looks) {
+  const visual = (c, l) => JSON.stringify([l.appearance, l.accessories ?? c?.accessories])
+  return looks.map((l) => {
+    const id = slugify(l.id)
+    const old = prev?.looks?.find((x) => x.id === id)
+    return { ...l, id, reference_image: old && visual(prev, old) === visual(prev, l) ? old.reference_image : null }
+  })
+}
+
 server.registerTool(
   'characters_save',
   {
     title: 'Lưu nhân vật + bối cảnh',
     description:
-      'Lưu/cập nhật nhân vật (ngoại hình, tính cách, phụ kiện, giọng) và bối cảnh lặp lại. Cập nhật theo id — nhân vật không đổi ngoại hình/phụ kiện giữ nguyên character sheet đã sinh.',
+      'Lưu/cập nhật nhân vật (ngoại hình, tính cách, phụ kiện, giọng, các look) và bối cảnh lặp lại. Cập nhật theo id — nhân vật/look không đổi ngoại hình/phụ kiện giữ nguyên character sheet đã sinh. ' +
+      'Nhân vật đổi ngoại hình giữa phim (trước/sau make-up, thay đồ) → khai báo looks thay vì nhét trang phục mới vào accessories (accessories xuất hiện ở MỌI cảnh).',
     inputSchema: {
       project_id: projectId,
       characters: z.array(characterSchema).optional(),
@@ -341,7 +368,9 @@ server.registerTool(
         const id = slugify(c.id || c.name)
         const prev = p.characters.find((x) => x.id === id)
         const voice = c.voice || prev?.voice || VOICES[(p.characters.length + i) % VOICES.length].name
-        upsert(p.characters, { ...c, id, voice }, (x) => JSON.stringify([x.appearance, x.accessories]))
+        const item = { ...c, id, voice }
+        if (c.looks) item.looks = mergeLooks(prev, c.looks)
+        upsert(p.characters, item, (x) => JSON.stringify([x.appearance, x.accessories]))
       })
       locations.forEach((l) => upsert(p.locations, { ...l, id: slugify(l.id || l.name) }, (x) => x.description))
       p.characters = p.characters.filter((c) => !remove.includes(c.id))
@@ -356,8 +385,13 @@ server.registerTool(
   {
     title: 'Sinh character sheet + ảnh bối cảnh',
     description:
-      'Mỗi nhân vật 1 ảnh character sheet (nhiều góc + toàn bộ phụ kiện trong cùng 1 ảnh); mỗi bối cảnh 1 ảnh tham chiếu. Các ảnh này được đính kèm khi sinh storyboard để nhân vật/phụ kiện/bối cảnh nhất quán xuyên mọi tập.',
-    inputSchema: { project_id: projectId, ids: z.array(z.string()).optional().describe('Chỉ sinh cho các id này'), force, wait_sec: waitSec }
+      'Mỗi nhân vật 1 ảnh character sheet (nhiều góc + toàn bộ phụ kiện trong cùng 1 ảnh), thêm 1 sheet cho mỗi look; mỗi bối cảnh 1 ảnh tham chiếu. Các ảnh này được đính kèm khi sinh storyboard để nhân vật/phụ kiện/bối cảnh nhất quán xuyên mọi tập.',
+    inputSchema: {
+      project_id: projectId,
+      ids: z.array(z.string()).optional().describe('Chỉ sinh cho các id này: nhân vật (kèm mọi look của nó), "nhân-vật:look", hoặc bối cảnh'),
+      force,
+      wait_sec: waitSec
+    }
   },
   safe(({ project_id, ids, force, wait_sec }) => launch('references', project_id, wait_sec, (log) => pipeline.generateReferences(project_id, { ids, force }, log)))
 )
@@ -372,14 +406,14 @@ server.registerTool(
   },
   safe(async ({ project_id, ids }) => {
     const p = loadProject(project_id)
-    const items = [...p.characters, ...(p.locations || [])].filter((x) => !ids?.length || ids.includes(x.id))
+    const items = referenceItems(p).filter((r) => !ids?.length || ids.includes(r.id) || (r.owner && ids.includes(r.owner.id)))
     const content = []
     const { resizeImage } = await import('./media.js')
     for (const x of items) {
-      const file = abs(project_id, x.reference_image)
+      const file = abs(project_id, x.item.reference_image)
       content.push({ type: 'text', text: `${x.id} — ${x.name}${file && fs.existsSync(file) ? `: ${file}` : ': (chưa có ảnh)'}` })
       if (file && fs.existsSync(file)) {
-        const preview = path.join(path.dirname(file), `${x.id}.preview.jpg`)
+        const preview = path.join(path.dirname(file), `${path.basename(file, path.extname(file))}.preview.jpg`)
         await resizeImage(file, 640, preview)
         content.push({ type: 'image', data: fs.readFileSync(preview).toString('base64'), mimeType: 'image/jpeg' })
       }
@@ -407,6 +441,10 @@ const sceneSchema = z.object({
   description: z.string().optional().describe('Chuyện gì xảy ra (cho người đọc kịch bản)'),
   location: z.string().optional().describe('id/tên bối cảnh đã khai báo trong characters_save'),
   characters: z.array(z.string()).optional().describe('Nhân vật CÓ MẶT TRONG KHUNG HÌNH (id/tên) — quyết định cả chế độ âm thanh auto'),
+  looks: z
+    .record(z.string(), z.string())
+    .optional()
+    .describe('Look của nhân vật trong cảnh: { <id nhân vật>: <id look> } (vd { "trang": "sau" }). Nhân vật không ghi → dáng gốc'),
   image_prompt: z.string().describe('Khung hình đầu: cỡ cảnh, góc máy, bố cục, ánh sáng, nhân vật làm gì/biểu cảm. Không cần lặp ngoại hình nhân vật'),
   video_prompt: z.string().optional().describe('Chuyển động trong cảnh: hành động + chuyển động máy (dolly in, pan, orbit, handheld...). Bỏ trống = dùng image_prompt'),
   lines: z.array(lineSchema).optional().describe('Thoại + lời dẫn theo thứ tự (cũng là phụ đề)'),
@@ -421,9 +459,9 @@ const sceneSchema = z.object({
 function carryAssets(project, oldScene, newScene) {
   if (!oldScene?.assets) return { assets: {}, approved: false }
   const key = (s) => ({
-    image: JSON.stringify([s.image_prompt, s.characters, s.location]),
+    image: JSON.stringify([s.image_prompt, s.characters, s.location, s.looks]),
     audio: JSON.stringify([s.lines, pipeline.effectiveAudioMode(project, s)]),
-    video: JSON.stringify([s.video_prompt, s.duration_sec, pipeline.effectiveAudioMode(project, s)])
+    video: JSON.stringify([s.video_prompt, s.duration_sec, pipeline.effectiveAudioMode(project, s), s.looks])
   })
   const a = key(oldScene)
   const b = key(newScene)
@@ -446,7 +484,12 @@ function validateRefs(p, ep) {
     ...[...(s.characters || []), ...(s.lines || []).map((l) => l.speaker)]
       .filter((x) => x !== pipeline.NARRATOR && !findCharacter(p, x))
       .map((x) => `${s.id}: nhân vật "${x}"`),
-    ...(s.location && !findLocation(p, s.location) ? [`${s.id}: bối cảnh "${s.location}"`] : [])
+    ...(s.location && !findLocation(p, s.location) ? [`${s.id}: bối cảnh "${s.location}"`] : []),
+    ...Object.entries(s.looks || {}).flatMap(([who, look]) => {
+      const c = findCharacter(p, who)
+      if (!c) return [`${s.id}: looks — nhân vật "${who}"`]
+      return findLook(c, look) ? [] : [`${s.id}: look "${look}" của ${c.id} (có: ${(c.looks || []).map((l) => l.id).join(', ') || 'chưa có look nào'})`]
+    })
   ])
   if (bad.length) throw new Error(`Chưa khai báo trong characters_save — ${[...new Set(bad)].join('; ')}`)
 }
@@ -751,7 +794,7 @@ server.registerTool(
       project_id: projectId,
       kind: z.enum(['scene_image', 'scene_video', 'scene_audio', 'reference', 'music']),
       episode_id: episodeId.optional().describe('Cần cho scene_* và music'),
-      target: z.string().optional().describe('scene_id, hoặc id nhân vật/bối cảnh với kind=reference'),
+      target: z.string().optional().describe('scene_id, hoặc id nhân vật/bối cảnh (look: "nhân-vật:look") với kind=reference'),
       file_path: z.string().describe('Đường dẫn tuyệt đối tới file')
     }
   },
@@ -760,10 +803,12 @@ server.registerTool(
     const ext = path.extname(file_path).toLowerCase()
     await updateProject(project_id, async (p) => {
       if (kind === 'reference') {
-        const c = findCharacter(p, target || '') || findLocation(p, target || '')
-        if (!c) throw new Error(`Không có nhân vật/bối cảnh "${target}"`)
-        const sub = p.characters.includes(c) ? 'characters' : 'locations'
-        const dest = path.join(ensureDir(path.join(projectDir(project_id), sub)), `${c.id}${ext}`)
+        const [who, lookId] = String(target || '').split(':')
+        const owner = findCharacter(p, who)
+        const c = lookId ? owner && findLook(owner, lookId) : owner || findLocation(p, who)
+        if (!c) throw new Error(`Không có nhân vật/look/bối cảnh "${target}"`)
+        const sub = owner ? 'characters' : 'locations'
+        const dest = path.join(ensureDir(path.join(projectDir(project_id), sub)), `${lookId ? `${owner.id}--${c.id}` : c.id}${ext}`)
         fs.copyFileSync(file_path, dest)
         c.reference_image = rel(project_id, dest)
         return
@@ -865,7 +910,8 @@ server.registerTool(
   'job_status',
   {
     title: 'Theo dõi job',
-    description: 'Trạng thái job nền: running / succeeded / completed_with_errors (một số mục lỗi — xem result.failed) / failed. wait_sec>0 để chờ (tối đa 55s mỗi lần) thay vì poll liên tục.',
+    description: 'Trạng thái job nền: running / succeeded / completed_with_errors (một số mục lỗi — xem result.failed) / failed, kèm progress (step, done/total, failed) + elapsed_sec. ' +
+      'Đang chờ: gọi lặp với wait_sec=50 và sau MỖI lần báo người dùng 1 dòng tiến độ — không kết lượt khi job còn chạy.',
     inputSchema: { job_id: z.string(), wait_sec: waitSec },
     annotations: { readOnlyHint: true }
   },
