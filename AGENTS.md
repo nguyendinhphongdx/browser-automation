@@ -85,7 +85,8 @@ Mỗi app/package có `CLAUDE.md` riêng khi cần context hẹp (vd `apps/serve
 | `film-publish` · `/film-publish <project> <tập>` | Bộ đăng bài (tiêu đề, mô tả, chapter, hashtag, bản dọc 9:16) → MCP `publisher` điền sẵn trong Chrome của user, user tự bấm Đăng; mặc định riêng tư |
 | `/film-status [project]` | Tiến độ + quota |
 
-Kiến thức nghề truyện nằm 1 chỗ: `.claude/skills/film-story-craft/references/` — skill khác và `script-doctor` link sang, không chép lại. Việc code vẫn dùng Plan/Explore built-in.
+Kiến thức nghề truyện nằm 1 chỗ: `.claude/skills/film-story-craft/references/` — skill khác và `script-doctor` link sang, không chép lại.
+Bản đồ quy trình + luật "kết mỗi bước" (tóm tắt → đề xuất bước kế + chi phí → hỏi duyệt → đồng ý thì làm luôn): `references/pipeline.md` — mọi skill/lệnh film-* theo nó. Việc code vẫn dùng Plan/Explore built-in.
 
 ## Checklist trước khi commit
 
