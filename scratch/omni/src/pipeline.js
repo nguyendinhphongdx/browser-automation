@@ -4,7 +4,8 @@ import { config, RESOLUTIONS } from './config.js'
 import * as gemini from './gemini.js'
 import * as media from './media.js'
 import {
-  abs, ensureDir, episodeDir, exists, findCharacter, findEpisode, findLocation, findScene, loadProject, projectDir, rel, sceneDir, scenesOf, updateProject
+  abs, characterAs, ensureDir, episodeDir, exists, findCharacter, findEpisode, findLocation, findScene, loadProject, projectDir, referenceItems, rel,
+  sceneDir, scenesOf, updateProject
 } from './project.js'
 
 export const NARRATOR = 'narrator'
@@ -44,6 +45,8 @@ export function effectiveAudioMode(project, scene) {
 async function eachScene(projectId, episodeId, scenes, kind, log, work) {
   const failed = []
   const done = []
+  const tick = () => log.progress?.({ step: kind, total: scenes.length, done: done.length, failed: failed.length })
+  tick()
   await mapLimit(scenes, config.concurrency, async (scene) => {
     try {
       log(`${kind} ${episodeId}/${scene.id}: bắt đầu`)
@@ -56,9 +59,11 @@ async function eachScene(projectId, episodeId, scenes, kind, log, work) {
         if (s.errors) delete s.errors[kind]
       })
       done.push(scene.id)
+      tick()
       log(`${kind} ${episodeId}/${scene.id}: xong`)
     } catch (err) {
       failed.push({ scene: scene.id, error: err.message })
+      tick()
       log(`${kind} ${episodeId}/${scene.id}: LỖI — ${err.message}`)
       await updateProject(projectId, (p) => {
         const s = findScene(findEpisode(p, episodeId), scene.id)
@@ -78,7 +83,13 @@ async function eachScene(projectId, episodeId, scenes, kind, log, work) {
 function charactersIn(project, scene) {
   const ids = Array.isArray(scene.characters) ? scene.characters : (scene.lines || []).map((l) => l.speaker)
   const chars = ids.map((id) => findCharacter(project, id)).filter(Boolean)
-  return chars.filter((c, i) => chars.findIndex((x) => x.id === c.id) === i)
+  return chars.filter((c, i) => chars.findIndex((x) => x.id === c.id) === i).map((c) => characterAs(c, lookFor(project, scene, c)))
+}
+
+/** Look cảnh chọn cho nhân vật (khoá `scene.looks` là id hoặc tên nhân vật). */
+function lookFor(project, scene, character) {
+  const key = Object.keys(scene.looks || {}).find((k) => findCharacter(project, k)?.id === character.id)
+  return key ? scene.looks[key] : null
 }
 
 const accessoryText = (c) => (c.accessories?.length ? `; luôn có: ${c.accessories.map((a) => (a.description ? `${a.name} (${a.description})` : a.name)).join(', ')}` : '')
@@ -100,47 +111,55 @@ function locationNote(project, scene) {
 
 function characterSheetPrompt(project, c) {
   const props = c.accessories?.length
-    ? ` Show every accessory clearly — worn/held by the character AND as separate isolated item callouts: ${c.accessories.map((a) => `${a.name}${a.description ? ` (${a.description})` : ''}`).join('; ')}.`
+    ? ` Show every accessory clearly — worn/held by the character AND as separate isolated item drawings (pictures only, unlabeled): ${c.accessories.map((a) => `${a.name}${a.description ? ` (${a.description})` : ''}`).join('; ')}.`
     : ' The character carries NO weapons, bags or props.'
   return (
     `Character design sheet for an animated/cinematic series. ${project.style ? `Visual style: ${project.style}. ` : ''}` +
     `Single image on a plain light-grey background: full-body turnaround (front, 3/4, side, back) plus a face close-up showing a typical expression.` +
-    `${props} Character: ${c.name}${c.role ? ` (${c.role})` : ''} — ${c.appearance}.` +
-    `${c.personality ? ` Pose and expression convey personality: ${c.personality}.` : ''} Consistent proportions and colors across all views. Do NOT invent any extra accessories, weapons or props beyond those listed. No text, no labels, no watermark.`
+    `${props} Character: ${c.name}${c.role ? ` (${c.role})` : ''}${c.look ? `, look "${c.look}"` : ''} — ${c.appearance}.` +
+    `${c.personality ? ` Pose and expression convey personality: ${c.personality}.` : ''} Consistent proportions and colors across all views. Do NOT invent any extra accessories, weapons or props beyond those listed. ` +
+    `Absolutely NO written text anywhere in the image: no labels, captions, annotations, notes, names, view titles or arrows — pictures only. No watermark.`
   )
 }
 
 export async function generateReferences(projectId, { ids, force } = {}, log) {
   const project = loadProject(projectId)
-  const items = [
-    ...project.characters.map((c) => ({ kind: 'character', item: c })),
-    ...(project.locations || []).map((l) => ({ kind: 'location', item: l }))
-  ].filter(({ item }) => !ids?.length || ids.includes(item.id))
+  // ids có thể là nhân vật (gồm mọi look của nhân vật đó), "nhân-vật:look", hoặc bối cảnh.
+  const items = referenceItems(project).filter((r) => !ids?.length || ids.includes(r.id) || (r.owner && ids.includes(r.owner.id)))
   const failed = []
   const done = []
-  await mapLimit(items, config.concurrency, async ({ kind, item }) => {
-    if (!force && exists(projectId, item.reference_image)) return
+  const todo = items.filter(({ item }) => force || !exists(projectId, item.reference_image))
+  const tick = () => log.progress?.({ step: 'references', total: todo.length, done: done.length, failed: failed.length })
+  tick()
+  await mapLimit(todo, config.concurrency, async ({ kind, id, item, owner }) => {
     try {
-      log(`${kind} ${item.id}: sinh ảnh tham chiếu`)
-      const dir = ensureDir(path.join(projectDir(projectId), kind === 'character' ? 'characters' : 'locations'))
+      log(`${kind} ${id}: sinh ảnh tham chiếu`)
+      const dir = ensureDir(path.join(projectDir(projectId), kind === 'location' ? 'locations' : 'characters'))
       const prompt =
-        kind === 'character'
-          ? characterSheetPrompt(project, item)
-          : `Environment concept art, establishing wide shot, no people. ${project.style ? `Visual style: ${project.style}. ` : ''}${item.name} — ${item.description}. No text, no watermark.`
+        kind === 'location'
+          ? `Environment concept art, establishing wide shot, no people. ${project.style ? `Visual style: ${project.style}. ` : ''}${item.name} — ${item.description}. No text, no watermark.`
+          : characterSheetPrompt(project, kind === 'look' ? characterAs(owner, item.id) : item)
       const file = await gemini.generateImage({
         prompt,
         aspectRatio: '16:9',
-        outBase: path.join(dir, item.id),
-        usage: { projectId, purpose: kind === 'character' ? 'character_sheet' : 'location_reference', target: item.id }
+        outBase: path.join(dir, kind === 'look' ? `${owner.id}--${item.id}` : item.id),
+        usage: { projectId, purpose: kind === 'location' ? 'location_reference' : 'character_sheet', target: id }
       })
       await updateProject(projectId, (p) => {
-        const list = kind === 'character' ? p.characters : p.locations
-        list.find((x) => x.id === item.id).reference_image = rel(projectId, file)
+        const target =
+          kind === 'location'
+            ? p.locations.find((x) => x.id === item.id)
+            : kind === 'look'
+              ? p.characters.find((x) => x.id === owner.id).looks.find((x) => x.id === item.id)
+              : p.characters.find((x) => x.id === item.id)
+        target.reference_image = rel(projectId, file)
       })
-      done.push(item.id)
+      done.push(id)
+      tick()
     } catch (err) {
-      failed.push({ id: item.id, error: err.message })
-      log(`${kind} ${item.id}: LỖI — ${err.message}`)
+      failed.push({ id, error: err.message })
+      tick()
+      log(`${kind} ${id}: LỖI — ${err.message}`)
     }
   })
   return { done, failed }
@@ -488,6 +507,7 @@ export async function runEpisode(projectId, episodeId, { steps = STEPS, force = 
   const report = {}
   for (const step of STEPS.filter((s) => steps.includes(s))) {
     log(`══ ${episodeId}: ${step}`)
+    log.progress?.({ step, total: null, done: null, failed: null })
     if (step === 'references') report.references = await generateReferences(projectId, { force }, log)
     if (step === 'audio') report.audio = await generateEpisodeAudio(projectId, episodeId, { force }, log)
     if (step === 'storyboard') report.storyboard = await generateStoryboard(projectId, episodeId, { force }, log)
