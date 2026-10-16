@@ -24,6 +24,8 @@ export function startJob(kind, projectId, fn) {
     job.log.push(`${new Date().toISOString().slice(11, 19)} ${msg}`)
     if (job.log.length > 200) job.log.splice(0, job.log.length - 200)
   }
+  /** Tiến độ cho agent báo người dùng từng phút: { step, total, done, failed }. */
+  log.progress = (p) => Object.assign((job.progress ||= {}), p)
   job.promise = (async () => {
     try {
       job.result = await fn(log)
@@ -72,6 +74,8 @@ export function view(job, logTail = 10) {
     status: job.status,
     started_at: job.started_at,
     finished_at: job.finished_at,
+    elapsed_sec: Math.round(((job.finished_at ? Date.parse(job.finished_at) : Date.now()) - Date.parse(job.started_at)) / 1000),
+    ...(job.progress ? { progress: job.progress } : {}),
     recent_log: job.log.slice(-logTail),
     ...(job.error ? { error: job.error } : {}),
     ...(job.result ? { result: job.result } : {})
