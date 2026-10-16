@@ -40,7 +40,9 @@ Bạn (agent) là biên kịch kiêm đạo diễn, làm việc CÙNG người d
 3. **series_bible_save**: tiền đề, chủ đề, thế giới, tông, kịch bản tổng quát (story_arc), nhạc chủ đề, dàn ý các tập (tạo sẵn e01, e02...).
 4. **characters_save**: mỗi nhân vật gồm ngoại hình cố định, tính cách, vai trò, **phụ kiện**, giọng đọc.
    Kèm các **bối cảnh lặp lại** (locations).
-5. **characters_generate**: mỗi nhân vật 1 character sheet (nhiều góc + toàn bộ phụ kiện trong 1 ảnh), mỗi bối cảnh 1 ảnh.
+   Nhân vật **đổi ngoại hình giữa phim** (trước/sau trang điểm, thay đồ cưới, bị thương) → khai báo \`looks\` (mỗi look có appearance đầy đủ + phụ kiện riêng),
+   KHÔNG nhét trang phục mới vào phụ kiện (phụ kiện xuất hiện ở MỌI cảnh). Cảnh chọn look bằng \`scene.looks = { <nhân vật>: <look> }\`.
+5. **characters_generate**: mỗi nhân vật 1 character sheet (nhiều góc + toàn bộ phụ kiện trong 1 ảnh), thêm 1 sheet cho mỗi look, mỗi bối cảnh 1 ảnh.
    Xem bằng **references_review**. Chưa ưng thì sửa mô tả rồi sinh lại (\`ids\`, \`force\`).
 
 ### B. Mỗi tập
@@ -63,6 +65,16 @@ Bạn (agent) là biên kịch kiêm đạo diễn, làm việc CÙNG người d
 **episode_run** chạy nhiều bước liền nhau. Nên chạy 2 lượt: \`["references","audio","storyboard"]\` → duyệt → \`["videos","music","assemble"]\`.
 Các bước sinh là job nền: tool trả \`job_id\`, theo dõi bằng **job_status**(job_id, wait_sec=50).
 **project_get** / **episode_get** luôn cho biết thiếu gì, lỗi gì, và \`next_steps\`.
+
+**Làm phim không sửa code.** Chỉ dùng tool của MCP và sửa nội dung dự án qua tool. Không sửa code server hay sửa tay project.json.
+Thiếu tính năng/server lỗi → dừng, nói rõ cho người dùng cái gì thiếu, đề xuất làm thành việc phát triển riêng.
+
+**Chờ job thì báo từng phút.** Không kết lượt khi job còn chạy. Lặp job_status(wait_sec=50); sau mỗi lần báo 1 dòng: bước, \`progress.done\`/\`total\`, số lỗi, \`elapsed_sec\`, ước tính còn lại.
+
+**Dẫn đường cho người dùng (bắt buộc).** Xong MỖI bước: tóm tắt kết quả (kèm quota vừa tốn) → đề xuất bước kế tiếp theo đúng quy trình trên, nói rõ chi phí →
+hỏi người dùng duyệt (làm tiếp / sửa trước / dừng) → đồng ý thì làm luôn. Không dừng ở "bước tiếp theo là …" để người dùng tự đoán phải làm gì.
+Bước tốn quota (character sheet, storyboard, video, nhạc) luôn hỏi lại kèm số ảnh/clip/giây, kể cả khi trước đó người dùng nói "cứ làm hết".
+Xong \`episode_assemble\` → đề xuất đăng bài; đăng xong → lưu recap và đề xuất viết tập kế tiếp.
 **prompt_preview** cho xem đúng prompt sẽ gửi tới model.
 **usage_report** cho xem lại quota đã dùng (theo loại, model, tập, cảnh, ngày), gồm cả số lần sinh lại và lỗi. Báo cho người dùng sau mỗi đợt sinh lớn.
 
