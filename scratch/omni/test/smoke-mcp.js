@@ -117,4 +117,39 @@ console.log('assemble nháp:', draft.status, draft.error || draft.result?.durati
 if (draft.status !== 'succeeded') throw new Error('ghép nháp phải thành công')
 const overview = await call('project_get', { project_id })
 console.log('project next_steps:', overview.next_steps)
+
+// Look: trạng thái ngoại hình theo cảnh (trước/sau thay đồ) — mỗi look 1 sheet, cảnh chọn look qua scene.looks
+{
+  const base = { name: 'Mị Nương', appearance: 'thiếu nữ, áo yếm nâu, tóc thả dài', accessories: [{ name: 'quạt lụa', description: 'quạt lụa trắng' }] }
+  const coDau = { id: 'co-dau', name: 'Cô dâu', appearance: 'thiếu nữ, áo cưới đỏ thêu phượng, khăn vấn vàng', accessories: [] }
+  await call('characters_save', { project_id, characters: [{ ...base, looks: [coDau] }] })
+  await call('episode_script_save', {
+    project_id, episode_id: 'e02',
+    scenes: [
+      { characters: ['mi-nuong'], image_prompt: 'trung cảnh Mị Nương trước gương', duration_sec: 6 },
+      { characters: ['Mị Nương'], looks: { 'Mị Nương': 'co-dau' }, image_prompt: 'trung cảnh Mị Nương bước ra', duration_sec: 6 }
+    ]
+  })
+  const before = await call('prompt_preview', { project_id, episode_id: 'e02', scene_id: 's01' })
+  const after = await call('prompt_preview', { project_id, episode_id: 'e02', scene_id: 's02' })
+  if (!/áo yếm nâu/.test(before.image_prompt) || /áo cưới/.test(before.image_prompt)) throw new Error('cảnh không chọn look phải dùng dáng gốc')
+  if (!/áo cưới đỏ/.test(after.image_prompt) || /áo yếm nâu|quạt lụa/.test(after.image_prompt + after.video_prompt)) throw new Error('cảnh look "co-dau" còn lẫn đồ/phụ kiện của dáng gốc')
+  console.log('  ✓ scene.looks: cảnh "sau" không còn trang phục/phụ kiện "trước"')
+  await expectError('scene_update', { project_id, episode_id: 'e02', scene_id: 's02', changes: { looks: { 'mi-nuong': 'khong-co' } } }, /look "khong-co"/)
+
+  // Sheet riêng cho look: import → status thấy; gửi lại look không đổi giữ sheet, đổi trang phục thì bỏ sheet
+  await call('asset_import', { project_id, kind: 'reference', target: 'mi-nuong:co-dau', file_path: img })
+  const f = path.join(dir, project_id, 'project.json')
+  const lookOf = () => JSON.parse(fs.readFileSync(f, 'utf8')).characters.find((c) => c.id === 'mi-nuong').looks[0]
+  if (!lookOf().reference_image?.includes('mi-nuong--co-dau')) throw new Error('asset_import không gắn sheet cho look')
+  const st = await call('project_get', { project_id })
+  if (!st.characters.find((c) => c.id === 'mi-nuong').looks[0].sheet) throw new Error('project_get không báo sheet của look')
+  await call('characters_save', { project_id, characters: [{ ...base, looks: [coDau] }] })
+  if (!lookOf().reference_image) throw new Error('gửi lại look không đổi mà mất sheet')
+  await call('characters_save', { project_id, characters: [{ ...base, looks: [{ ...coDau, appearance: 'thiếu nữ, áo cưới trắng' }] }] })
+  if (lookOf().reference_image) throw new Error('đổi ngoại hình look mà vẫn giữ sheet cũ')
+  const st2 = await call('project_get', { project_id })
+  if (!st2.next_steps.some((s) => s.includes('mi-nuong:co-dau'))) throw new Error('next_steps phải nhắc sinh sheet cho look')
+  console.log('  ✓ look có sheet riêng, giữ/bỏ sheet đúng khi characters_save')
+}
 await client.close()
