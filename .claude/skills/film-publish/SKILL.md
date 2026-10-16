@@ -24,7 +24,7 @@ Hai MCP: **film-studio** soạn bộ đăng bài (offline, ffmpeg, miễn phí) 
 | 1 | Soạn bộ đăng bài | film-studio `episode_publish_kit(platforms)` | Mặc định `youtube, shorts, tiktok, reels` |
 | 2 | **Duyệt cùng user** | đọc `publish/<platform>.txt`, `publish.json` | Xem bảng dưới. Sửa → `episode_publish_kit(title=..., description_intro=..., hashtags=..., chapters=..., made_for_kids=...)` — được lưu, chạy lại không mất |
 | 3 | Đăng nhập (lần đầu / hết hạn) | publisher `publisher_status` → `publisher_login(platforms)` | User đăng nhập xong phải **thoát hẳn** Chrome đó (Cmd+Q) |
-| 4 | Điền sẵn từng nền tảng | publisher `publish_prepare(platform)` → `publish_job_status(wait_sec=50)` | Một nền tảng một lần. Trình `filled` + `manual_steps` + screenshot |
+| 4 | Điền sẵn từng nền tảng | publisher `publish_prepare(platform)` → `publish_job_status(wait_sec=50)` lặp, báo 1 dòng tiến độ mỗi lần | Một nền tảng một lần. Trình `filled` + `manual_steps` + screenshot |
 | 5 | User tự hoàn tất | (user, trong Chrome) | Đọc lại `manual_steps` (vd. TikTok: chọn "Chỉ mình tôi", bật nhãn AI). User bấm Đăng/Lưu |
 | 6 | Ghi nhận | publisher `publish_record(platform, url, visibility)` | Chỉ ghi điều user xác nhận. Link YouTube được chèn vào mô tả tập sau |
 | 7 | Lên công khai (nếu muốn) | user tự đổi trong YouTube Studio / TikTok | Chỉ sau khi user đã xem bản riêng tư và **nói rõ** "công khai bài X". Xong → `publish_record(visibility="public")` |
@@ -48,7 +48,11 @@ Hai MCP: **film-studio** soạn bộ đăng bài (offline, ffmpeg, miễn phí) 
 | Captcha / xác minh | Dừng. User tự làm trong Chrome rồi bảo bạn chạy tiếp |
 | Upload quá lâu | `publish_job_status(wait_sec=50)` thêm; file lớn → tăng `PUBLISH_UPLOAD_TIMEOUT_MS` |
 
+## Kết mỗi bước
+Theo [pipeline.md](../film-story-craft/references/pipeline.md): tóm tắt → đề xuất bước kế → hỏi duyệt (AskUserQuestion: Làm tiếp / Sửa trước / Dừng) → đồng ý thì làm luôn. Xong 1 nền tảng → hỏi nền tảng kế. Xong cả tập → lưu `recap` (nếu chưa) và đề xuất **viết kịch bản tập tiếp theo**; tập cuối → tổng kết dự án.
+
 ## Anti-pattern
+- ❌ Sửa code server/publisher (`scratch/omni/src/**`) khi đang đăng bài — selector hỏng thì hướng dẫn user làm tay và đề xuất việc sửa riêng ([pipeline.md](../film-story-craft/references/pipeline.md)).
 - ❌ Bấm nút đăng hộ, hoặc chuyển công khai khi user chưa nói rõ cho bài đó.
 - ❌ Đăng nhiều nền tảng/nhiều tập dồn một lượt không ai xem — từng bài, có screenshot.
 - ❌ Đăng `final.mp4` nháp ảnh tĩnh.
