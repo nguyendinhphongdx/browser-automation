@@ -43,7 +43,10 @@ Phân số cảnh theo `scene_budget` cho từng nhịp (nhịp cao trào nhiề
 Gọi subagent **`script-doctor`** với `project_id` + `episode_id` (nó tự đọc qua MCP). Sửa `CRITICAL`/`MAJOR` bằng `scene_update` (sửa lẻ) hoặc `episode_script_save` (sửa nhiều). Tối đa 2 vòng.
 
 ### 7. Báo user
-Beat sheet (bảng mốc | nhịp) · số cảnh · độ dài ước tính / mục tiêu · cảnh TTS vs native · điểm script-doctor và đã sửa gì. Hỏi trước khi sinh storyboard (đó là `/film-make`, tốn tiền).
+Beat sheet (bảng mốc | nhịp) · số cảnh · độ dài ước tính / mục tiêu · cảnh TTS vs native · điểm script-doctor và đã sửa gì. Rồi hỏi duyệt bước kế tiếp theo [pipeline.md](../film-story-craft/references/pipeline.md): tập đầu của dự án chưa có character sheet → **sinh character sheet** (nêu số ảnh); đã có → **thoại TTS + storyboard** (nêu số ảnh = số cảnh). Đồng ý → chuyển sang skill `film-production` làm luôn.
+
+## Kết mỗi bước
+Theo [pipeline.md](../film-story-craft/references/pipeline.md): tóm tắt → đề xuất bước kế + chi phí → hỏi duyệt (AskUserQuestion: Làm tiếp / Sửa trước / Dừng) → đồng ý thì làm luôn trong lượt. Không kết bằng một dòng lệnh `/film-…` trơ.
 
 ## Sửa tập đã có
 - Sửa ít cảnh → `scene_update` (server tự bỏ asset không còn khớp, giữ phần không đổi).
@@ -51,6 +54,7 @@ Beat sheet (bảng mốc | nhịp) · số cảnh · độ dài ước tính / m
 - Đổi thoại cảnh native = sinh lại video cảnh đó (tốn tiền) — nói cho user biết.
 
 ## Anti-pattern
+- ❌ Sửa code server (`scratch/omni/src/**`) cho vừa kịch bản — schema thiếu gì thì dừng, đề xuất việc phát triển riêng ([pipeline.md](../film-story-craft/references/pipeline.md)).
 - ❌ Viết scenes trước khi có beat sheet.
 - ❌ Mở tập bằng toàn cảnh + lời dẫn "Ngày xửa ngày xưa…".
 - ❌ `characters` liệt kê cả người chỉ được nhắc tên mà không có trong khung.
