@@ -83,6 +83,11 @@ console.log('preview video_prompt:', pv.video_prompt, '| dur', pv.video_duration
 const off = await call('prompt_preview', { project_id, episode_id: 'e01', scene_id: 's03' })
 if (/giáp vảy cá/.test(off.image_prompt) || /giáp vảy cá/.test(off.video_prompt)) throw new Error('người nói ngoài khung bị đưa vào prompt ảnh/video')
 console.log('  ✓ người nói ngoài khung không bị vẽ vào cảnh')
+// characters: [] = chủ ý không ai trong khung (hồi tưởng có lời kể) → không suy từ người nói
+await call('scene_update', { project_id, episode_id: 'e01', scene_id: 's03', changes: { characters: [] } })
+const empty = await call('prompt_preview', { project_id, episode_id: 'e01', scene_id: 's03' })
+if (/giáp vảy cá|áo choàng xanh lá/.test(empty.image_prompt)) throw new Error('characters: [] vẫn bị suy ra nhân vật từ người nói')
+console.log('  ✓ characters: [] không vẽ ai vào khung')
 
 await expectError('episode_script_save', { project_id, episode_id: 'e01', mode: 'append', scenes: [{ image_prompt: 'x', lines: [{ speaker: 'Mị Nương', text: 'hi' }] }] }, /Mị Nương/)
 await expectError('episode_videos_generate', { project_id, episode_id: 'e01', wait_sec: 5 }, /.*/).catch(async () => {
