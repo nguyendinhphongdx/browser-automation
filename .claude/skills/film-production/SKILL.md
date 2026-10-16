@@ -5,7 +5,7 @@ description: Sản xuất 1 tập phim trong MCP film-studio từ kịch bản �
 
 # film-production — từ kịch bản tới mp4, không đốt tiền oan
 
-Kịch bản phải có trước (skill `film-scene-writing`). Mọi bước sinh là **job nền**: tool trả `job_id` → `job_status(job_id, wait_sec=50)` lặp tới khi xong. `episode_get` luôn cho biết đang ở đâu và `next_steps`.
+Kịch bản phải có trước (skill `film-scene-writing`). Mọi bước sinh là **job nền**: tool trả `job_id` → `job_status(job_id, wait_sec=50)` lặp tới khi xong, **sau mỗi lần báo user 1 dòng tiến độ** (`⏳ storyboard 12/32 xong · 0 lỗi · 3:40`) và không kết lượt khi job còn chạy ([pipeline.md](../film-story-craft/references/pipeline.md) — luật chờ job). `episode_get` luôn cho biết đang ở đâu và `next_steps`.
 
 ## Thứ tự & cổng
 
@@ -24,6 +24,9 @@ Kịch bản phải có trước (skill `film-scene-writing`). Mọi bước sin
 
 `episode_run` chạy nhiều bước liền — chỉ dùng cho 2 lượt: `["references","audio","storyboard"]` → duyệt → `["videos","music","assemble"]`, và chỉ khi user đã đồng ý chi phí lượt 2.
 
+## Kết mỗi bước
+Theo [pipeline.md](../film-story-craft/references/pipeline.md): xong mỗi dòng của bảng trên → tóm tắt (kèm quota vừa tốn) → đề xuất dòng kế + chi phí → hỏi duyệt (AskUserQuestion: Làm tiếp / Sửa trước / Dừng) → đồng ý thì chạy luôn. Ghép xong `final.mp4` → đề xuất **đăng bài** (skill `film-publish`, miễn phí).
+
 ## Duyệt storyboard cùng user — soi gì
 
 - Nhân vật đúng character sheet (mặt, trang phục, phụ kiện)? Sai → thêm chi tiết vào `image_prompt` hoặc giảm số nhân vật trong khung.
@@ -41,9 +44,13 @@ Kịch bản phải có trước (skill `film-scene-writing`). Mọi bước sin
 | 429 / RESOURCE_EXHAUSTED liên tục | Đợi vài phút; đề nghị user giảm `FILM_CONCURRENCY` |
 | "Không có job" sau khi restart | Job chỉ sống trong process — xem trạng thái thật bằng `episode_get` |
 | Video thiếu thoại / sai khẩu hình (native) | Cân nhắc `audio_mode: "tts"` cho cảnh đó qua `scene_update` |
+| Ảnh bị chặn "prohibited content" ở khung cận/trung cảnh một nhân vật nữ | Thường do trang phục trong `appearance` (vd "áo yếm") lên khung cận. Thêm "khoác kín áo choàng … từ cổ xuống" vào `image_prompt` cảnh đó rồi sinh lại riêng cảnh ấy. Lặp lại nhiều lần → cân nhắc sửa `appearance` (mất character sheet, phải sinh lại) |
+| Video bị chặn "safety violations" | Cảnh trẻ em/người ở chỗ nguy hiểm: viết lại `video_prompt` cho tư thế vững vàng, bớt từ hiểm nguy, rồi sinh lại riêng cảnh đó |
+| Lệnh CLI (`src/cli.js`) lỗi `fetch failed` hàng loạt | Sandbox chặn mạng của lệnh shell; MCP server không bị. Chạy lại ngoài sandbox, không tốn quota vì request chưa đi |
 | Phim lệch độ dài mục tiêu | Sửa kịch bản (thêm/bớt cảnh) trước khi sinh thêm video |
 
 ## Anti-pattern
+- ❌ Sửa code server (`scratch/omni/src/**`, test, `package.json`) hay sửa tay `project.json` khi đang làm phim — thiếu tính năng thì dừng, đề xuất việc phát triển riêng ([pipeline.md](../film-story-craft/references/pipeline.md)).
 - ❌ `force=true` cả tập để sửa 1–2 cảnh.
 - ❌ Sinh video khi storyboard chưa duyệt hoặc chưa xem nháp ảnh tĩnh.
 - ❌ `require_approval=false` khi user chưa nói rõ.
