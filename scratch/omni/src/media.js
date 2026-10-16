@@ -244,6 +244,50 @@ export async function resizeImage(file, width, outFile) {
   return outFile
 }
 
+/**
+ * Khung dọc 9:16 cho TikTok / Reels / Shorts từ phim ngang.
+ * blur = giữ trọn khung gốc ở giữa, nền là chính hình đó phóng to + làm mờ (không mất chi tiết hai bên);
+ * crop = cắt giữa cho đầy khung (mất hai bên, hợp cảnh nhân vật đứng giữa).
+ * maxSec = cắt bớt (teaser) + fade cuối. Giữ track phụ đề mềm nếu có.
+ */
+function verticalFilter(width, height, mode) {
+  if (mode === 'crop') return `scale=-2:${height},crop=${width}:${height},setsar=1`
+  return (
+    `split[a][b];[a]scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},gblur=sigma=40,eq=brightness=-0.08[bg];` +
+    `[b]scale=${width}:-2[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2,setsar=1`
+  )
+}
+
+export async function reframeVertical({ input, outFile, width, height, mode = 'blur', maxSec }) {
+  let vf = verticalFilter(width, height, mode)
+  let af = 'anull'
+  if (maxSec) {
+    const st = Math.max(0, maxSec - 1).toFixed(3)
+    vf += `,fade=t=out:st=${st}:d=1`
+    af = `afade=t=out:st=${st}:d=1`
+  }
+  await ffmpeg([
+    '-i', input,
+    '-filter_complex', `[0:v]${vf}[v];[0:a]${af}[a]`,
+    '-map', '[v]', '-map', '[a]', '-map', '0:s?', '-c:s', 'copy',
+    ...VIDEO_ENC, '-profile:v', 'high', ...AUDIO_ENC,
+    ...(maxSec ? ['-t', maxSec.toFixed(3)] : []),
+    '-movflags', '+faststart', outFile
+  ])
+  return outFile
+}
+
+export async function reframeVerticalImage({ input, outFile, width, height, mode = 'blur' }) {
+  await ffmpeg(['-i', input, '-filter_complex', `[0:v]${verticalFilter(width, height, mode)}[v]`, '-map', '[v]', '-frames:v', '1', '-q:v', '2', outFile])
+  return outFile
+}
+
+/** Nén lại ảnh bìa cho vừa giới hạn dung lượng (YouTube thumbnail ≤ 2MB). */
+export async function compressImage(input, outFile, { width = 1280, quality = 3 } = {}) {
+  await ffmpeg(['-i', input, '-vf', `scale='min(${width},iw)':-2`, '-frames:v', '1', '-q:v', String(quality), outFile])
+  return outFile
+}
+
 export async function thumbnail(video, atSec, outFile) {
   await ffmpeg(['-ss', atSec.toFixed(2), '-i', video, '-frames:v', '1', '-q:v', '2', outFile])
   return outFile

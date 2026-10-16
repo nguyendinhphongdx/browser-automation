@@ -1,3 +1,4 @@
 .env
 projects/
 node_modules/
+.browser-profile/

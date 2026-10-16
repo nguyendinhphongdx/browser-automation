@@ -11,6 +11,7 @@ Agent là biên kịch kiêm đạo diễn. Server lo sinh asset (Gemini) và d�
 ## Yêu cầu
 
 - Node ≥ 20, `ffmpeg` + `ffprobe` (`brew install ffmpeg`)
+- Google Chrome (chỉ cần cho MCP `publisher`)
 - `GEMINI_API_KEY`
 
 ```bash
@@ -58,6 +59,7 @@ Nên bắt đầu bằng prompt có sẵn **`brainstorm_series`** (Claude Code: 
 | `/film-write <project> [tập]` | kịch bản chi tiết + phân cảnh, giữ liên tục (skill `film-scene-writing`) |
 | `/film-review <project> [tập]` | agent `script-doctor` chấm rubric + đề xuất sửa |
 | `/film-make <project> <tập>` | sinh asset tới mp4, hỏi trước bước tốn tiền (skill `film-production`) |
+| `/film-publish <project> <tập>` | bộ đăng bài + điền sẵn trong Chrome, bạn tự bấm Đăng (skill `film-publish`) |
 | `/film-status [project]` | tiến độ + quota |
 
 `.mcp.json` chạy server qua `git rev-parse --show-toplevel`, nên mở Claude Code ở gốc repo hay ở `scratch/omni` đều kết nối được.
@@ -73,6 +75,7 @@ Nên bắt đầu bằng prompt có sẵn **`brainstorm_series`** (Claude Code: 
 | Tập | `episode_script_save` (kịch bản chi tiết + phân cảnh), `episode_get`, `scene_update`, `prompt_preview` |
 | Sinh | `episode_audio_generate`, `storyboard_generate`, `storyboard_review`, `storyboard_approve`, `episode_videos_generate`, `music_generate` |
 | Dựng | `episode_assemble`, `episode_run` (chạy nhiều bước), `asset_import` (dùng file của bạn) |
+| Đăng bài | `episode_publish_kit` (tiêu đề, mô tả, chapter, hashtag, ảnh bìa, phụ đề, bản dọc 9:16 + teaser → `publish/publish.json`) — xem [Đăng bài](#đăng-bài) |
 | Quota | `usage_report` (gom theo kind / model / purpose / episode / scene / day; `project_get` có tóm tắt) |
 | Job | `job_status` (có `wait_sec`), `job_list` |
 
@@ -96,6 +99,51 @@ nên restart server không mất kết quả.
 - **Âm thanh cuối.** Nhạc nền lặp cho đủ dài và tự hạ khi có thoại (sidechain), chuẩn hoá -14 LUFS, fade đầu / cuối.
 - **Đầu ra.** Mỗi tập ra `final.mp4` (H.264 / AAC, +faststart), `final.srt` (cũng nhúng thành track phụ đề mềm) và `cover.jpg`.
   Nếu ffmpeg có libass thì `burn_subtitles=true` sẽ đốt cứng phụ đề vào hình.
+
+## Đăng bài
+
+Hai lớp, tách riêng:
+
+**1. Bộ đăng bài** — tool `episode_publish_kit` của `film-studio`. Chạy offline bằng ffmpeg, miễn phí, chạy lại bao nhiêu lần cũng được.
+Kết quả ghi vào `episodes/<ep>/publish/`:
+
+| File | Nội dung |
+|---|---|
+| `publish.json` | manifest cho publisher: tiêu đề, mô tả, thẻ, hashtag, chapter, file + chế độ riêng tư từng nền tảng; `uploads` do publisher ghi |
+| `<nền tảng>.txt` | tiêu đề + mô tả/caption để dán tay |
+| `thumbnail.jpg`, `cover-vertical.jpg`, `captions.<lang>.srt` | ảnh bìa ngang (≤ 2MB) / dọc, phụ đề |
+| `vertical.mp4`, `vertical-90s.mp4`, `vertical-180s.mp4` | bản dọc 9:16 (`blur`: giữ trọn khung, nền mờ · `crop`: cắt giữa). Tập dài hơn giới hạn Reels (90s) / Shorts (3 phút) → teaser cắt ở ranh giới cảnh |
+
+- Chapter dựng từ mốc cảnh thật (`output.scene_starts`, ghi khi `episode_assemble`), đặt tên theo `beats` của tập.
+  Chuẩn YouTube: ≥ 3 mục, mục đầu 0:00, mỗi mục ≥ 10s; không đạt thì bỏ mục lục.
+- Mô tả không đưa `ending` của bible hay `cliffhanger` vào, để không lộ nội dung. Tập trước đã đăng thì có link sang.
+- Chỉnh sửa (`title`, `description_intro`, `hashtags`, `chapters`, `made_for_kids`, `altered_content`, `vertical_mode`) được lưu vào `episode.publish`; chạy lại không mất.
+
+**2. MCP `publisher`** (`src/publisher/`, khai báo trong `.mcp.json`) — đăng bằng **Chrome thật** của bạn:
+- Profile riêng `scratch/omni/.browser-profile/` (git bỏ qua).
+- `publisher_login` mở Chrome **thường**, không automation. Bạn tự đăng nhập YouTube / TikTok / Facebook, kể cả 2FA, rồi thoát hẳn Chrome đó (Cmd+Q). Cookie ở lại profile.
+- `publish_prepare` mở trang upload bằng Playwright trên đúng profile đó: chọn file, điền tiêu đề, mô tả, thẻ, ảnh bìa, "dành cho trẻ em", chế độ **riêng tư**.
+  Xong thì **dừng trước nút Đăng/Lưu** và trả screenshot + danh sách việc bạn cần tự làm.
+- **Server không có cách nào bấm Đăng.** Bạn tự bấm, rồi `publish_record` ghi link lại.
+- Không giả vân tay trình duyệt, không giải captcha, không lưu mật khẩu, thao tác tốc độ người.
+  Gặp captcha / xác minh thì dừng để bạn tự xử lý.
+
+| Tool | Việc |
+|---|---|
+| `publisher_status` | profile, browser đang mở chưa, bài nào đã chuẩn bị / đăng |
+| `publisher_login` | mở Chrome thường để bạn đăng nhập |
+| `publish_prepare` → `publish_job_status` | điền sẵn 1 nền tảng (`youtube`, `shorts`, `tiktok`, `reels`), dừng trước nút Đăng |
+| `publish_screenshot` | ảnh tab đang đăng |
+| `publish_record` | ghi link + chế độ hiển thị sau khi bạn bấm |
+| `publisher_close` | đóng Chrome của publisher |
+
+Giao diện các nền tảng hay đổi. Selector gom ở `sel` trong `src/publisher/platforms.js`; bước nào không tìm thấy thì chuyển thành việc làm tay, không bấm bừa.
+Adapter mới chỉ được thử trên trang giả. Lần đăng thật đầu tiên nên làm cùng nhau và xem screenshot từng bước.
+
+Ghi chú nền tảng (docs, 10/2026):
+- Facebook Reels: 3–90s, 9:16. Reels đăng lên Page luôn công khai khi bấm Đăng.
+- YouTube: Shorts tối đa 3 phút. Bắt buộc khai báo "dành cho trẻ em".
+- TikTok: hiện "Chỉ mình tôi" và nhãn "Nội dung do AI tạo" là việc làm tay trong `manual_steps`.
 
 ## Dashboard web
 
@@ -132,6 +180,9 @@ theo https://ai.google.dev/gemini-api/docs/pricing. Server không tự đoán gi
 | `FILM_VIDEO_MIN_SEC` / `FILM_VIDEO_MAX_SEC` | 4 / 10 (giới hạn của gemini-omni-1.1-flash) |
 | `FILM_CONCURRENCY` | 3 |
 | `FILM_PRICING_FILE` | `pricing.json` (bảng đơn giá để ước tính chi phí) |
+| `PUBLISH_PROFILE_DIR` | `.browser-profile` (profile Chrome của publisher) |
+| `PUBLISH_CHROME_PATH` | Chrome cài trên máy |
+| `PUBLISH_UPLOAD_TIMEOUT_MS` | 180000 (chờ upload xong tới khi form hiện) |
 | `HTTPS_PROXY` | hỗ trợ (fetch của Node mặc định bỏ qua biến này) |
 
 ## Test
@@ -139,6 +190,8 @@ theo https://ai.google.dev/gemini-api/docs/pricing. Server không tự đoán gi
 ```bash
 node test/smoke-assemble.js   # dựng phim offline bằng asset giả (ffmpeg), không tốn API
 node test/smoke-mcp.js        # đi hết luồng tool qua MCP client thật, không tốn API
+node test/smoke-publish.js    # bộ đăng bài offline: chapter, hashtag, bản dọc 9:16, teaser, chạy lại giữ chỉnh sửa
+node test/smoke-publisher.js  # publisher với trang upload giả + Chrome headless: điền đúng, KHÔNG bấm Đăng
 GEMINI_API_KEY=... node test/live-cheap.js   # 1 câu TTS + 1 ảnh
 GEMINI_API_KEY=... node test/live-refs.js    # character sheet + ảnh phân cảnh dùng sheet
 GEMINI_API_KEY=... node test/live-usage.js   # sổ quota: ảnh, TTS sinh lại, 1 lần lỗi

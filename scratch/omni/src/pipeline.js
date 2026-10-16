@@ -470,6 +470,8 @@ export async function assembleEpisode(projectId, episodeId, opts = {}, log = () 
     music: useMusic,
     subtitles: cues.length ? (burnedSubtitles ? 'burned-in' : 'soft-track + .srt') : 'none',
     stills_used: noVideo,
+    // Mốc từng cảnh trên phim cuối — publish kit dựng chapter từ đây.
+    scene_starts: scenes.map((s, i) => ({ id: s.id, start: Number(starts[i].toFixed(2)) })),
     assembled_at: new Date().toISOString()
   }
   await updateProject(projectId, (p) => {

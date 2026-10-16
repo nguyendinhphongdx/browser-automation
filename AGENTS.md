@@ -74,7 +74,7 @@ Mỗi app/package có `CLAUDE.md` riêng khi cần context hẹp (vd `apps/serve
 | `docs-write` | Tạo 1 trang docs mới đúng số thứ tự + template, đúng cây (`architecture`/`conventions`/`development`/`user-guide`) |
 | `adr-write` | Tạo ADR mới từ `docs/adr/_template.md`, numbering kế tiếp, mặc định status Proposed |
 
-### Film Studio (`scratch/omni`, MCP `film-studio`)
+### Film Studio (`scratch/omni`, MCP `film-studio` + `publisher`)
 
 | Skill / lệnh | Khi dùng |
 |---|---|
@@ -82,6 +82,7 @@ Mỗi app/package có `CLAUDE.md` riêng khi cần context hẹp (vd `apps/serve
 | `film-scene-writing` · `/film-write <project> [tập]` | Kịch bản chi tiết + phân cảnh 1 tập, giữ liên tục qua `story_context` + `recap` |
 | agent `script-doctor` · `/film-review <project> [tập]` | Chấm bible/kịch bản theo rubric, trả danh sách sửa theo mức độ |
 | `film-production` · `/film-make <project> <tập>` | Sinh asset tới final.mp4, có cổng xác nhận chi phí |
+| `film-publish` · `/film-publish <project> <tập>` | Bộ đăng bài (tiêu đề, mô tả, chapter, hashtag, bản dọc 9:16) → MCP `publisher` điền sẵn trong Chrome của user, user tự bấm Đăng; mặc định riêng tư |
 | `/film-status [project]` | Tiến độ + quota |
 
 Kiến thức nghề truyện nằm 1 chỗ: `.claude/skills/film-story-craft/references/` — skill khác và `script-doctor` link sang, không chép lại. Việc code vẫn dùng Plan/Explore built-in.

@@ -9,6 +9,7 @@ import { BRAINSTORM_PROMPT, EPISODE_PROMPT, GUIDE, VOICES } from './guide.js'
 import * as jobs from './jobs.js'
 import { TRANSITIONS, layoutLines, probe } from './media.js'
 import * as pipeline from './pipeline.js'
+import * as publish from './publish.js'
 import { USAGE_GROUPS, usageReport } from './usage.js'
 import { startDashboard } from './dashboard/http.js'
 import {
@@ -793,6 +794,43 @@ server.registerTool(
       }
     })
     return json({ imported: kind, target })
+  })
+)
+
+// ═══════════════ Đăng bài ═══════════════
+
+server.registerTool(
+  'episode_publish_kit',
+  {
+    title: 'Bộ đăng bài cho 1 tập',
+    description:
+      'Từ kịch bản + final.mp4 sinh bộ đăng bài vào episodes/<ep>/publish/: tiêu đề, mô tả tiếng Việt (hook, tóm tắt, mục lục chapter theo mốc cảnh, link tập trước/sau), hashtag, tags, ' +
+      'ảnh bìa, phụ đề, bản dọc 9:16 (TikTok/Reels/Shorts; tập dài hơn giới hạn → teaser cắt ở ranh giới cảnh) + publish.json cho publisher. ' +
+      'Offline (ffmpeg), chạy lại thoải mái. Truyền title/description_intro/hashtags/chapters/made_for_kids/vertical_mode để chỉnh — được LƯU, lần sau giữ nguyên.',
+    inputSchema: {
+      project_id: projectId,
+      episode_id: episodeId,
+      platforms: z.array(z.enum(Object.keys(publish.PLATFORMS))).optional().describe('Mặc định youtube, shorts, tiktok, reels'),
+      title: z.string().optional().describe('Ghi đè tiêu đề (mặc định "<phim> — Tập N: <tên tập>")'),
+      description_intro: z.string().optional().describe('Đoạn mở đầu mô tả/caption (mặc định = hook của tập)'),
+      hashtags: z.array(z.string()).optional().describe('Hashtag thêm vào ĐẦU danh sách (YouTube hiện 3 cái đầu trên tiêu đề)'),
+      chapters: z.array(z.object({ scene_id: z.string(), title: z.string() })).optional().describe('Chốt chapter: mỗi mục bắt đầu tại 1 cảnh. Mục đầu luôn là 0:00'),
+      made_for_kids: z.boolean().optional().describe('YouTube bắt buộc: nội dung DÀNH CHO TRẺ EM? Hỏi người dùng — không tự đoán'),
+      altered_content: z.boolean().optional().describe('YouTube "nội dung bị biến đổi/tổng hợp trông như thật". Mặc định: chỉ true khi style tả thực; hoạt hình → false'),
+      vertical_mode: z.enum(['blur', 'crop']).optional().describe('blur (mặc định) = giữ trọn khung, nền mờ; crop = cắt giữa đầy khung'),
+      reset: z.boolean().optional().describe('Xoá mọi chỉnh sửa đã lưu, sinh lại từ kịch bản'),
+      force: z.boolean().optional().describe('Render lại bản dọc dù không đổi gì'),
+      wait_sec: waitSec
+    }
+  },
+  safe(async ({ project_id, episode_id, platforms, reset, force, wait_sec, ...edits }) => {
+    await updateProject(project_id, (p) => {
+      const ep = findEpisode(p, episode_id)
+      if (reset) delete ep.publish
+      const changed = definedOnly(edits)
+      if (Object.keys(changed).length) ep.publish = { ...ep.publish, ...changed }
+    })
+    return launch('publish_kit', project_id, wait_sec ?? 55, (log) => publish.buildPublishKit(project_id, episode_id, { platforms, force }, log))
   })
 )
 

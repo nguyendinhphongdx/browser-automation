@@ -4,6 +4,11 @@
       "type": "stdio",
       "command": "sh",
       "args": ["-c", "cd \"$(git rev-parse --show-toplevel)\" && exec node scratch/omni/src/server.js"]
+    },
+    "publisher": {
+      "type": "stdio",
+      "command": "sh",
+      "args": ["-c", "cd \"$(git rev-parse --show-toplevel)\" && exec node scratch/omni/src/publisher/server.js"]
     }
   }
 }

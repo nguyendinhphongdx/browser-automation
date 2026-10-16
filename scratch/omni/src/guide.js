@@ -57,6 +57,8 @@ Bạn (agent) là biên kịch kiêm đạo diễn, làm việc CÙNG người d
 10. **episode_videos_generate**: ảnh → video. Chỉ chạy khi tập đủ ảnh và đã duyệt. Đây là bước tốn tiền và thời gian nhất.
 11. **music_generate**: nhạc nền của tập.
 12. **episode_assemble**: ghép thành \`episodes/<id>/output/final.mp4\` (+ \`.srt\`, \`cover.jpg\`).
+13. **episode_publish_kit** (miễn phí): bộ đăng bài — tiêu đề, mô tả, chapter, hashtag, ảnh bìa, bản dọc 9:16 cho TikTok/Reels/Shorts.
+    Duyệt cùng người dùng, hỏi \`made_for_kids\`. Đăng bằng MCP **publisher** (điền sẵn trong Chrome của người dùng, người dùng tự bấm Đăng).
 
 **episode_run** chạy nhiều bước liền nhau. Nên chạy 2 lượt: \`["references","audio","storyboard"]\` → duyệt → \`["videos","music","assemble"]\`.
 Các bước sinh là job nền: tool trả \`job_id\`, theo dõi bằng **job_status**(job_id, wait_sec=50).
@@ -141,7 +143,8 @@ ${Object.entries(config.models).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
 \`${config.projectsDir}/<project_id>/\`: project.json, characters/, locations/,
 episodes/<ep>/scenes/<sc>/{image, preview.jpg, line-XX.wav, audio.wav, video.mp4, segment.mp4},
-episodes/<ep>/music/, episodes/<ep>/output/{final.mp4, final.srt, cover.jpg}
+episodes/<ep>/music/, episodes/<ep>/output/{final.mp4, final.srt, cover.jpg},
+episodes/<ep>/publish/{publish.json, <nền tảng>.txt, thumbnail.jpg, vertical.mp4, ...}
 `
 
 export const BRAINSTORM_PROMPT = ({ idea, episodes, platform }) => `Chúng ta sẽ cùng làm 1 dự án phim bằng MCP server "film-studio". Ý tưởng ban đầu: ${idea}
