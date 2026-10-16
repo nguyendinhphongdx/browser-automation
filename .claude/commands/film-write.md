@@ -10,4 +10,4 @@ Dùng skill `film-scene-writing`.
 - Thiếu episode_id → chọn tập sớm nhất chưa có kịch bản (theo `story_context`); tất cả đã có → đề xuất tập tiếp theo nối mạch.
 - Phần còn lại của tham số là ghi chú/yêu cầu sửa của tôi — ưu tiên nó.
 
-Kết thúc ở bước báo cáo (beat sheet, số cảnh, độ dài, điểm script-doctor). Không sinh storyboard/video.
+Báo cáo (beat sheet, số cảnh, độ dài, điểm script-doctor), rồi theo luật "kết mỗi bước" ở `.claude/skills/film-story-craft/references/pipeline.md`: đề xuất bước sản xuất kế tiếp kèm số ảnh sẽ sinh, hỏi tôi duyệt; tôi đồng ý thì làm luôn theo skill `film-production`.
