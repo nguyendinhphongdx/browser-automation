@@ -30,6 +30,8 @@ Quy tắc liên tục: giữ trục 180° trong đối thoại (A luôn bên tr�
 
 Không lặp ngoại hình/phụ kiện (server tự thêm). Không yêu cầu chữ trong hình.
 
+**Đổi ngoại hình giữa tập** (thay đồ, trang điểm xong, bị thương): nhân vật phải có look tương ứng (`characters_save` → `looks`), rồi từ cảnh đổi trở đi ghi `"looks": { "<id nhân vật>": "<id look>" }`. Server dùng appearance + sheet của look đó thay dáng gốc. Đừng vá bằng "ĐÃ THAY ĐỒ…" trong image_prompt.
+
 ## video_prompt — mẫu
 
 `[1 hành động chính, có điểm đầu → điểm cuối] + [1 chuyển động máy]`
