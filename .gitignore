@@ -10,6 +10,6 @@ out/
 Thumbs.db
 .claude/*
 !.claude/skills
+!.claude/commands
+!.claude/agents
 .pnpm-store/
-# Script test cục bộ của dev, có thể chứa key thật — không commit
-scratch/

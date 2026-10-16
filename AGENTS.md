@@ -17,7 +17,8 @@ apps/server/    Next.js 16 App Router — lớp cloud TUỲ CHỌN: auth, backup
 packages/shared-types/   Type TS dùng chung desktop ↔ server, zero-dep
 packages/fingerprint/    Sinh + inject fingerprint chống phát hiện
 docs/           architecture/ (hiện trạng) · conventions/ (đích) · adr/ (vì sao) · development/ (quy trình contributor) · user-guide/ (end-user)
-.claude/        skills/ (mỏng, trỏ vào docs/)
+.claude/        skills/ (mỏng, trỏ vào docs/) · skills/film-* + commands/ + agents/script-doctor cho Film Studio
+scratch/omni/   Film Studio MCP server (kịch bản → mp4, Gemini + ffmpeg) — xem scratch/omni/README.md
 ```
 
 Mỗi app/package có `CLAUDE.md` riêng khi cần context hẹp (vd `apps/server/CLAUDE.md` → cảnh báo Next.js 16 breaking change) — đọc trước khi sửa code trong đó, convention package-level thắng nếu xung đột với root.
@@ -56,7 +57,7 @@ Mỗi app/package có `CLAUDE.md` riêng khi cần context hẹp (vd `apps/serve
 - ❌ Ghi `docs/conventions/` thành bản chép hiện trạng khi hiện trạng còn lệch — hạ chuẩn đích xuống bằng code cũ là làm sai mục đích cây docs này.
 - ❌ Tạo component dùng chung bên trong `renderer/pages/<feature>/` rồi import ngược sang `components/` — lỗi thật đã gặp, xem [docs/conventions/02](docs/conventions/02-renderer-layering.md).
 - ❌ Tách `Window.api` bằng nhiều `declare global { interface Window {...} } }` riêng — đã thử, lỗi `TS2717` (TS không merge khác type cùng field). Xem [ADR-0001](docs/adr/0001-window-api-composition.md).
-- ❌ Thêm `.claude/agents/` tuỳ biến khi Plan/Explore built-in của Claude Code đã đủ cho quy mô 1 dev (YAGNI).
+- ❌ Thêm `.claude/agents/` tuỳ biến cho việc code khi Plan/Explore built-in đã đủ (YAGNI). Ngoại lệ có chủ đích: `script-doctor` — biên tập kịch bản độc lập cho Film Studio (người viết tự chấm bài mình thì không khách quan).
 - ❌ Lặp nội dung giữa `architecture/`/`conventions/`/`adr/` — mỗi chủ đề có đúng 1 nơi canonical, chỗ khác chỉ link sang.
 
 ## Writing rule (mọi docs trong repo)
@@ -73,7 +74,19 @@ Mỗi app/package có `CLAUDE.md` riêng khi cần context hẹp (vd `apps/serve
 | `docs-write` | Tạo 1 trang docs mới đúng số thứ tự + template, đúng cây (`architecture`/`conventions`/`development`/`user-guide`) |
 | `adr-write` | Tạo ADR mới từ `docs/adr/_template.md`, numbering kế tiếp, mặc định status Proposed |
 
-Không có `.claude/agents/` hay `.claude/commands/` tuỳ biến — dùng Plan/Explore built-in của Claude Code cho việc plan/khám phá code lớn.
+### Film Studio (`scratch/omni`, MCP `film-studio` + `publisher`)
+
+| Skill / lệnh | Khi dùng |
+|---|---|
+| `film-story-craft` · `/film-new <ý tưởng>` | Phim mới từ 1 câu: concept → bible → nhân vật → dàn ý tập, lưu vào film-studio |
+| `film-scene-writing` · `/film-write <project> [tập]` | Kịch bản chi tiết + phân cảnh 1 tập, giữ liên tục qua `story_context` + `recap` |
+| agent `script-doctor` · `/film-review <project> [tập]` | Chấm bible/kịch bản theo rubric, trả danh sách sửa theo mức độ |
+| `film-production` · `/film-make <project> <tập>` | Sinh asset tới final.mp4, có cổng xác nhận chi phí |
+| `film-publish` · `/film-publish <project> <tập>` | Bộ đăng bài (tiêu đề, mô tả, chapter, hashtag, bản dọc 9:16) → MCP `publisher` điền sẵn trong Chrome của user, user tự bấm Đăng; mặc định riêng tư |
+| `/film-status [project]` | Tiến độ + quota |
+
+Kiến thức nghề truyện nằm 1 chỗ: `.claude/skills/film-story-craft/references/` — skill khác và `script-doctor` link sang, không chép lại.
+Bản đồ quy trình + luật "kết mỗi bước" (tóm tắt → đề xuất bước kế + chi phí → hỏi duyệt → đồng ý thì làm luôn): `references/pipeline.md` — mọi skill/lệnh film-* theo nó. Việc code vẫn dùng Plan/Explore built-in.
 
 ## Checklist trước khi commit
 

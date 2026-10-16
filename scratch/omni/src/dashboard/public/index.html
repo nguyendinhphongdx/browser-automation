@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Film Studio</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --panel: #ffffff; --panel-2: #f0eee9; --text: #1d1c1a; --muted: #6b6862; --line: #e2dfd8;
+    --accent: #b5532c; --accent-soft: #f6e3da; --ok: #2f7d4f; --ok-soft: #dcefe3; --warn: #a86b00; --warn-soft: #f8ecd2;
+    --err: #b3261e; --err-soft: #f7dcda; --info: #2c5f9e; --info-soft: #dde8f6;
+    --radius: 10px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151413; --panel: #1f1e1c; --panel-2: #282624; --text: #ece9e3; --muted: #9b968d; --line: #34312e;
+      --accent: #e0805a; --accent-soft: #3a2a22; --ok: #6cc193; --ok-soft: #1f3328; --warn: #e3b25a; --warn-soft: #3a2f1a;
+      --err: #f08a82; --err-soft: #3d2120; --info: #8ab4ec; --info-soft: #1e2a3b; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  a { color: inherit; text-decoration: none; }
+  header { position: sticky; top: 0; z-index: 10; background: var(--panel); border-bottom: 1px solid var(--line); }
+  .bar { max-width: 1400px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+  .brand { font-weight: 700; letter-spacing: .2px; }
+  .crumbs { color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
+  .crumbs a:hover { color: var(--text); }
+  .live { margin-left: auto; display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.on { background: var(--ok); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 50% { opacity: .35; } }
+  main { max-width: 1400px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 15px; margin: 28px 0 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+  .sub { color: var(--muted); }
+  .grid { display: grid; gap: 12px; }
+  .cards { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .card.link:hover { border-color: var(--accent); }
+  .card .body { padding: 12px; }
+  .cover { aspect-ratio: 16/9; background: var(--panel-2); width: 100%; object-fit: cover; display: block; }
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .pill { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--panel-2); color: var(--muted); white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.err { background: var(--err-soft); color: var(--err); }
+  .pill.info { background: var(--info-soft); color: var(--info); }
+  .pill.accent { background: var(--accent-soft); color: var(--accent); }
+  .refs { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .refs img { aspect-ratio: 16/9; object-fit: cover; width: 100%; display: block; background: var(--panel-2); cursor: zoom-in; }
+  .top { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .top { grid-template-columns: 1fr; } }
+  video.player { width: 100%; border-radius: var(--radius); background: #000; display: block; }
+  .empty-player { aspect-ratio: 16/9; border-radius: var(--radius); border: 1px dashed var(--line); display: grid; place-items: center; color: var(--muted); background: var(--panel); }
+  .stats { display: grid; gap: 10px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+  .stat .k { color: var(--muted); font-size: 12px; }
+  .stat .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .progress { display: grid; gap: 8px; }
+  .prow { display: grid; grid-template-columns: 70px 1fr 64px; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+  .track { height: 8px; background: var(--panel-2); border-radius: 99px; overflow: hidden; }
+  .fill { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s; }
+  .fill.done { background: var(--ok); }
+  .next { margin: 0; padding-left: 18px; }
+  .next li { margin: 3px 0; }
+  .next li.warn { color: var(--warn); }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 24px 0 14px; overflow-x: auto; }
+  .tab { padding: 8px 14px; border: 0; background: none; color: var(--muted); font: inherit; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+  .tab.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+  .scenes { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+  .scene { cursor: pointer; position: relative; }
+  .scene:hover { border-color: var(--accent); }
+  .scene .thumb { aspect-ratio: 16/9; background: var(--panel-2); position: relative; overflow: hidden; }
+  .scene .thumb img, .scene .thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .scene .id { position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,.65); color: #fff; font-size: 11px; padding: 1px 6px; border-radius: 6px; font-weight: 600; }
+  .scene .tr { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,.55); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 6px; }
+  .scene .noimg { display: grid; place-items: center; height: 100%; color: var(--muted); font-size: 12px; }
+  .scene .body { padding: 8px 10px 10px; }
+  .scene .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .scene .line { color: var(--muted); font-size: 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 36px; }
+  .status { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+  .chk { font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--panel-2); color: var(--muted); }
+  .chk.y { background: var(--ok-soft); color: var(--ok); }
+  .chk.e { background: var(--err-soft); color: var(--err); }
+  .jobs { display: grid; gap: 10px; }
+  .job { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+  .job pre, .script { white-space: pre-wrap; word-break: break-word; font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); margin: 8px 0 0; max-height: 220px; overflow: auto; }
+  .script { max-height: none; font: 14px/1.7 inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; font-family: inherit; }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; background: var(--panel-2); }
+  .tablewrap { overflow-x: auto; }
+  .drawer-bg { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 20; display: none; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(720px, 100vw); background: var(--panel); z-index: 21; overflow: auto; transform: translateX(100%); transition: transform .2s; border-left: 1px solid var(--line); }
+  .drawer.open { transform: none; }
+  .drawer-bg.open { display: block; }
+  .drawer .head { position: sticky; top: 0; background: var(--panel); padding: 12px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; z-index: 1; }
+  .drawer .content { padding: 16px; display: grid; gap: 14px; }
+  .drawer img, .drawer video { width: 100%; border-radius: var(--radius); display: block; background: #000; }
+  .btn { border: 1px solid var(--line); background: var(--panel-2); color: var(--text); border-radius: 8px; padding: 6px 10px; font: inherit; cursor: pointer; }
+  .btn:hover { border-color: var(--accent); }
+  .lines { display: grid; gap: 6px; }
+  .say { background: var(--panel-2); border-radius: 8px; padding: 8px 10px; }
+  .say b { color: var(--accent); font-weight: 600; }
+  .say small { color: var(--muted); }
+  .kv { display: grid; grid-template-columns: 120px 1fr; gap: 6px 12px; font-size: 13px; }
+  .kv div:nth-child(odd) { color: var(--muted); }
+  .err-box { background: var(--err-soft); color: var(--err); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 30; display: none; place-items: center; padding: 20px; cursor: zoom-out; }
+  .lightbox.open { display: grid; }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+  .muted { color: var(--muted); }
+  .flex { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font: inherit; }
+  .error-page { padding: 40px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <a class="brand" href="#/">🎬 Film Studio</a>
+  <nav class="crumbs" id="crumbs"></nav>
+  <div class="live" id="live"><span class="dot"></span><span>—</span></div>
+</div></header>
+<main id="app"><div class="error-page">Đang tải…</div></main>
+
+<div class="drawer-bg" id="drawerBg"></div>
+<aside class="drawer" id="drawer"></aside>
+<div class="lightbox" id="lightbox"><img alt=""></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s)
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+const fmt = (sec) => (sec == null ? '—' : `${Math.floor(sec / 60)}:${String(Math.round(sec % 60)).padStart(2, '0')}`)
+const num = (n, d = 0) => (n == null ? '—' : Number(n).toLocaleString('vi-VN', { maximumFractionDigits: d }))
+const api = async (p) => {
+  const r = await fetch(p)
+  const j = await r.json()
+  if (!r.ok) throw new Error(j.error || r.statusText)
+  return j
+}
+
+const state = { route: null, tab: 'board', usageGroup: 'kind', episode: null, project: null, sceneOpen: null }
+const pieces = {} // key -> chuỗi html cuối cùng: chỉ ghi DOM khi đổi, video đang phát không bị reset
+
+function patch(id, html) {
+  const el = document.getElementById(id)
+  if (!el || pieces[id] === html) return
+  pieces[id] = html
+  el.innerHTML = html
+}
+
+function route() {
+  const h = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent)
+  if (h[0] === 'p' && h[1] && h[2] === 'e' && h[3]) return { view: 'episode', id: h[1], ep: h[3] }
+  if (h[0] === 'p' && h[1]) return { view: 'project', id: h[1] }
+  return { view: 'home' }
+}
+
+function crumbs(items) {
+  $('#crumbs').innerHTML = items.map((c) => (c.href ? `<span>›</span><a href="${c.href}">${esc(c.label)}</a>` : `<span>›</span><span>${esc(c.label)}</span>`)).join('')
+}
+
+// ───────────── Trang chủ ─────────────
+async function renderHome(first) {
+  const list = await api('/api/projects')
+  crumbs([])
+  if (first) $('#app').innerHTML = `<h1>Dự án phim</h1><p class="sub">Làm phim bằng cách chat với agent (Claude Code / Codex) qua MCP <b>film-studio</b>. Trang này hiển thị trạng thái và kết quả.</p><div id="home" class="grid cards"></div>`
+  patch('home', list.length ? list.map((p) => `
+    <a class="card link" href="#/p/${encodeURIComponent(p.id)}"><div class="body">
+      <div style="font-weight:600;font-size:16px">${esc(p.title)}</div>
+      <div class="sub">${esc(p.logline || '')}</div>
+      <div class="pills"><span class="pill">${p.episodes} tập</span><span class="pill">${esc(p.aspect_ratio)}</span><span class="pill">cập nhật ${new Date(p.updated_at).toLocaleString('vi-VN')}</span></div>
+    </div></a>`).join('') : `<div class="muted">Chưa có dự án. Bắt đầu bằng cách nhờ agent: “làm phim … bằng film-studio”.</div>`)
+}
+
+// ───────────── Dự án ─────────────
+async function renderProject(r, first) {
+  const p = await api(`/api/projects/${encodeURIComponent(r.id)}`)
+  state.project = p
+  crumbs([{ label: p.title }])
+  if (first) {
+    $('#app').innerHTML = `<div id="phead"></div>
+      <h2>Các tập</h2><div id="eps" class="grid cards"></div>
+      <h2>Nhân vật</h2><div id="chars" class="grid refs"></div>
+      <h2>Bối cảnh</h2><div id="locs" class="grid refs"></div>
+      <h2>Quota đã dùng</h2><div id="usage"></div>
+      <h2>Bước tiếp theo</h2><div id="pnext"></div>`
+  }
+  patch('phead', `<h1>${esc(p.title)}</h1><div class="sub">${esc(p.logline || '')}</div>
+    <div class="pills"><span class="pill">${esc(p.aspect_ratio)}</span><span class="pill">mỗi tập ${esc(p.episode_duration)}</span><span class="pill">âm thanh: ${esc(p.audio_mode)}</span>${p.style ? `<span class="pill accent">${esc(p.style)}</span>` : ''}</div>`)
+  patch('eps', p.episodes.map((e) => `
+    <a class="card link" href="#/p/${encodeURIComponent(p.id)}/e/${encodeURIComponent(e.id)}">
+      ${e.cover ? `<img class="cover" src="${e.cover}" loading="lazy" alt="">` : `<div class="cover"></div>`}
+      <div class="body">
+        <div style="font-weight:600">Tập ${e.number} · ${esc(e.title)}</div>
+        <div class="sub" style="font-size:12px">${esc(e.synopsis || '')}</div>
+        <div class="pills">
+          <span class="pill">${e.scenes} cảnh</span>
+          <span class="pill">${esc(e.duration)}</span>
+          <span class="pill">ảnh ${esc(e.storyboard)}</span>
+          <span class="pill">video ${esc(e.videos)}</span>
+          ${e.final ? '<span class="pill ok">✓ đã có phim</span>' : ''}
+        </div>
+      </div></a>`).join('') || '<div class="muted">Chưa có tập nào.</div>')
+  const refCard = (x) => `<div class="card">${x.image ? `<img src="${x.image}" loading="lazy" alt="" data-zoom="${x.image}">` : `<div class="cover"></div>`}
+    <div class="body"><div style="font-weight:600">${esc(x.name)}</div>
+    ${x.role ? `<div class="sub" style="font-size:12px">${esc(x.role)}</div>` : ''}
+    <div class="sub" style="font-size:12px">${esc(x.appearance || x.description || '')}</div>
+    ${x.personality ? `<div style="font-size:12px;margin-top:4px">Tính cách: ${esc(x.personality)}</div>` : ''}
+    <div class="pills">${x.voice ? `<span class="pill info">giọng ${esc(x.voice)}</span>` : ''}${(x.accessories || []).map((a) => `<span class="pill">${esc(a.name)}</span>`).join('')}${(x.looks || []).map((l) => `<span class="pill info" title="${esc(l.appearance)}">look ${esc(l.name || l.id)}</span>`).join('')}</div></div></div>`
+  patch('chars', p.characters.map(refCard).join('') || '<div class="muted">Chưa có nhân vật.</div>')
+  patch('locs', p.locations.map(refCard).join('') || '<div class="muted">Chưa có bối cảnh.</div>')
+  const u = p.usage
+  patch('usage', `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
+    ${[['Lần gọi API', num(u.calls)], ['Lỗi', num(u.failed)], ['Sinh lại', num(u.regenerated)], ['Ảnh', num(u.images)], ['Giây video', num(u.video_sec, 1)], ['Giây âm thanh', num(u.audio_sec, 1)], ['Token', num(u.total_tokens)], ['Chi phí ước tính', u.est_cost == null ? 'chưa có bảng giá' : num(u.est_cost, 4)]]
+      .map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>`)
+  patch('pnext', `<ul class="next">${p.next_steps.map((n) => `<li class="${n.startsWith('⚠') ? 'warn' : ''}">${esc(n)}</li>`).join('')}</ul>`)
+}
+
+// ───────────── Tập ─────────────
+const MODE = { tts: ['TTS', 'info'], native: ['tiếng video', 'accent'] }
+
+function sceneCard(s) {
+  const mode = MODE[s.audio_mode] || [s.audio_mode, '']
+  const line = s.lines?.[0] ? `${s.lines[0].speaker === 'narrator' ? 'Dẫn' : s.lines[0].speaker}: ${s.lines[0].text}` : (s.description || s.image_prompt || '')
+  const chk = (ok, label, title) => `<span class="chk ${ok === true ? 'y' : ''}" title="${title}">${ok === true ? '✓' : '·'} ${label}</span>`
+  const err = s.errors ? Object.keys(s.errors) : []
+  return `<div class="card scene" data-scene="${esc(s.id)}">
+    <div class="thumb">${s.thumb ? `<img src="${s.thumb}" loading="lazy" alt="">` : '<div class="noimg">chưa có ảnh</div>'}
+      <span class="id">${esc(s.id)}</span>${s.transition && s.transition.type !== 'cut' ? `<span class="tr">${esc(s.transition.type)}</span>` : ''}</div>
+    <div class="body">
+      <div class="title">${esc(s.title || s.id)}${s.skip ? ' <span class="pill">bỏ qua</span>' : ''}</div>
+      <div class="line">${esc(line)}</div>
+      <div class="status">
+        <span class="chk ${mode[1] ? '' : ''}" style="color:var(--${mode[1] || 'muted'})">${mode[0]}</span>
+        ${chk(s.image, 'ảnh', 'ảnh storyboard')}${chk(s.approved, 'duyệt', 'đã duyệt')}
+        ${s.tts_audio === 'n/a' ? '' : chk(s.tts_audio, 'thoại', 'thoại TTS')}
+        ${chk(s.video, 'video', 'video')}
+        <span class="chk">${s.video_duration ? s.video_duration.toFixed(1) : s.est_sec}s</span>
+        ${err.map((k) => `<span class="chk e" title="${esc(s.errors[k])}">lỗi ${esc(k)}</span>`).join('')}
+      </div>
+    </div></div>`
+}
+
+async function renderEpisode(r, first) {
+  const [e, jobs] = await Promise.all([api(`/api/projects/${encodeURIComponent(r.id)}/episodes/${encodeURIComponent(r.ep)}`), api(`/api/jobs?project=${encodeURIComponent(r.id)}`)])
+  state.episode = e
+  crumbs([{ label: e.project.title, href: `#/p/${encodeURIComponent(r.id)}` }, { label: `Tập ${e.number} · ${e.title}` }])
+  if (first) {
+    $('#app').innerHTML = `<div id="ehead"></div>
+      <div class="top" style="margin-top:14px"><div id="player"></div><div class="stats" id="estats"></div></div>
+      <div class="tabs" id="tabs"></div><div id="tabbody"></div>`
+  }
+  const active = e.scenes.filter((s) => !s.skip)
+  const count = (f) => active.filter(f).length
+  const tts = active.filter((s) => s.tts_audio !== 'n/a')
+  const running = jobs.jobs.filter((j) => j.status === 'running')
+
+  patch('ehead', `<h1>Tập ${e.number} · ${esc(e.title)}</h1><div class="sub">${esc(e.synopsis || '')}</div>`)
+  patch('player', e.output?.video
+    ? `<video class="player" controls preload="metadata" poster="${e.output.cover || ''}" src="${e.output.video}">${e.output.srt ? '' : ''}</video>
+       <div class="flex" style="margin-top:8px"><a class="btn" href="${e.output.video}" download>Tải phim</a>${e.output.srt ? `<a class="btn" href="${e.output.srt}" download>Phụ đề .srt</a>` : ''}${e.output.cover ? `<a class="btn" href="${e.output.cover}" download>Ảnh bìa</a>` : ''}<span class="muted">ghép lúc ${new Date(e.output.assembled_at).toLocaleString('vi-VN')}</span></div>`
+    : `<div class="empty-player">Chưa có phim hoàn chỉnh — ${running.length ? 'đang chạy…' : 'cần sinh video rồi ghép'}</div>`)
+
+  const bar = (label, n, total) => `<div class="prow"><span>${label}</span><div class="track"><div class="fill ${n === total && total ? 'done' : ''}" style="width:${total ? (100 * n) / total : 0}%"></div></div><span>${n}/${total}</span></div>`
+  const d = e.duration
+  patch('estats', `
+    <div class="stat"><div class="k">Độ dài · mục tiêu / ước tính / thực tế</div>
+      <div class="v">${esc(d.target)} / ${esc(d.estimated)} / ${d.assembled ? esc(d.assembled) : '—'}</div></div>
+    <div class="stat"><div class="progress">
+      ${bar('Ảnh', count((s) => s.image), active.length)}${bar('Duyệt', count((s) => s.approved), active.length)}
+      ${bar('Thoại', tts.filter((s) => s.tts_audio === true).length, tts.length)}${bar('Video', count((s) => s.video), active.length)}
+    </div></div>
+    <div class="stat"><div class="k">Bước tiếp theo</div><ul class="next">${e.next_steps.map((n) => `<li class="${n.startsWith('⚠') ? 'warn' : ''}">${esc(n)}</li>`).join('')}</ul></div>`)
+
+  const tabs = [['board', `Storyboard (${active.length})`], ['jobs', `Job ${running.length ? `● ${running.length}` : ''}`], ['script', 'Kịch bản'], ['usage', 'Quota']]
+  patch('tabs', tabs.map(([k, l]) => `<button class="tab ${state.tab === k ? 'on' : ''}" data-tab="${k}">${l}</button>`).join(''))
+
+  if (state.tab === 'board') patch('tabbody', `<div class="grid scenes">${e.scenes.map(sceneCard).join('')}</div>`)
+  if (state.tab === 'script') patch('tabbody', `<div class="script">${esc(e.script || 'Chưa có kịch bản.')}</div>`)
+  if (state.tab === 'jobs') {
+    patch('tabbody', `<div class="jobs">${jobs.live ? '' : '<div class="muted">Dashboard đang chạy riêng (không cùng MCP server) nên không thấy job. Trạng thái asset vẫn cập nhật bình thường.</div>'}
+      ${jobs.jobs.slice().reverse().map((j) => `<div class="job"><div class="flex"><b>${esc(j.kind)}</b>
+        <span class="pill ${j.status === 'running' ? 'info' : j.status === 'succeeded' ? 'ok' : j.status === 'failed' ? 'err' : 'warn'}">${esc(j.status)}</span>
+        <span class="muted">${esc(j.job_id)} · bắt đầu ${new Date(j.started_at).toLocaleTimeString('vi-VN')}${j.finished_at ? ` · xong ${new Date(j.finished_at).toLocaleTimeString('vi-VN')}` : ''}</span></div>
+        ${j.error ? `<div class="err-box" style="margin-top:8px">${esc(j.error)}</div>` : ''}<pre>${esc(j.recent_log.join('\n'))}</pre></div>`).join('') || '<div class="muted">Chưa có job nào trong phiên này.</div>'}</div>`)
+  }
+  if (state.tab === 'usage') await renderUsage(r)
+  if (state.sceneOpen) renderDrawer(state.sceneOpen, true)
+}
+
+async function renderUsage(r) {
+  const u = await api(`/api/projects/${encodeURIComponent(r.id)}/usage?episode=${encodeURIComponent(r.ep)}&group=${state.usageGroup}`)
+  const cols = [['calls', 'Gọi'], ['ok', 'OK'], ['failed', 'Lỗi'], ['regenerated', 'Sinh lại'], ['images', 'Ảnh'], ['video_sec', 'Giây video'], ['audio_sec', 'Giây âm thanh'], ['total_tokens', 'Token'], ['api_time_sec', 'Thời gian API (s)'], ['est_cost', 'Chi phí']]
+  const row = (name, t) => `<tr><td>${esc(name)}</td>${cols.map(([k]) => `<td>${t[k] == null ? '—' : num(t[k], k === 'est_cost' ? 4 : 1)}</td>`).join('')}</tr>`
+  patch('tabbody', `<div class="flex" style="margin-bottom:10px"><span class="muted">Nhóm theo</span>
+    <select id="ugroup">${['kind', 'model', 'purpose', 'scene', 'day'].map((g) => `<option ${g === state.usageGroup ? 'selected' : ''}>${g}</option>`).join('')}</select>
+    <span class="muted">${typeof u.pricing === 'string' ? esc(u.pricing) : `bảng giá: ${esc(u.pricing.currency)}`}</span></div>
+    <div class="tablewrap"><table><thead><tr><th></th>${cols.map(([, l]) => `<th>${l}</th>`).join('')}</tr></thead>
+    <tbody>${Object.entries(u.groups).map(([k, t]) => row(k, t)).join('')}</tbody>
+    <tfoot>${row('Tổng tập này', u.total)}</tfoot></table></div>
+    ${u.recent_errors.length ? `<h2>Lỗi gần nhất</h2>${u.recent_errors.map((x) => `<div class="err-box" style="margin-bottom:6px">${esc(x.ts.slice(11, 19))} · ${esc(x.scene || '')} · ${esc(x.error)}</div>`).join('')}` : ''}`)
+}
+
+function renderDrawer(id, refresh) {
+  const s = state.episode?.scenes.find((x) => x.id === id)
+  if (!s) return
+  const html = `<div class="head"><b>${esc(s.id)} · ${esc(s.title || '')}</b><span class="pill">${esc(MODE[s.audio_mode]?.[0] || s.audio_mode)}</span><button class="btn" style="margin-left:auto" data-close>Đóng</button></div>
+    <div class="content">
+      ${s.video ? `<video controls autoplay muted loop src="${s.video}" poster="${s.image || ''}"></video>` : s.image ? `<img src="${s.image}" alt="" data-zoom="${s.image}">` : '<div class="empty-player">Chưa có ảnh</div>'}
+      ${s.video && s.image ? `<details><summary class="muted">Ảnh storyboard</summary><img src="${s.image}" alt="" style="margin-top:8px" data-zoom="${s.image}"></details>` : ''}
+      ${s.audio ? `<div><div class="muted" style="font-size:12px;margin-bottom:4px">Thoại TTS</div><audio controls src="${s.audio}" style="width:100%"></audio></div>` : ''}
+      ${s.errors ? Object.entries(s.errors).map(([k, v]) => `<div class="err-box"><b>Lỗi ${esc(k)}:</b> ${esc(v)}</div>`).join('') : ''}
+      ${s.lines?.length ? `<div class="lines">${s.lines.map((l) => `<div class="say"><b>${esc(l.speaker === 'narrator' ? 'Người dẫn' : l.speaker)}</b>${l.style ? ` <small>[${esc(l.style)}]</small>` : ''}<div>${esc(l.text)}</div></div>`).join('')}</div>` : ''}
+      <div class="kv">
+        <div>Bối cảnh</div><div>${esc(s.location || '—')}</div>
+        <div>Nhân vật</div><div>${esc((s.characters || []).join(', ') || '—')}</div>
+        <div>Chuyển cảnh</div><div>${s.transition ? `${esc(s.transition.type)} ${s.transition.duration ?? ''}` : 'fade (mặc định)'}</div>
+        <div>Độ dài</div><div>${s.video_duration ? `video ${s.video_duration.toFixed(1)}s` : `ước tính ${s.est_sec}s`}${s.audio_duration ? ` · thoại ${s.audio_duration}s` : ''}</div>
+        <div>Trạng thái</div><div>${s.approved ? 'đã duyệt' : 'chưa duyệt'}</div>
+        <div>Prompt ảnh</div><div>${esc(s.image_prompt)}</div>
+        <div>Prompt video</div><div>${esc(s.video_prompt || '(dùng prompt ảnh)')}</div>
+        ${s.description ? `<div>Mô tả</div><div>${esc(s.description)}</div>` : ''}
+      </div>
+    </div>`
+  if (refresh && pieces.drawer === html) return
+  pieces.drawer = html
+  $('#drawer').innerHTML = html
+  $('#drawer').classList.add('open')
+  $('#drawerBg').classList.add('open')
+}
+
+function closeDrawer() {
+  state.sceneOpen = null
+  pieces.drawer = null
+  $('#drawer').classList.remove('open')
+  $('#drawerBg').classList.remove('open')
+  $('#drawer').innerHTML = ''
+}
+
+// ───────────── Vòng làm mới ─────────────
+async function refreshLive() {
+  try {
+    const { live, jobs } = await api('/api/jobs')
+    const running = jobs.filter((j) => j.status === 'running')
+    $('#live').innerHTML = `<span class="dot ${running.length ? 'on' : ''}"></span><span>${!live ? 'xem riêng (không thấy job)' : running.length ? `${running.length} job đang chạy` : 'không có job chạy'}</span>`
+  } catch {
+    $('#live').innerHTML = '<span class="dot"></span><span>mất kết nối</span>'
+  }
+}
+
+async function render(first = false) {
+  const r = route()
+  if (first) {
+    Object.keys(pieces).forEach((k) => delete pieces[k])
+    closeDrawer()
+    window.scrollTo(0, 0)
+  }
+  state.route = r
+  try {
+    if (r.view === 'home') await renderHome(first)
+    if (r.view === 'project') await renderProject(r, first)
+    if (r.view === 'episode') await renderEpisode(r, first)
+  } catch (err) {
+    if (first) $('#app').innerHTML = `<div class="error-page">Không tải được: ${esc(err.message)}</div>`
+  }
+}
+
+document.addEventListener('click', (ev) => {
+  const t = ev.target
+  const zoom = t.closest('[data-zoom]')
+  if (zoom) {
+    $('#lightbox img').src = zoom.dataset.zoom
+    $('#lightbox').classList.add('open')
+    return
+  }
+  if (t.closest('#lightbox')) return $('#lightbox').classList.remove('open')
+  const tab = t.closest('[data-tab]')
+  if (tab) {
+    state.tab = tab.dataset.tab
+    delete pieces.tabbody
+    return render()
+  }
+  const sc = t.closest('[data-scene]')
+  if (sc) {
+    state.sceneOpen = sc.dataset.scene
+    return renderDrawer(sc.dataset.scene)
+  }
+  if (t.closest('[data-close]') || t.id === 'drawerBg') closeDrawer()
+})
+document.addEventListener('change', (ev) => {
+  if (ev.target.id === 'ugroup') {
+    state.usageGroup = ev.target.value
+    render()
+  }
+})
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') {
+    $('#lightbox').classList.remove('open')
+    closeDrawer()
+  }
+})
+// Rê chuột lên cảnh có video → phát thử không tiếng.
+document.addEventListener('mouseover', (ev) => {
+  const card = ev.target.closest?.('.scene')
+  if (!card || card.dataset.hover) return
+  const s = state.episode?.scenes.find((x) => x.id === card.dataset.scene)
+  if (!s?.video) return
+  card.dataset.hover = '1'
+  const thumb = $('.thumb', card)
+  const img = $('img', thumb)
+  const v = Object.assign(document.createElement('video'), { src: s.video, muted: true, loop: true, autoplay: true, playsInline: true })
+  if (img) img.style.display = 'none'
+  thumb.prepend(v)
+  card.addEventListener('mouseleave', () => {
+    v.remove()
+    if (img) img.style.display = ''
+    delete card.dataset.hover
+  }, { once: true })
+})
+
+window.addEventListener('hashchange', () => render(true))
+render(true)
+refreshLive()
+setInterval(() => {
+  refreshLive()
+  if (!document.hidden) render()
+}, 4000)
+</script>
+</body>
+</html>
