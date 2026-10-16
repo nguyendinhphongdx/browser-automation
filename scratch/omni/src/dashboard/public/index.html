@@ -208,7 +208,7 @@ async function renderProject(r, first) {
     ${x.role ? `<div class="sub" style="font-size:12px">${esc(x.role)}</div>` : ''}
     <div class="sub" style="font-size:12px">${esc(x.appearance || x.description || '')}</div>
     ${x.personality ? `<div style="font-size:12px;margin-top:4px">Tính cách: ${esc(x.personality)}</div>` : ''}
-    <div class="pills">${x.voice ? `<span class="pill info">giọng ${esc(x.voice)}</span>` : ''}${(x.accessories || []).map((a) => `<span class="pill">${esc(a.name)}</span>`).join('')}</div></div></div>`
+    <div class="pills">${x.voice ? `<span class="pill info">giọng ${esc(x.voice)}</span>` : ''}${(x.accessories || []).map((a) => `<span class="pill">${esc(a.name)}</span>`).join('')}${(x.looks || []).map((l) => `<span class="pill info" title="${esc(l.appearance)}">look ${esc(l.name || l.id)}</span>`).join('')}</div></div></div>`
   patch('chars', p.characters.map(refCard).join('') || '<div class="muted">Chưa có nhân vật.</div>')
   patch('locs', p.locations.map(refCard).join('') || '<div class="muted">Chưa có bối cảnh.</div>')
   const u = p.usage
