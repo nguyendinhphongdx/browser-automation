@@ -151,6 +151,36 @@ const byIdOrName = (list, key) => {
 export const findCharacter = (project, key) => byIdOrName(project.characters, key)
 export const findLocation = (project, key) => (key ? byIdOrName(project.locations || [], key) : null)
 
+/**
+ * Look = một trạng thái ngoại hình của nhân vật (vd "sau" khi trang điểm + thay đồ), có character sheet riêng.
+ * Cảnh chọn look qua `scene.looks = { <nhân vật>: <look> }`; không chọn → dáng gốc (appearance/accessories của nhân vật).
+ */
+export const findLook = (character, lookId) => (lookId ? (character.looks || []).find((l) => l.id === slugify(lookId)) || null : null)
+
+/** Nhân vật như nó xuất hiện trong 1 look: appearance + accessories + ảnh tham chiếu của look (accessories không khai báo → kế thừa dáng gốc). */
+export function characterAs(character, lookId) {
+  const look = findLook(character, lookId)
+  if (!look) return character
+  return {
+    ...character,
+    look: look.id,
+    appearance: look.appearance,
+    accessories: look.accessories ?? character.accessories,
+    reference_image: look.reference_image
+  }
+}
+
+/** Mọi ảnh tham chiếu cần có: nhân vật (dáng gốc), từng look (id "nhân-vật:look"), bối cảnh. */
+export function referenceItems(project) {
+  return [
+    ...project.characters.flatMap((c) => [
+      { kind: 'character', id: c.id, name: c.name, item: c },
+      ...(c.looks || []).map((l) => ({ kind: 'look', id: `${c.id}:${l.id}`, name: `${c.name} (${l.name || l.id})`, item: l, owner: c }))
+    ]),
+    ...(project.locations || []).map((l) => ({ kind: 'location', id: l.id, name: l.name, item: l }))
+  ]
+}
+
 export const scenesOf = (episode) => episode.scenes.filter((s) => !s.skip)
 
 // ───────────── Tóm tắt tiến độ + bước tiếp theo (để agent nào đọc cũng biết đang ở đâu) ─────────────
@@ -252,7 +282,7 @@ export function summarize(project, h) {
   const next = []
   if (!project.bible) next.push('series_bible_save — chủ đề, thế giới, tông, mạch truyện, dàn ý các tập (sau khi brainstorm với người dùng)')
   if (!project.characters.length) next.push('characters_save — nhân vật (ngoại hình, tính cách, phụ kiện, giọng) + bối cảnh lặp lại')
-  const noSheet = [...project.characters, ...(project.locations || [])].filter((c) => !has(c.reference_image)).map((c) => c.id)
+  const noSheet = referenceItems(project).filter((r) => !has(r.item.reference_image)).map((r) => r.id)
   if (project.characters.length && noSheet.length) next.push(`characters_generate — ảnh tham chiếu còn thiếu: ${noSheet.join(', ')}`)
   if (project.bible && !project.episodes.length) next.push('episode_script_save — kịch bản chi tiết tập 1')
   const episodes = project.episodes.map((ep) => {
@@ -280,7 +310,14 @@ export function summarize(project, h) {
     audio_mode: project.audio_mode,
     episode_duration: fmtMin(project.episode_duration_sec || EPISODE_DEFAULT_SEC),
     bible: project.bible ? Object.keys(project.bible).filter((k) => project.bible[k]) : null,
-    characters: project.characters.map((c) => ({ id: c.id, name: c.name, role: c.role, voice: c.voice, sheet: has(c.reference_image) })),
+    characters: project.characters.map((c) => ({
+      id: c.id,
+      name: c.name,
+      role: c.role,
+      voice: c.voice,
+      sheet: has(c.reference_image),
+      ...(c.looks?.length ? { looks: c.looks.map((l) => ({ id: l.id, name: l.name, sheet: has(l.reference_image) })) } : {})
+    })),
     locations: (project.locations || []).map((l) => ({ id: l.id, name: l.name, reference: has(l.reference_image) })),
     episodes,
     next_steps: next.length ? next : ['Mọi tập đã hoàn chỉnh.']
