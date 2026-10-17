@@ -228,20 +228,24 @@ export function buildImagePrompt(project, scene) {
   )
 }
 
+/** Ảnh tham chiếu đính kèm khi vẽ 1 cảnh: sheet (theo look) của tối đa 3 nhân vật trong khung + ảnh bối cảnh. */
+export function sceneReferences(project, scene) {
+  const loc = findLocation(project, scene.location)
+  return [
+    ...charactersIn(project, scene).filter((c) => exists(project.id, c.reference_image)).slice(0, 3).map((c) => abs(project.id, c.reference_image)),
+    ...(loc && exists(project.id, loc.reference_image) ? [abs(project.id, loc.reference_image)] : [])
+  ]
+}
+
 export async function generateStoryboard(projectId, episodeId, { sceneIds, force } = {}, log) {
   const project = loadProject(projectId)
   const ep = findEpisode(project, episodeId)
   const scenes = pickScenes(ep, sceneIds).filter((s) => force || !exists(projectId, s.assets?.image))
   return eachScene(projectId, episodeId, scenes, 'image', log, async (scene) => {
-    const loc = findLocation(project, scene.location)
-    const refs = [
-      ...charactersIn(project, scene).filter((c) => exists(projectId, c.reference_image)).slice(0, 3).map((c) => abs(projectId, c.reference_image)),
-      ...(loc && exists(projectId, loc.reference_image) ? [abs(projectId, loc.reference_image)] : [])
-    ]
     const file = await gemini.generateImage({
       prompt: buildImagePrompt(project, scene),
       aspectRatio: project.aspect_ratio,
-      references: refs,
+      references: sceneReferences(project, scene),
       outBase: path.join(sceneDir(projectId, episodeId, scene.id), 'image'),
       usage: { projectId, purpose: 'storyboard', episode: episodeId, scene: scene.id }
     })
