@@ -58,5 +58,9 @@ Theo [pipeline.md](../film-story-craft/references/pipeline.md): xong mỗi dòng
 - ❌ Sửa code server (`scratch/omni/src/**`, test, `package.json`) hay sửa tay `project.json` khi đang làm phim — thiếu tính năng thì dừng, đề xuất việc phát triển riêng ([pipeline.md](../film-story-craft/references/pipeline.md)).
 - ❌ `force=true` cả tập để sửa 1–2 cảnh.
 - ❌ Sinh video khi storyboard chưa duyệt hoặc chưa xem nháp ảnh tĩnh.
+- ❌ Sinh độc lập/ song song các cảnh liền nhau trong cùng continuity block.
+- ❌ Dùng prompt style chung khác `project.style` hoặc sai `project.aspect_ratio`.
+- ❌ Sinh toàn bộ video sau khi chỉ xem `prompt_preview`; phải có pilot clip thật.
+- ❌ Coi `done/total` của job là kiểm duyệt nội dung, hoặc sinh nhạc trước khi user duyệt preview clip thật.
 - ❌ `require_approval=false` khi user chưa nói rõ.
 - ❌ Kết thúc mà không báo `usage_report`.
