@@ -16,8 +16,8 @@ Trước mọi bước ảnh/video, đọc và làm đúng [visual-continuity.md
 | 0 | Trạng thái | `episode_get`, `usage_report` | 0 | Báo user tập đang ở bước nào |
 | 1 | Character sheet + bối cảnh | `characters_generate` → `references_review` | ảnh ×(nhân vật+bối cảnh) | **Hỏi trước** lần đầu; cho user xem ảnh, sửa mô tả → `characters_generate(ids, force)` |
 | 2 | Thoại TTS | `episode_audio_generate` | rẻ | Không cần hỏi. Đọc cảnh báo "đứng hình" → quay lại sửa kịch bản |
-| 3 | Storyboard | `storyboard_generate` → `storyboard_review` | ảnh ×số cảnh | **Hỏi trước** (nói số ảnh). Duyệt cùng user |
-| 4 | Sửa storyboard | `scene_update` / `storyboard_generate(scene_ids, force)` → `storyboard_approve` | ảnh ×cảnh sửa | Theo ý user |
+| 3 | Storyboard theo continuity block | lập ledger → sinh tuần tự trong block → `storyboard_review` | ảnh ×số cảnh | **Hỏi trước** (nói số ảnh). Không sinh song song cảnh phụ thuộc |
+| 4 | Khóa continuity | duyệt từng block → contact sheet toàn tập → sửa → `storyboard_approve` | ảnh ×cảnh sửa | Chỉ approve khi chuỗi đạt, không chỉ từng ảnh đẹp |
 | 5 | Nháp nhịp phim | `episode_assemble(allow_stills=true, music=false)` | 0 | Luôn làm. Gửi đường dẫn `video_abs` (hoặc dashboard http://localhost:4747) cho user xem |
 | 6 | **Video** | `episode_videos_generate` | **đắt nhất** | **BẮT BUỘC hỏi**: số clip × tổng giây video, `usage_report` hiện tại. `prompt_preview` soát 2–3 cảnh quan trọng trước |
 | 7 | Nhạc nền | `music_generate` | 1 bài | Hỏi nếu chưa có prompt nhạc |
