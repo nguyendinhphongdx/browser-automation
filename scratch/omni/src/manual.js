@@ -1,12 +1,16 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { buildImagePrompt, referenceRequest, sceneReferences } from './pipeline.js'
-import { abs, ensureDir, episodeDir, findEpisode, findScene, loadProject, projectDir, referenceItems, scenesOf } from './project.js'
+import {
+  abs, ensureDir, episodeDir, findEpisode, findScene, loadProject, projectDir, referenceItems, rel, sceneDir, scenesOf, updateProject
+} from './project.js'
 
 /**
  * Ảnh "làm tay": người dùng tự tạo ảnh ở công cụ khác (ChatGPT, Midjourney…) bằng gói prompt server xuất ra,
  * tải về 1 thư mục đặt tên theo id, rồi server nhập hàng loạt. Không tự động hoá giao diện của dịch vụ nào.
  */
+
+const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp'])
 
 /** Chép ảnh tham chiếu vào refs/ của gói (đánh số, tên dễ đọc) để kéo-thả vào công cụ tạo ảnh. */
 function packRefs(projectId, refsDir, files) {
@@ -84,4 +88,38 @@ export function referencesPack(projectId, { ids, all = false } = {}) {
     }
   })
   return { ...writePack(dir, `Ảnh tham chiếu ${project.title}`, HOWTO('references_import_folder(folder=...)'), items), ids: items.map((it) => it.id) }
+}
+
+function imageFiles(folder) {
+  if (!fs.existsSync(folder) || !fs.statSync(folder).isDirectory()) throw new Error(`Không thấy thư mục ${folder}`)
+  return fs
+    .readdirSync(folder)
+    .filter((f) => IMAGE_EXT.has(path.extname(f).toLowerCase()) && !f.startsWith('.'))
+    .map((f) => ({ file: path.join(folder, f), stem: path.basename(f, path.extname(f)).toLowerCase(), ext: path.extname(f).toLowerCase() }))
+}
+
+/** Nhập ảnh storyboard: file "s01.png" → cảnh s01. Ảnh mới = chưa duyệt, video cũ bỏ (giống asset_import scene_image). */
+export async function importStoryboardFolder(projectId, episodeId, folder) {
+  const files = imageFiles(folder)
+  const imported = []
+  const unknown = []
+  const p = await updateProject(projectId, (p) => {
+    const ep = findEpisode(p, episodeId)
+    for (const f of files) {
+      const s = ep.scenes.find((x) => x.id.toLowerCase() === f.stem)
+      if (!s) {
+        unknown.push(path.basename(f.file))
+        continue
+      }
+      const dest = path.join(sceneDir(projectId, ep.id, s.id), `image${f.ext}`)
+      fs.copyFileSync(f.file, dest)
+      s.assets = { ...s.assets, image: rel(projectId, dest), video: null, video_duration: null }
+      s.approved = false
+      imported.push(s.id)
+    }
+  })
+  const missing = scenesOf(findEpisode(p, episodeId))
+    .filter((s) => !s.assets?.image)
+    .map((s) => s.id)
+  return { imported, unknown, missing }
 }
