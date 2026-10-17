@@ -129,6 +129,14 @@ export function characterSheetPrompt(project, c, { fromBase = false } = {}) {
 export const locationPrompt = (project, loc) =>
   `Environment concept art, establishing wide shot, no people. ${project.style ? `Visual style: ${project.style}. ` : ''}${loc.name} — ${loc.description}. No text, no watermark.`
 
+/** Prompt + ảnh tham chiếu cho 1 mục tham chiếu (nhân vật / look / bối cảnh) — dùng chung cho Gemini và gói prompt làm tay. */
+export function referenceRequest(project, { kind, item, owner }) {
+  if (kind === 'location') return { prompt: locationPrompt(project, item), references: [] }
+  if (kind !== 'look') return { prompt: characterSheetPrompt(project, item), references: [] }
+  const base = exists(project.id, owner.reference_image) ? abs(project.id, owner.reference_image) : null
+  return { prompt: characterSheetPrompt(project, characterAs(owner, item.id), { fromBase: !!base }), references: base ? [base] : [] }
+}
+
 export async function generateReferences(projectId, { ids, force } = {}, log) {
   const project = loadProject(projectId)
   // ids có thể là nhân vật (gồm mọi look của nhân vật đó), "nhân-vật:look", hoặc bối cảnh.
@@ -142,18 +150,14 @@ export async function generateReferences(projectId, { ids, force } = {}, log) {
     try {
       log(`${kind} ${id}: sinh ảnh tham chiếu`)
       const dir = ensureDir(path.join(projectDir(projectId), kind === 'location' ? 'locations' : 'characters'))
-      // Look vẽ lại từ chữ hay lệch mặt/màu da so với dáng gốc → gửi kèm sheet gốc (đã sinh ở lượt trước) làm tham chiếu.
-      const baseSheet = kind === 'look' ? abs(projectId, findCharacter(loadProject(projectId), owner.id)?.reference_image) : null
-      const withBase = baseSheet && fs.existsSync(baseSheet)
-      if (kind === 'look' && !withBase) log(`${kind} ${id}: chưa có sheet gốc của ${owner.id} — sinh look không có ảnh tham chiếu`)
-      const prompt =
-        kind === 'location'
-          ? locationPrompt(project, item)
-          : characterSheetPrompt(project, kind === 'look' ? characterAs(owner, item.id) : item, { fromBase: withBase })
+      // Look vẽ lại từ chữ hay lệch mặt/màu da so với dáng gốc → gửi kèm sheet gốc (đọc lại: có thể vừa sinh ở lượt trước) làm tham chiếu.
+      const fresh = loadProject(projectId)
+      const { prompt, references } = referenceRequest(fresh, { kind, item, owner: owner && findCharacter(fresh, owner.id) })
+      if (kind === 'look' && !references.length) log(`${kind} ${id}: chưa có sheet gốc của ${owner.id} — sinh look không có ảnh tham chiếu`)
       const file = await gemini.generateImage({
         prompt,
         aspectRatio: '16:9',
-        references: withBase ? [baseSheet] : [],
+        references,
         outBase: path.join(dir, kind === 'look' ? `${owner.id}--${item.id}` : item.id),
         usage: { projectId, purpose: kind === 'location' ? 'location_reference' : 'character_sheet', target: id }
       })
