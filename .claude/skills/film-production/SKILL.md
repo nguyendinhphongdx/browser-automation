@@ -26,7 +26,7 @@ Trước mọi bước ảnh/video, đọc và làm đúng [visual-continuity.md
 | 10 | Ghép final | `episode_assemble` | 0 | Chạy lại thoải mái |
 | 11 | Báo cáo | `usage_report(episode_id)` | 0 | Tổng quota, số lần sinh lại, lỗi |
 
-`episode_run` chạy nhiều bước liền — chỉ dùng cho 2 lượt: `["references","audio","storyboard"]` → duyệt → `["videos","music","assemble"]`, và chỉ khi user đã đồng ý chi phí lượt 2.
+Không dùng `episode_run` cho video: nó bỏ qua pilot và audit đầu ra thật. Có thể dùng cho `references`/`audio`; storyboard vẫn phải tuân continuity block.
 
 ## Kết mỗi bước
 Theo [pipeline.md](../film-story-craft/references/pipeline.md): xong mỗi dòng của bảng trên → tóm tắt (kèm quota vừa tốn) → đề xuất dòng kế + chi phí → hỏi duyệt (AskUserQuestion: Làm tiếp / Sửa trước / Dừng) → đồng ý thì chạy luôn. Ghép xong `final.mp4` → đề xuất **đăng bài** (skill `film-publish`, miễn phí).
