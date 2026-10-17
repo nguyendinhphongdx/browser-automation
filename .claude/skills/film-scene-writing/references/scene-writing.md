@@ -22,6 +22,8 @@ Schema đầy đủ: tool `episode_script_save` (`scenes[]`). Server tự ghép 
 
 Quy tắc liên tục: giữ trục 180° trong đối thoại (A luôn bên trái, B bên phải); hướng chuyển động giữ nguyên qua các cảnh liền (đi trái→phải); hướng nhìn khớp giữa 2 cảnh qua vai.
 
+Trước khi lưu, gom cảnh thành continuity block và lập ledger anchor/ảnh trước, trái-phải, look, ánh sáng, trạng thái nối. Quy trình sinh và cổng lỗi nằm ở [visual-continuity.md](../../film-production/references/visual-continuity.md); đây là nguồn canonical, không tạo từng ảnh độc lập.
+
 ## image_prompt — mẫu
 
 `[cỡ cảnh], [góc máy]: [ai] [đang làm gì] [biểu cảm], [bố cục: tiền/hậu cảnh, vị trí trong khung], [ánh sáng + thời gian], [chi tiết đạo cụ quan trọng]`
