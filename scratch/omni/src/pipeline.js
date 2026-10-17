@@ -109,7 +109,7 @@ function locationNote(project, scene) {
 
 // ───────────────────────── Character sheet + bối cảnh ─────────────────────────
 
-function characterSheetPrompt(project, c, { fromBase = false } = {}) {
+export function characterSheetPrompt(project, c, { fromBase = false } = {}) {
   // Look có sheet gốc đính kèm: chỉ đổi những gì mô tả look nói, còn lại giữ y nguyên người trong ảnh.
   const base = fromBase
     ? ' The attached reference image is this SAME person in their original look: keep the exact same face, facial features, body shape, height and SKIN TONE (do not lighten or darken the skin) — change only the hair, clothing, makeup and accessories as described below. Do not copy the original outfit.'
