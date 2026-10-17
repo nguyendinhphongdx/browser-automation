@@ -7,6 +7,8 @@ description: Sản xuất 1 tập phim trong MCP film-studio từ kịch bản �
 
 Kịch bản phải có trước (skill `film-scene-writing`). Mọi bước sinh là **job nền**: tool trả `job_id` → `job_status(job_id, wait_sec=50)` lặp tới khi xong, **sau mỗi lần báo user 1 dòng tiến độ** (`⏳ storyboard 12/32 xong · 0 lỗi · 3:40`) và không kết lượt khi job còn chạy ([pipeline.md](../film-story-craft/references/pipeline.md) — luật chờ job). `episode_get` luôn cho biết đang ở đâu và `next_steps`.
 
+Trước mọi bước ảnh/video, đọc và làm đúng [visual-continuity.md](references/visual-continuity.md). **Ảnh đẹp riêng lẻ không đủ**; mục tiêu là identity, không gian và hành động nối được qua cả chuỗi.
+
 ## Thứ tự & cổng
 
 | # | Bước | Tool | Chi phí | Cổng |
