@@ -19,10 +19,12 @@ Trước mọi bước ảnh/video, đọc và làm đúng [visual-continuity.md
 | 3 | Storyboard theo continuity block | lập ledger → sinh tuần tự trong block → `storyboard_review` | ảnh ×số cảnh | **Hỏi trước** (nói số ảnh). Không sinh song song cảnh phụ thuộc |
 | 4 | Khóa continuity | duyệt từng block → contact sheet toàn tập → sửa → `storyboard_approve` | ảnh ×cảnh sửa | Chỉ approve khi chuỗi đạt, không chỉ từng ảnh đẹp |
 | 5 | Nháp nhịp phim | `episode_assemble(allow_stills=true, music=false)` | 0 | Luôn làm. Gửi đường dẫn `video_abs` (hoặc dashboard http://localhost:4747) cho user xem |
-| 6 | **Video** | `episode_videos_generate` | **đắt nhất** | **BẮT BUỘC hỏi**: số clip × tổng giây video, `usage_report` hiện tại. `prompt_preview` soát 2–3 cảnh quan trọng trước |
-| 7 | Nhạc nền | `music_generate` | 1 bài | Hỏi nếu chưa có prompt nhạc |
-| 8 | Ghép | `episode_assemble` | 0 | Chạy lại thoải mái |
-| 9 | Báo cáo | `usage_report(episode_id)` | 0 | Tổng quota, số lần sinh lại, lỗi |
+| 6 | **Pilot video** | `prompt_preview` → `episode_videos_generate(scene_ids=3 cảnh)` → ghép sample | 3 clip | **BẮT BUỘC hỏi** số giây; user xem đầu ra thật |
+| 7 | **Video còn lại** | `episode_videos_generate` | **đắt nhất** | Pilot đạt → **hỏi lại** số clip × tổng giây + `usage_report` |
+| 8 | Preview clip thật | `episode_assemble(music=false)` → audit từng cảnh | 0 | User duyệt preview; trạng thái job thành công chưa phải duyệt |
+| 9 | Nhạc nền | `music_generate` | 1 bài | Hỏi sau khi preview thật đạt |
+| 10 | Ghép final | `episode_assemble` | 0 | Chạy lại thoải mái |
+| 11 | Báo cáo | `usage_report(episode_id)` | 0 | Tổng quota, số lần sinh lại, lỗi |
 
 `episode_run` chạy nhiều bước liền — chỉ dùng cho 2 lượt: `["references","audio","storyboard"]` → duyệt → `["videos","music","assemble"]`, và chỉ khi user đã đồng ý chi phí lượt 2.
 
