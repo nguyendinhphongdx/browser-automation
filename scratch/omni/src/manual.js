@@ -2,7 +2,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { buildImagePrompt, referenceRequest, sceneReferences } from './pipeline.js'
 import {
-  abs, ensureDir, episodeDir, findEpisode, findScene, loadProject, projectDir, referenceItems, rel, sceneDir, scenesOf, updateProject
+  abs, ensureDir, episodeDir, findCharacter, findEpisode, findLocation, findLook, findScene, loadProject, projectDir, referenceItems, rel, sceneDir, scenesOf,
+  updateProject
 } from './project.js'
 
 /**
@@ -121,5 +122,32 @@ export async function importStoryboardFolder(projectId, episodeId, folder) {
   const missing = scenesOf(findEpisode(p, episodeId))
     .filter((s) => !s.assets?.image)
     .map((s) => s.id)
+  return { imported, unknown, missing }
+}
+
+/** Nhập ảnh tham chiếu: "may.png" → nhân vật/bối cảnh may, "trang--sau.png" → look "sau" của trang. */
+export async function importReferencesFolder(projectId, folder) {
+  const files = imageFiles(folder)
+  const imported = []
+  const unknown = []
+  const p = await updateProject(projectId, (p) => {
+    for (const f of files) {
+      const [who, lookId] = f.stem.split('--')
+      const owner = findCharacter(p, who)
+      const target = lookId ? owner && findLook(owner, lookId) : owner || findLocation(p, who)
+      if (!target) {
+        unknown.push(path.basename(f.file))
+        continue
+      }
+      const sub = owner ? 'characters' : 'locations'
+      const dest = path.join(ensureDir(path.join(projectDir(projectId), sub)), `${lookId ? `${owner.id}--${target.id}` : target.id}${f.ext}`)
+      fs.copyFileSync(f.file, dest)
+      target.reference_image = rel(projectId, dest)
+      imported.push(lookId ? `${owner.id}:${target.id}` : target.id)
+    }
+  })
+  const missing = referenceItems(p)
+    .filter((r) => !r.item.reference_image || !fs.existsSync(abs(projectId, r.item.reference_image)))
+    .map((r) => r.id)
   return { imported, unknown, missing }
 }
