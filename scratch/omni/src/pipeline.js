@@ -126,6 +126,9 @@ export function characterSheetPrompt(project, c, { fromBase = false } = {}) {
   )
 }
 
+export const locationPrompt = (project, loc) =>
+  `Environment concept art, establishing wide shot, no people. ${project.style ? `Visual style: ${project.style}. ` : ''}${loc.name} — ${loc.description}. No text, no watermark.`
+
 export async function generateReferences(projectId, { ids, force } = {}, log) {
   const project = loadProject(projectId)
   // ids có thể là nhân vật (gồm mọi look của nhân vật đó), "nhân-vật:look", hoặc bối cảnh.
@@ -145,7 +148,7 @@ export async function generateReferences(projectId, { ids, force } = {}, log) {
       if (kind === 'look' && !withBase) log(`${kind} ${id}: chưa có sheet gốc của ${owner.id} — sinh look không có ảnh tham chiếu`)
       const prompt =
         kind === 'location'
-          ? `Environment concept art, establishing wide shot, no people. ${project.style ? `Visual style: ${project.style}. ` : ''}${item.name} — ${item.description}. No text, no watermark.`
+          ? locationPrompt(project, item)
           : characterSheetPrompt(project, kind === 'look' ? characterAs(owner, item.id) : item, { fromBase: withBase })
       const file = await gemini.generateImage({
         prompt,
