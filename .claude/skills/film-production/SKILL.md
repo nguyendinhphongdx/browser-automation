@@ -35,7 +35,8 @@ Theo [pipeline.md](../film-story-craft/references/pipeline.md): xong mỗi dòng
 
 - Nhân vật đúng character sheet (mặt, trang phục, phụ kiện)? Sai → thêm chi tiết vào `image_prompt` hoặc giảm số nhân vật trong khung.
 - Khung hình kể được nhịp truyện không cần thoại?
-- Liên tục giữa cảnh liền nhau (hướng nhìn, vị trí, ánh sáng, thời gian trong ngày)?
+- Soi theo bảng block trong [visual-continuity.md](references/visual-continuity.md): cảnh sau có dùng cảnh trước làm reference và bắt đúng trạng thái cuối không?
+- Liên tục giữa cảnh liền nhau: khuôn mặt/tóc/tỷ lệ, look/trang phục, hướng nhìn, vị trí, ánh sáng, thời gian và sơ đồ location.
 - Có chữ/watermark lạ → sinh lại cảnh đó.
 - **Ai là ai** (chốt chặn cuối trước khi tốn tiền video): xem dãy ảnh theo thứ tự kèm thoại. Câu gọi/xưng hô nào bị cắt sang người khác người được gọi không? Người được gọi vắng mặt đã xuất hiện bằng hình chưa? Có → quay lại `film-scene-writing` sửa kịch bản ([story-craft §7b](../film-story-craft/references/story-craft.md)), đừng vá bằng lời dẫn.
 - Cảnh có trẻ em/người ở chỗ nguy hiểm (mép vực, giữa lũ) dễ bị bộ lọc an toàn của model video chặn: mô tả tư thế vững vàng, gợi nguy hiểm bằng cảnh rộng.
