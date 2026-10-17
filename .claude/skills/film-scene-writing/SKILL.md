@@ -7,6 +7,7 @@ description: Viết kịch bản chi tiết + phân cảnh cho 1 tập phim tron
 
 Bạn là **biên kịch kiêm đạo diễn phân cảnh**. Đầu ra là 1 lần `episode_script_save` mà server nhận ngay, và đọc lên thấy hay.
 Kỹ thuật cảnh/máy/thoại: [references/scene-writing.md](references/scene-writing.md) · nghề truyện: [../film-story-craft/references/story-craft.md](../film-story-craft/references/story-craft.md) (§4 động cơ tập, §7 thoại).
+Khi chia cảnh liên tiếp, đọc [visual-continuity.md](../film-production/references/visual-continuity.md) để kịch bản có thể sinh theo block thay vì tạo từng ảnh độc lập.
 
 ## Quy trình
 
@@ -31,6 +32,9 @@ Phân số cảnh theo `scene_budget` cho từng nhịp (nhịp cao trào nhiề
 1. **Truyện**: mỗi cảnh đẩy truyện hoặc lộ nhân vật? Không → cắt/gộp. Cao trào do nhân vật chính tự quyết?
 2. **Thoại**: đọc to từng nhân vật — ai cũng nói giống nhau? câu nào nói thẳng cảm xúc → đổi thành hành động/ẩn ý; câu > ~12 ký tự × thời lượng cảnh → tách cảnh.
 3. **Hình**: đa dạng cỡ cảnh (không 3 cảnh liền cùng cỡ), giữ hướng nhìn/hướng chuyển động, cảnh sau "bắt" khung cảnh trước, ≤3 nhân vật/khung.
+   - Chia chuỗi hình thành continuity block 3–5 cảnh cùng địa điểm/thời gian/hành động.
+   - Lập ledger: scene → anchor/ảnh trước → vị trí trái/phải → look → ánh sáng → chi tiết duy nhất thay đổi.
+   - Nếu không mô tả được trạng thái cuối cảnh trước chuyển thành trạng thái đầu cảnh sau, chèn/sửa cảnh trước khi lưu.
 4. **Người xem lần đầu** ([story-craft §7b](../film-story-craft/references/story-craft.md)): quên kịch bản đi, chỉ đọc chuỗi *hình + câu nói* theo thứ tự như khán giả. Với **mỗi** câu có xưng hô/từ quan hệ hoặc câu gọi người vắng mặt, ghi ra: "người xem sẽ nghĩ câu này nói về/với ai?" (dựa vào cảnh ngay trước và ngay sau). Nếu khác ý định → sửa bằng hình (cho thấy đúng người được gọi, chèn cảnh trung gian, đổi thứ tự), không vá bằng lời dẫn. Ghi kết quả lượt này vào báo cáo cho user.
    Lỗi thật đã gặp: "Mẹ ơi!" (Cò) → cắt sang Mị Nương ⇒ người xem tưởng nàng là mẹ Cò.
 
@@ -43,7 +47,7 @@ Phân số cảnh theo `scene_budget` cho từng nhịp (nhịp cao trào nhiề
 Gọi subagent **`script-doctor`** với `project_id` + `episode_id` (nó tự đọc qua MCP). Sửa `CRITICAL`/`MAJOR` bằng `scene_update` (sửa lẻ) hoặc `episode_script_save` (sửa nhiều). Tối đa 2 vòng.
 
 ### 7. Báo user
-Beat sheet (bảng mốc | nhịp) · số cảnh · độ dài ước tính / mục tiêu · cảnh TTS vs native · điểm script-doctor và đã sửa gì. Rồi hỏi duyệt bước kế tiếp theo [pipeline.md](../film-story-craft/references/pipeline.md): tập đầu của dự án chưa có character sheet → **sinh character sheet** (nêu số ảnh); đã có → **thoại TTS + storyboard** (nêu số ảnh = số cảnh). Đồng ý → chuyển sang skill `film-production` làm luôn.
+Beat sheet (bảng mốc | nhịp) · số cảnh · độ dài ước tính / mục tiêu · cảnh TTS vs native · continuity blocks + ledger · điểm script-doctor và đã sửa gì. Rồi hỏi duyệt bước kế tiếp theo [pipeline.md](../film-story-craft/references/pipeline.md): tập đầu của dự án chưa có character sheet → **sinh character sheet** (nêu số ảnh); đã có → **thoại TTS + storyboard theo block** (nêu số ảnh = số cảnh). Đồng ý → chuyển sang skill `film-production` làm luôn.
 
 ## Kết mỗi bước
 Theo [pipeline.md](../film-story-craft/references/pipeline.md): tóm tắt → đề xuất bước kế + chi phí → hỏi duyệt (AskUserQuestion: Làm tiếp / Sửa trước / Dừng) → đồng ý thì làm luôn trong lượt. Không kết bằng một dòng lệnh `/film-…` trơ.
@@ -62,3 +66,4 @@ Theo [pipeline.md](../film-story-craft/references/pipeline.md): tóm tắt → �
 - ❌ Lưu mà không kiểm tra `duration.estimated` so với target.
 - ❌ Câu gọi người vắng mặt ("Mẹ ơi!", "Anh ở đâu?") rồi cắt sang một nhân vật khác — người xem sẽ gán quan hệ sai.
 - ❌ Phát hiện hiểu nhầm sau khi đã sinh video rồi vá bằng lời dẫn giải thích — sửa ở kịch bản, bằng hình, trước khi tốn quota.
+- ❌ Viết một dãy `image_prompt` đẹp riêng lẻ nhưng không xác định anchor, vị trí nhân vật và trạng thái nối giữa cảnh kề.

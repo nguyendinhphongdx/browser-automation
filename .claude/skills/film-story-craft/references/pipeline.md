@@ -32,6 +32,8 @@ Xong 1 bước (hoặc 1 giai đoạn), KHÔNG dừng ở "Bước tiếp theo: 
 
 Bước **tốn quota** (ô "Cổng" ghi *hỏi*): câu hỏi phải nêu số ảnh/clip/giây và `usage_report` hiện tại. "Cứ làm hết đi" chỉ áp cho bước miễn phí và bước đã nêu giá — tới cổng tốn tiền tiếp theo vẫn hỏi lại.
 
+`job_status=succeeded` chỉ xác nhận asset tồn tại. Ảnh/video chỉ được coi là đạt sau cổng continuity và user duyệt đầu ra thật theo [visual-continuity.md](../../film-production/references/visual-continuity.md).
+
 ## Bản đồ
 
 | Giai đoạn | Bước | Tool / skill | Tốn | Cổng | Kế tiếp |
@@ -43,9 +45,11 @@ Bước **tốn quota** (ô "Cổng" ghi *hỏi*): câu hỏi phải nêu số �
 | | chấm + sửa | `script-doctor` (`/film-review`) | 0 | chọn mục sửa | **sản xuất** |
 | **3. Sản xuất** `/film-make` | character sheet + bối cảnh (1 lần/dự án) | `characters_generate` → `references_review` | ảnh × (nhân vật + bối cảnh) | **hỏi** | duyệt sheet |
 | | thoại TTS | `episode_audio_generate` | rẻ | — | storyboard |
-| | storyboard | `storyboard_generate` → `storyboard_review` → `storyboard_approve` | ảnh × cảnh | **hỏi** | nháp |
+| | storyboard theo block | ledger → sinh tuần tự trong block → review block/toàn tập → approve | ảnh × cảnh | **hỏi** | nháp |
 | | nháp ảnh tĩnh | `episode_assemble(allow_stills=true)` | 0 | user xem nháp | video |
-| | video | `episode_videos_generate` | **đắt nhất**: clip × giây | **hỏi** | nhạc |
+| | pilot video | 3 clip đại diện → sample không nhạc → audit | clip × giây | **hỏi** | video còn lại |
+| | video còn lại | `episode_videos_generate` | **đắt nhất**: clip × giây | **hỏi lại sau pilot** | preview thật |
+| | preview clip thật | `episode_assemble(music=false)` → audit từng cảnh | 0 | user duyệt | nhạc |
 | | nhạc + ghép | `music_generate` → `episode_assemble` | 1 bài / 0 | user xem final.mp4 | **đăng** |
 | **4. Đăng** `/film-publish` | bộ đăng bài | `episode_publish_kit` | 0 | duyệt + `made_for_kids` | điền form |
 | | điền sẵn từng nền tảng | publisher `publish_prepare` | 0 | user tự bấm Đăng | ghi nhận |

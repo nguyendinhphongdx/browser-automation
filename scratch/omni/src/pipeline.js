@@ -109,17 +109,32 @@ function locationNote(project, scene) {
 
 // ───────────────────────── Character sheet + bối cảnh ─────────────────────────
 
-function characterSheetPrompt(project, c) {
+export function characterSheetPrompt(project, c, { fromBase = false } = {}) {
+  // Look có sheet gốc đính kèm: chỉ đổi những gì mô tả look nói, còn lại giữ y nguyên người trong ảnh.
+  const base = fromBase
+    ? ' The attached reference image is this SAME person in their original look: keep the exact same face, facial features, body shape, height and SKIN TONE (do not lighten or darken the skin) — change only the hair, clothing, makeup and accessories as described below. Do not copy the original outfit.'
+    : ''
   const props = c.accessories?.length
     ? ` Show every accessory clearly — worn/held by the character AND as separate isolated item drawings (pictures only, unlabeled): ${c.accessories.map((a) => `${a.name}${a.description ? ` (${a.description})` : ''}`).join('; ')}.`
     : ' The character carries NO weapons, bags or props.'
   return (
     `Character design sheet for an animated/cinematic series. ${project.style ? `Visual style: ${project.style}. ` : ''}` +
-    `Single image on a plain light-grey background: full-body turnaround (front, 3/4, side, back) plus a face close-up showing a typical expression.` +
+    `Single image on a plain light-grey background: full-body turnaround (front, 3/4, side, back) plus a face close-up showing a typical expression.${base}` +
     `${props} Character: ${c.name}${c.role ? ` (${c.role})` : ''}${c.look ? `, look "${c.look}"` : ''} — ${c.appearance}.` +
     `${c.personality ? ` Pose and expression convey personality: ${c.personality}.` : ''} Consistent proportions and colors across all views. Do NOT invent any extra accessories, weapons or props beyond those listed. ` +
     `Absolutely NO written text anywhere in the image: no labels, captions, annotations, notes, names, view titles or arrows — pictures only. No watermark.`
   )
+}
+
+export const locationPrompt = (project, loc) =>
+  `Environment concept art, establishing wide shot, no people. ${project.style ? `Visual style: ${project.style}. ` : ''}${loc.name} — ${loc.description}. No text, no watermark.`
+
+/** Prompt + ảnh tham chiếu cho 1 mục tham chiếu (nhân vật / look / bối cảnh) — dùng chung cho Gemini và gói prompt làm tay. */
+export function referenceRequest(project, { kind, item, owner }) {
+  if (kind === 'location') return { prompt: locationPrompt(project, item), references: [] }
+  if (kind !== 'look') return { prompt: characterSheetPrompt(project, item), references: [] }
+  const base = exists(project.id, owner.reference_image) ? abs(project.id, owner.reference_image) : null
+  return { prompt: characterSheetPrompt(project, characterAs(owner, item.id), { fromBase: !!base }), references: base ? [base] : [] }
 }
 
 export async function generateReferences(projectId, { ids, force } = {}, log) {
@@ -131,17 +146,18 @@ export async function generateReferences(projectId, { ids, force } = {}, log) {
   const todo = items.filter(({ item }) => force || !exists(projectId, item.reference_image))
   const tick = () => log.progress?.({ step: 'references', total: todo.length, done: done.length, failed: failed.length })
   tick()
-  await mapLimit(todo, config.concurrency, async ({ kind, id, item, owner }) => {
+  const work = async ({ kind, id, item, owner }) => {
     try {
       log(`${kind} ${id}: sinh ảnh tham chiếu`)
       const dir = ensureDir(path.join(projectDir(projectId), kind === 'location' ? 'locations' : 'characters'))
-      const prompt =
-        kind === 'location'
-          ? `Environment concept art, establishing wide shot, no people. ${project.style ? `Visual style: ${project.style}. ` : ''}${item.name} — ${item.description}. No text, no watermark.`
-          : characterSheetPrompt(project, kind === 'look' ? characterAs(owner, item.id) : item)
+      // Look vẽ lại từ chữ hay lệch mặt/màu da so với dáng gốc → gửi kèm sheet gốc (đọc lại: có thể vừa sinh ở lượt trước) làm tham chiếu.
+      const fresh = loadProject(projectId)
+      const { prompt, references } = referenceRequest(fresh, { kind, item, owner: owner && findCharacter(fresh, owner.id) })
+      if (kind === 'look' && !references.length) log(`${kind} ${id}: chưa có sheet gốc của ${owner.id} — sinh look không có ảnh tham chiếu`)
       const file = await gemini.generateImage({
         prompt,
         aspectRatio: '16:9',
+        references,
         outBase: path.join(dir, kind === 'look' ? `${owner.id}--${item.id}` : item.id),
         usage: { projectId, purpose: kind === 'location' ? 'location_reference' : 'character_sheet', target: id }
       })
@@ -161,7 +177,10 @@ export async function generateReferences(projectId, { ids, force } = {}, log) {
       tick()
       log(`${kind} ${id}: LỖI — ${err.message}`)
     }
-  })
+  }
+  // Sheet gốc + bối cảnh trước, look sau — để look có sheet gốc mới nhất làm tham chiếu.
+  await mapLimit(todo.filter((r) => r.kind !== 'look'), config.concurrency, work)
+  await mapLimit(todo.filter((r) => r.kind === 'look'), config.concurrency, work)
   return { done, failed }
 }
 
@@ -209,20 +228,24 @@ export function buildImagePrompt(project, scene) {
   )
 }
 
+/** Ảnh tham chiếu đính kèm khi vẽ 1 cảnh: sheet (theo look) của tối đa 3 nhân vật trong khung + ảnh bối cảnh. */
+export function sceneReferences(project, scene) {
+  const loc = findLocation(project, scene.location)
+  return [
+    ...charactersIn(project, scene).filter((c) => exists(project.id, c.reference_image)).slice(0, 3).map((c) => abs(project.id, c.reference_image)),
+    ...(loc && exists(project.id, loc.reference_image) ? [abs(project.id, loc.reference_image)] : [])
+  ]
+}
+
 export async function generateStoryboard(projectId, episodeId, { sceneIds, force } = {}, log) {
   const project = loadProject(projectId)
   const ep = findEpisode(project, episodeId)
   const scenes = pickScenes(ep, sceneIds).filter((s) => force || !exists(projectId, s.assets?.image))
   return eachScene(projectId, episodeId, scenes, 'image', log, async (scene) => {
-    const loc = findLocation(project, scene.location)
-    const refs = [
-      ...charactersIn(project, scene).filter((c) => exists(projectId, c.reference_image)).slice(0, 3).map((c) => abs(projectId, c.reference_image)),
-      ...(loc && exists(projectId, loc.reference_image) ? [abs(projectId, loc.reference_image)] : [])
-    ]
     const file = await gemini.generateImage({
       prompt: buildImagePrompt(project, scene),
       aspectRatio: project.aspect_ratio,
-      references: refs,
+      references: sceneReferences(project, scene),
       outBase: path.join(sceneDir(projectId, episodeId, scene.id), 'image'),
       usage: { projectId, purpose: 'storyboard', episode: episodeId, scene: scene.id }
     })

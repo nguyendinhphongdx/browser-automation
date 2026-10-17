@@ -13,6 +13,23 @@ function ai() {
   return client
 }
 
+let storeRejected = false
+/**
+ * Tạo interaction KHÔNG lưu phía Google (store=false) trừ khi FILM_GEMINI_STORE=1.
+ * Model nào không nhận store=false thì gọi lại bình thường (và ghi nhớ để khỏi thử lại) — không làm hỏng job.
+ */
+async function createInteraction(request) {
+  if (config.geminiStore || storeRejected) return ai().interactions.create(request)
+  try {
+    return await ai().interactions.create({ ...request, store: false })
+  } catch (err) {
+    if (!/\bstore\b/i.test(String(err?.message))) throw err
+    storeRejected = true
+    console.error(`[film-studio] Model không nhận store=false (${String(err.message).slice(0, 120)}) — gọi lại có lưu.`)
+    return ai().interactions.create(request)
+  }
+}
+
 const MIME_EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -68,7 +85,7 @@ export async function generateImage({ prompt, aspectRatio, references = [], outB
   const model = config.models.image
   const input = references.length ? [{ type: 'text', text: prompt }, ...references.map(imagePart)] : prompt
   return tracked(usage, 'image', model, { aspect_ratio: aspectRatio, references: references.length }, async (attempt) => {
-    const res = await withRetry('Sinh ảnh', () => ai().interactions.create({ model, input, response_format: { type: 'image', aspect_ratio: aspectRatio } }), 3, attempt)
+    const res = await withRetry('Sinh ảnh', () => createInteraction({ model, input, response_format: { type: 'image', aspect_ratio: aspectRatio } }), 3, attempt)
     const out = res.output_image
     const buf = await contentBytes(out, `ảnh (model "${model}")`)
     const file = `${outBase}.${MIME_EXT[out?.mime_type] || 'jpg'}`
@@ -137,7 +154,7 @@ export async function generateSpeech({ text, voice, style, language, outFile, us
     const res = await withRetry(
       'Sinh giọng đọc',
       () =>
-        ai().interactions.create({
+        createInteraction({
           model: config.models.tts,
           input: tag ? `[${tag}] ${text}` : text,
           generation_config: { speech_config: [{ voice: voice || 'Kore', language }] },
@@ -167,7 +184,7 @@ export async function generateMusic({ prompt, outFile, usage }) {
   return tracked(usage, 'music', config.models.music, {}, async (attempt) => {
     const res = await withRetry(
       'Sinh nhạc',
-      () => ai().interactions.create({ model: config.models.music, input: prompt, response_format: { type: 'audio', mime_type: 'audio/mp3' } }),
+      () => createInteraction({ model: config.models.music, input: prompt, response_format: { type: 'audio', mime_type: 'audio/mp3' } }),
       3,
       attempt
     )

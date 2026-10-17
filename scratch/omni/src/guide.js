@@ -42,7 +42,7 @@ Bạn (agent) là biên kịch kiêm đạo diễn, làm việc CÙNG người d
    Kèm các **bối cảnh lặp lại** (locations).
    Nhân vật **đổi ngoại hình giữa phim** (trước/sau trang điểm, thay đồ cưới, bị thương) → khai báo \`looks\` (mỗi look có appearance đầy đủ + phụ kiện riêng),
    KHÔNG nhét trang phục mới vào phụ kiện (phụ kiện xuất hiện ở MỌI cảnh). Cảnh chọn look bằng \`scene.looks = { <nhân vật>: <look> }\`.
-5. **characters_generate**: mỗi nhân vật 1 character sheet (nhiều góc + toàn bộ phụ kiện trong 1 ảnh), thêm 1 sheet cho mỗi look, mỗi bối cảnh 1 ảnh.
+5. **characters_generate**: mỗi nhân vật 1 character sheet (nhiều góc + toàn bộ phụ kiện trong 1 ảnh), thêm 1 sheet cho mỗi look (sinh SAU sheet gốc và gửi kèm sheet gốc làm tham chiếu để giữ mặt + màu da; sinh lại sheet gốc thì nên sinh lại cả look: ids=[nhân vật], force), mỗi bối cảnh 1 ảnh.
    Xem bằng **references_review**. Chưa ưng thì sửa mô tả rồi sinh lại (\`ids\`, \`force\`).
 
 ### B. Mỗi tập

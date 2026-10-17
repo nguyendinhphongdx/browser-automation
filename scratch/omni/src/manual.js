@@ -1,0 +1,153 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { buildImagePrompt, referenceRequest, sceneReferences } from './pipeline.js'
+import {
+  abs, ensureDir, episodeDir, findCharacter, findEpisode, findLocation, findLook, findScene, loadProject, projectDir, referenceItems, rel, sceneDir, scenesOf,
+  updateProject
+} from './project.js'
+
+/**
+ * Ảnh "làm tay": người dùng tự tạo ảnh ở công cụ khác (ChatGPT, Midjourney…) bằng gói prompt server xuất ra,
+ * tải về 1 thư mục đặt tên theo id, rồi server nhập hàng loạt. Không tự động hoá giao diện của dịch vụ nào.
+ */
+
+const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp'])
+
+/** Chép ảnh tham chiếu vào refs/ của gói (đánh số, tên dễ đọc) để kéo-thả vào công cụ tạo ảnh. */
+function packRefs(projectId, refsDir, files) {
+  return files.map((file) => {
+    const name = path.relative(projectDir(projectId), file).replaceAll(path.sep, '__')
+    const dest = path.join(ensureDir(refsDir), name)
+    if (!fs.existsSync(dest) || fs.statSync(dest).mtimeMs < fs.statSync(file).mtimeMs) fs.copyFileSync(file, dest)
+    return dest
+  })
+}
+
+function writePack(dir, title, intro, items) {
+  ensureDir(dir)
+  fs.writeFileSync(path.join(dir, 'prompts.json'), JSON.stringify(items, null, 2))
+  const md = [
+    `# ${title}`,
+    '',
+    intro,
+    '',
+    ...items.flatMap((it) => [
+      `## ${it.file} — ${it.title}`,
+      '',
+      `Khung hình: **${it.aspect_ratio}**${it.references.length ? ` · Đính kèm: ${it.references.map((r) => `\`${path.basename(r)}\``).join(', ')}` : ' · Không cần đính kèm ảnh'}`,
+      '',
+      '```text',
+      it.prompt,
+      '```',
+      ''
+    ])
+  ].join('\n')
+  fs.writeFileSync(path.join(dir, 'prompts.md'), md)
+  return { dir, prompts_md: path.join(dir, 'prompts.md'), prompts_json: path.join(dir, 'prompts.json'), refs_dir: path.join(dir, 'refs') }
+}
+
+const HOWTO = (folderHint) =>
+  `Cách dùng: mỗi mục dán prompt vào công cụ tạo ảnh, đính kèm các ảnh trong \`refs/\` được ghi ở mục đó, ` +
+  `tải ảnh về và đặt tên đúng như tiêu đề mục (đuôi png/jpg/webp đều được) vào 1 thư mục, rồi gọi ${folderHint}.`
+
+/** Gói prompt storyboard cho 1 tập (mặc định: mọi cảnh chưa có ảnh). */
+export function storyboardPack(projectId, episodeId, { sceneIds, all = false } = {}) {
+  const project = loadProject(projectId)
+  const ep = findEpisode(project, episodeId)
+  const scenes = sceneIds?.length ? sceneIds.map((id) => findScene(ep, id)) : scenesOf(ep).filter((s) => all || !s.assets?.image)
+  const dir = path.join(episodeDir(projectId, episodeId), 'manual')
+  const items = scenes.map((s) => ({
+    id: s.id,
+    file: `${s.id}.png`,
+    title: s.title || s.description || s.id,
+    aspect_ratio: project.aspect_ratio,
+    prompt: buildImagePrompt(project, s),
+    references: packRefs(projectId, path.join(dir, 'refs'), sceneReferences(project, s))
+  }))
+  return {
+    ...writePack(dir, `Storyboard ${project.title} — ${ep.id} ${ep.title || ''}`, HOWTO(`storyboard_import_folder(episode_id="${ep.id}", folder=...)`), items),
+    scenes: items.map((it) => it.id)
+  }
+}
+
+/** Gói prompt character sheet / look / bối cảnh (mặc định: mục chưa có ảnh). Look nên làm SAU sheet gốc để đính kèm được sheet gốc. */
+export function referencesPack(projectId, { ids, all = false } = {}) {
+  const project = loadProject(projectId)
+  const picked = referenceItems(project).filter((r) =>
+    ids?.length ? ids.includes(r.id) || (r.owner && ids.includes(r.owner.id)) : all || !r.item.reference_image || !fs.existsSync(abs(projectId, r.item.reference_image))
+  )
+  const dir = path.join(projectDir(projectId), 'manual', 'references')
+  const items = picked.map((r) => {
+    const { prompt, references } = referenceRequest(project, r)
+    return {
+      id: r.id,
+      file: `${r.id.replace(':', '--')}.png`,
+      title: r.name,
+      aspect_ratio: '16:9',
+      prompt,
+      references: packRefs(projectId, path.join(dir, 'refs'), references)
+    }
+  })
+  return { ...writePack(dir, `Ảnh tham chiếu ${project.title}`, HOWTO('references_import_folder(folder=...)'), items), ids: items.map((it) => it.id) }
+}
+
+function imageFiles(folder) {
+  if (!fs.existsSync(folder) || !fs.statSync(folder).isDirectory()) throw new Error(`Không thấy thư mục ${folder}`)
+  return fs
+    .readdirSync(folder)
+    .filter((f) => IMAGE_EXT.has(path.extname(f).toLowerCase()) && !f.startsWith('.'))
+    .map((f) => ({ file: path.join(folder, f), stem: path.basename(f, path.extname(f)).toLowerCase(), ext: path.extname(f).toLowerCase() }))
+}
+
+/** Nhập ảnh storyboard: file "s01.png" → cảnh s01. Ảnh mới = chưa duyệt, video cũ bỏ (giống asset_import scene_image). */
+export async function importStoryboardFolder(projectId, episodeId, folder) {
+  const files = imageFiles(folder)
+  const imported = []
+  const unknown = []
+  const p = await updateProject(projectId, (p) => {
+    const ep = findEpisode(p, episodeId)
+    for (const f of files) {
+      const s = ep.scenes.find((x) => x.id.toLowerCase() === f.stem)
+      if (!s) {
+        unknown.push(path.basename(f.file))
+        continue
+      }
+      const dest = path.join(sceneDir(projectId, ep.id, s.id), `image${f.ext}`)
+      fs.copyFileSync(f.file, dest)
+      s.assets = { ...s.assets, image: rel(projectId, dest), video: null, video_duration: null }
+      s.approved = false
+      imported.push(s.id)
+    }
+  })
+  const missing = scenesOf(findEpisode(p, episodeId))
+    .filter((s) => !s.assets?.image)
+    .map((s) => s.id)
+  return { imported, unknown, missing }
+}
+
+/** Nhập ảnh tham chiếu: "may.png" → nhân vật/bối cảnh may, "trang--sau.png" → look "sau" của trang. */
+export async function importReferencesFolder(projectId, folder) {
+  const files = imageFiles(folder)
+  const imported = []
+  const unknown = []
+  const p = await updateProject(projectId, (p) => {
+    for (const f of files) {
+      const [who, lookId] = f.stem.split('--')
+      const owner = findCharacter(p, who)
+      const target = lookId ? owner && findLook(owner, lookId) : owner || findLocation(p, who)
+      if (!target) {
+        unknown.push(path.basename(f.file))
+        continue
+      }
+      const sub = owner ? 'characters' : 'locations'
+      const dest = path.join(ensureDir(path.join(projectDir(projectId), sub)), `${lookId ? `${owner.id}--${target.id}` : target.id}${f.ext}`)
+      fs.copyFileSync(f.file, dest)
+      target.reference_image = rel(projectId, dest)
+      imported.push(lookId ? `${owner.id}:${target.id}` : target.id)
+    }
+  })
+  const missing = referenceItems(p)
+    .filter((r) => !r.item.reference_image || !fs.existsSync(abs(projectId, r.item.reference_image)))
+    .map((r) => r.id)
+  return { imported, unknown, missing }
+}

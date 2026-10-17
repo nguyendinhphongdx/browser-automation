@@ -30,6 +30,12 @@ export const config = {
   ffmpeg: process.env.FFMPEG_PATH || 'ffmpeg',
   ffprobe: process.env.FFPROBE_PATH || 'ffprobe',
   fps: 30,
+  /**
+   * Interactions API mặc định LƯU mọi request phía Google (55 ngày gói trả phí, 1 ngày gói free) và người có
+   * quyền vào project xem được trong AI Studio. Mặc định gửi store=false cho ảnh/TTS/nhạc; đặt FILM_GEMINI_STORE=1
+   * để giữ hành vi lưu. Video luôn lưu vì chạy nền (background) bắt buộc store=true.
+   */
+  geminiStore: process.env.FILM_GEMINI_STORE === '1',
   /** Dashboard web (chỉ đọc) chạy kèm MCP server; 0 = tắt. */
   dashboardPort: Number(process.env.FILM_DASHBOARD_PORT ?? 4747)
 }
