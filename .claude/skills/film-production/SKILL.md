@@ -1,6 +1,6 @@
 ---
 name: film-production
-description: Sản xuất 1 tập phim trong MCP film-studio từ kịch bản đã lưu tới final.mp4 — character sheet, thoại TTS, storyboard, duyệt, nháp ảnh tĩnh, video, nhạc, ghép — với cổng xác nhận trước mỗi bước tốn tiền và báo quota. Dùng khi user muốn sinh ảnh/storyboard/video, "làm phim đi", ghép tập, sinh lại cảnh lỗi, hoặc xem đã tốn bao nhiêu quota.
+description: Sản xuất 1 tập phim trong MCP film-studio từ kịch bản đã lưu tới final.mp4 — khóa character/style/location, storyboard theo continuity block, pilot video, duyệt preview thật, nhạc và ghép — với cổng xác nhận trước mỗi bước tốn tiền. Dùng khi user muốn sinh ảnh/storyboard/video, "làm phim đi", ghép tập, sinh lại cảnh lỗi, hoặc xem quota.
 ---
 
 # film-production — từ kịch bản tới mp4, không đốt tiền oan
