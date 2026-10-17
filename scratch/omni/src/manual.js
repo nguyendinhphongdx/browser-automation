@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { buildImagePrompt, sceneReferences } from './pipeline.js'
-import { ensureDir, episodeDir, findEpisode, findScene, loadProject, projectDir, scenesOf } from './project.js'
+import { buildImagePrompt, referenceRequest, sceneReferences } from './pipeline.js'
+import { abs, ensureDir, episodeDir, findEpisode, findScene, loadProject, projectDir, referenceItems, scenesOf } from './project.js'
 
 /**
  * Ảnh "làm tay": người dùng tự tạo ảnh ở công cụ khác (ChatGPT, Midjourney…) bằng gói prompt server xuất ra,
@@ -63,4 +63,25 @@ export function storyboardPack(projectId, episodeId, { sceneIds, all = false } =
     ...writePack(dir, `Storyboard ${project.title} — ${ep.id} ${ep.title || ''}`, HOWTO(`storyboard_import_folder(episode_id="${ep.id}", folder=...)`), items),
     scenes: items.map((it) => it.id)
   }
+}
+
+/** Gói prompt character sheet / look / bối cảnh (mặc định: mục chưa có ảnh). Look nên làm SAU sheet gốc để đính kèm được sheet gốc. */
+export function referencesPack(projectId, { ids, all = false } = {}) {
+  const project = loadProject(projectId)
+  const picked = referenceItems(project).filter((r) =>
+    ids?.length ? ids.includes(r.id) || (r.owner && ids.includes(r.owner.id)) : all || !r.item.reference_image || !fs.existsSync(abs(projectId, r.item.reference_image))
+  )
+  const dir = path.join(projectDir(projectId), 'manual', 'references')
+  const items = picked.map((r) => {
+    const { prompt, references } = referenceRequest(project, r)
+    return {
+      id: r.id,
+      file: `${r.id.replace(':', '--')}.png`,
+      title: r.name,
+      aspect_ratio: '16:9',
+      prompt,
+      references: packRefs(projectId, path.join(dir, 'refs'), references)
+    }
+  })
+  return { ...writePack(dir, `Ảnh tham chiếu ${project.title}`, HOWTO('references_import_folder(folder=...)'), items), ids: items.map((it) => it.id) }
 }
